@@ -10,6 +10,7 @@ python run.py memoir
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -59,12 +60,27 @@ def main() -> None:
 
     GENERATED_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    
 
     config = books[book_name]
+
+    cover = (ROOT / config["cover"]).resolve()
 
     manuscript = (ROOT / config["manuscript"]).resolve()
 
     output_name = config["output_name"]
+
+    #
+    # Stage book assets
+    #
+
+    book_assets = ROOT / "assets" / "books" / "current"
+    book_assets.mkdir(parents=True, exist_ok=True)
+
+    shutil.copy2(
+        cover,
+        book_assets / "cover.png",
+    )
 
     typst_source = publish(manuscript)
 

@@ -1,9 +1,11 @@
 books:
 
   engineering:
-    manuscript: ../HomeLab-Engineering/publication/manuscript.md
+    manuscript: ../HomeLab-Engineering/manuscript.md
+    cover: ../HomeLab-Engineering/assets/book_cover.png
     output_name: HomeLab-Engineering
 
   memoir:
     manuscript: ../Project-memoir/manuscript.md
+    cover: ../Project-memoir/assets/cover.png
     output_name: Project-Memoir

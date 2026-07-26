@@ -131,7 +131,7 @@ class _Renderer:
 
         self.lines.append(
             '#image('
-            '"../assets/book_cover.png", '
+            '"../assets/books/current/cover.png", '
             'width: 100%, '
             'height: 100%'
             ')'
@@ -185,17 +185,14 @@ class _Renderer:
         )
 
         self.lines.append("")
+        self.lines.append("")
         self.lines.append("#v(20%)")
         self.lines.append("")
-
-        self.lines.append(
-            '#text(size: 12pt, weight: "bold")[VTR Press]'
-        )
-
-        if md.copyright_year:
-            self.lines.append(
-                f'#text(size: 11pt)[{md.copyright_year}]'
-            )
+        self.lines.append("#align(center)[")
+        self.lines.append('  #image("../assets/publisher/logo.png", width: 20mm)')
+        self.lines.append("  #v(2mm)")
+        self.lines.append(f'  #text(size: 11pt)[{md.copyright_year}]')
+        self.lines.append("]")
 
         self.lines.append("")
         self.lines.append("]")
