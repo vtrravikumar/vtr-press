@@ -1,0 +1,1 @@
+#panic("BOOK.TYP WAS LOADED")
