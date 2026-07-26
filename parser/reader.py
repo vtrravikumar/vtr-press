@@ -11,8 +11,8 @@ from pathlib import Path
 
 import yaml
 
-from publication.exceptions import FrontMatterError
-from publication.model import Metadata
+from exceptions import FrontMatterError
+from model import Metadata
 
 
 def read(path: str | Path) -> tuple[Metadata, str]:

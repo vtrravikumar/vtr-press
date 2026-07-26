@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from publication.model import Book
-from publication.parser.reader import read
-from publication.parser.structure import parse_structure
-from publication.parser.inline import parse_inline
-from publication.renderer.typst import render
+from model import Book
+from parser.reader import read
+from parser.structure import parse_structure
+from parser.inline import parse_inline
+from renderer.typst import render
 
 
 def publish(path: str | Path) -> str:

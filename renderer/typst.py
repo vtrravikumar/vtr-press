@@ -4,7 +4,7 @@ Render a Book AST into Typst source.
 
 from __future__ import annotations
 
-from publication.model import (
+from model import (
     Book,
     Part,
     Chapter,

@@ -7,7 +7,7 @@ rich inline structures such as Bold, Italic, Code and Link.
 
 from __future__ import annotations
 
-from publication.model import (
+from model import (
     Book,
     Block,
     Paragraph,

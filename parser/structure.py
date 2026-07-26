@@ -11,8 +11,8 @@ parser.inline.
 
 from __future__ import annotations
 
-from publication.exceptions import StructureError
-from publication.model import (
+from exceptions import StructureError
+from model import (
     Book,
     Chapter,
     Metadata,

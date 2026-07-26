@@ -1,30 +1,108 @@
-# publication/README.md
+# VTR Press
 
-# Publication Workspace
+VTR Press is a lightweight publishing engine for transforming structured Markdown manuscripts into professional publishing formats.
 
-This directory contains all material required to transform the manuscript into a published book.
+The engine is designed to be independent of any specific book. A single manuscript can be rendered into multiple publication formats without modification.
 
-The manuscript itself lives under the `book/` directory.
+## Quick Start
 
-This workspace contains publishing assets including front matter, back matter, metadata, cover material, edition history, and publication planning.
+```bash
+git clone ...
 
-## Current Stage
+cd vtr-press
 
-- Manuscript Status: Reading Draft v0.5
-- Editorial Status: Structural Review Complete
-- Reader Pass: Pending
-- Publication Status: Not Started
+source .venv/bin/activate
 
-## Contents
+pip install -r requirements.txt
 
-- metadata.md
-- front-matter.md
-- back-matter.md
-- author-bio.md
-- acknowledgements.md
-- dedication.md
-- about-the-book.md
-- edition-history.md
-- publishing-checklist.md
-- isbn-notes.md
-- cover/
+python publish.py
+
+## Current Capabilities
+
+- ✅ Markdown parser
+- ✅ Book abstract syntax tree (AST)
+- ✅ Typst renderer
+- ✅ PDF generation
+
+## In Progress
+
+- EPUB renderer
+- EPUB writer
+
+## Planned
+
+- HTML renderer
+- DOCX renderer
+- Kindle support
+
+---
+
+## Repository Structure
+
+```
+vtr-press/
+
+├── parser/
+├── renderer/
+├── writer/
+├── theme/
+
+├── model.py
+├── publish.py
+├── exceptions.py
+
+├── docs/
+├── assets/
+├── generated/
+└── output/
+```
+
+---
+
+## Development Environment
+
+Create a virtual environment:
+
+```bash
+python3 -m venv .venv
+```
+
+Activate it (macOS/Linux):
+
+```bash
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Deactivate:
+
+```bash
+deactivate
+```
+
+---
+
+## Running
+
+The publishing engine is currently under active development.
+
+Eventually the primary entry point will be:
+
+```bash
+python publish.py
+```
+
+---
+
+## Philosophy
+
+Books are content.
+
+VTR Press transforms manuscripts into professional publication formats.
+
+Adding a new output format should never require changing the manuscript itself.

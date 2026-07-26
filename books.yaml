@@ -1,0 +1,9 @@
+books:
+
+  engineering:
+    manuscript: ../HomeLab-Engineering/publication/manuscript.md
+    output_name: HomeLab-Engineering
+
+  memoir:
+    manuscript: ../Project-memoir/manuscript.md
+    output_name: Project-Memoir

@@ -1,6 +1,6 @@
 """EPUB Renderer v0.1 (Skeleton)"""
 from __future__ import annotations
-from publication.model import Book,Part,Chapter,Section,Paragraph,Verse,Text,Bold,Italic,Code,Link,Block,Inline
+from model import Book,Part,Chapter,Section,Paragraph,Verse,Text,Bold,Italic,Code,Link,Block,Inline
 
 def render(book: Book)->dict[str,str]:
     return _Renderer().render(book)
