@@ -3,7 +3,7 @@ Build the document hierarchy from Markdown.
 
 This module understands only the structural elements of the manuscript.
 
-It creates the Book, Part, Chapter and Section objects.
+It creates the Book, Part, Chapter, Scene, Section and Block objects.
 
 Inline formatting is intentionally ignored and is handled later by
 parser.inline.
@@ -15,6 +15,7 @@ from exceptions import StructureError
 from model import (
     Book,
     Chapter,
+    Scene,
     Metadata,
     Paragraph,
     Part,
@@ -41,32 +42,48 @@ SECTION_MAP = {
 def parse_structure(metadata: Metadata, body: str) -> Book:
     """
     Parse the Markdown body into a Book model.
-
-    Parameters
-    ----------
-    metadata
-        Book metadata extracted from the YAML front matter.
-
-    body
-        Markdown body without the front matter.
-
-    Returns
-    -------
-    Book
-        Parsed document hierarchy.
     """
 
     book = Book(metadata=metadata)
 
     current_part: Part | None = None
     current_chapter: Chapter | None = None
+    current_scene: Scene | None = None
     current_section: Section | None = None
 
     chapter_number = 0
+
     paragraph: list[str] = []
 
     verse: list[str] = []
     in_verse = False
+
+    # ----------------------------------------------------------
+    # Helpers
+    # ----------------------------------------------------------
+
+    def _ensure_scene() -> Scene:
+        """
+        Return the current scene.
+
+        If the manuscript contains no explicit scene headings,
+        automatically create an untitled scene so older books
+        continue to work unchanged.
+        """
+
+        nonlocal current_scene
+
+        if current_scene is None:
+
+            if current_chapter is None:
+                raise StructureError(
+                    "Content found outside a Chapter."
+                )
+
+            current_scene = Scene(title=None)
+            current_chapter.scenes.append(current_scene)
+
+        return current_scene
 
     def flush_paragraph() -> None:
         """Create a Paragraph block from accumulated lines."""
@@ -89,16 +106,18 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
         )
 
         if current_chapter is not None:
-            current_chapter.blocks.append(block)
+
+            _ensure_scene().blocks.append(block)
 
         elif current_section is not None:
+
             current_section.blocks.append(block)
 
         else:
             raise StructureError(
                 "Paragraph found outside a Section or Chapter."
             )
-        
+
     def flush_verse() -> None:
         """Create a Verse block from accumulated lines."""
 
@@ -114,9 +133,11 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
         verse.clear()
 
         if current_chapter is not None:
-            current_chapter.blocks.append(block)
+
+            _ensure_scene().blocks.append(block)
 
         elif current_section is not None:
+
             current_section.blocks.append(block)
 
         else:
@@ -124,6 +145,9 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
                 "Verse found outside a Section or Chapter."
             )
 
+    # ----------------------------------------------------------
+    # Parse document
+    # ----------------------------------------------------------
 
     for raw_line in body.splitlines():
 
@@ -153,7 +177,7 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
             continue
 
         # ----------------------------------------------------------
-        # Blank line -> paragraph boundary
+        # Blank line
         # ----------------------------------------------------------
 
         if not line:
@@ -161,25 +185,25 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
             continue
 
         # ----------------------------------------------------------
-        # Level-1 Heading (Book Title)
+        # Book title
         # ----------------------------------------------------------
 
         if line.startswith("# "):
 
             flush_paragraph()
+            flush_verse()
 
-            # The book title already comes from the YAML metadata.
-            # Ignore the Markdown title.
-
+            # Title comes from YAML front matter.
             continue
 
         # ----------------------------------------------------------
-        # Level-2 Heading
+        # Part / Section
         # ----------------------------------------------------------
 
         if line.startswith("## "):
 
             flush_paragraph()
+            flush_verse()
 
             title = line[3:].strip()
             key = title.lower()
@@ -190,6 +214,7 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
                 book.sections.append(current_part)
 
                 current_chapter = None
+                current_scene = None
                 current_section = None
 
             else:
@@ -205,16 +230,18 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
 
                 current_part = None
                 current_chapter = None
+                current_scene = None
 
             continue
 
         # ----------------------------------------------------------
-        # Level-3 Heading
+        # Chapter
         # ----------------------------------------------------------
 
         if line.startswith("### "):
 
             flush_paragraph()
+            flush_verse()
 
             if current_part is None:
                 raise StructureError(
@@ -230,19 +257,44 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
 
             current_part.chapters.append(current_chapter)
 
+            current_scene = None
+
             continue
 
         # ----------------------------------------------------------
-        # Regular paragraph line
+        # Scene
+        # ----------------------------------------------------------
+
+        if line.startswith("#### "):
+
+            flush_paragraph()
+            flush_verse()
+
+            if current_chapter is None:
+                raise StructureError(
+                    f"Scene found outside a Chapter: {line}"
+                )
+
+            current_scene = Scene(
+                title=line[5:].strip(),
+            )
+
+            current_chapter.scenes.append(current_scene)
+
+            continue
+
+        # ----------------------------------------------------------
+        # Regular paragraph
         # ----------------------------------------------------------
 
         paragraph.append(line)
 
-    if in_verse:
-        raise StructureError(
-            "Unterminated :::verse block."
-        )
+        if in_verse:
+            raise StructureError(
+                "Unterminated :::verse block."
+            )
 
-    flush_paragraph()
+        flush_paragraph()
+        flush_verse()
 
-    return book
+        return book
