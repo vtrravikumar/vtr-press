@@ -100,6 +100,7 @@ class Paragraph(Block):
     """A paragraph consisting of inline elements."""
 
     children: list[Inline] = field(default_factory=list)
+
 @dataclass(slots=True)
 class Verse(Block):
     """A block that preserves line breaks exactly."""
@@ -141,16 +142,40 @@ class Section:
 
 
 # ============================================================================
+# Scenes
+# ============================================================================
+
+
+@dataclass(slots=True)
+class Scene:
+    """
+    A logical subdivision within a chapter.
+
+    Scenes are rendered inline and are intentionally excluded
+    from the Table of Contents.
+    """
+
+    title: str | None = None
+    blocks: list[Block] = field(default_factory=list)
+
+# ============================================================================
 # Chapters
 # ============================================================================
 
+
 @dataclass(slots=True)
 class Chapter:
-    """A chapter within a Part."""
+    """
+    A chapter within a Part.
+
+    A chapter contains one or more scenes. Older manuscripts
+    without explicit scene headings automatically receive a
+    single untitled scene during parsing.
+    """
 
     number: int
     title: str
-    blocks: list[Block] = field(default_factory=list)
+    scenes: list[Scene] = field(default_factory=list)
 
 
 # ============================================================================
