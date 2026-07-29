@@ -153,6 +153,8 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
 
         line = raw_line.rstrip()
 
+
+
         # ----------------------------------------------------------
         # Verse block
         # ----------------------------------------------------------
@@ -289,12 +291,12 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
 
         paragraph.append(line)
 
-        if in_verse:
-            raise StructureError(
-                "Unterminated :::verse block."
-            )
+    if in_verse:
+        raise StructureError(
+            "Unterminated :::verse block."
+        )
 
-        flush_paragraph()
-        flush_verse()
+    flush_paragraph()
+    flush_verse()
 
-        return book
+    return book

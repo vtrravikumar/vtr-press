@@ -8,6 +8,7 @@ from model import (
     Book,
     Part,
     Chapter,
+    Scene,
     Section,
     Paragraph,
     Verse,
@@ -87,7 +88,7 @@ class _Renderer:
         self._render_cover()
         self._render_title_page(book)
         for item in book.sections:
-
+            print(type(item).__name__, item.title)
             if isinstance(item, Section):
                 self._render_section(item)
 
@@ -291,11 +292,34 @@ class _Renderer:
     def _render_chapter(self, chapter: Chapter) -> None:
 
         self._page_break()
+
         self._render_heading(2, chapter.title)
         self.lines.append("")
 
-        for block in chapter.blocks:
+        for scene in chapter.scenes:
+            self._render_scene(scene)
+
+    # ------------------------------------------------------------------
+    # Scene
+    # ------------------------------------------------------------------
+
+    def _render_scene(self, scene: Scene) -> None:
+        """Render a scene within a chapter."""
+
+        if scene.title:
+
+            self.lines.append("#v(0.8em)")
+
+            self.lines.append(
+                f'#text(weight: "bold")[{scene.title}]'
+            )
+            self.lines.append("")
+            self.lines.append("#v(0.5em)")
+            self.lines.append("")
+
+        for block in scene.blocks:
             self._render_block(block)
+
 
     # ------------------------------------------------------------------
     # Section

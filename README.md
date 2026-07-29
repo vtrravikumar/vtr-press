@@ -4,18 +4,115 @@ VTR Press is a lightweight publishing engine for transforming structured Markdow
 
 The engine is designed to be independent of any specific book. A single manuscript can be rendered into multiple publication formats without modification.
 
-## Quick Start
+# Quick Start
+
+## 1. Open a terminal
 
 ```bash
-git clone ...
+cd ~/Documents/Projects/vtr-press
+```
 
-cd vtr-press
+> Adjust the path if your Projects directory is elsewhere.
+
+---
+
+## 2. Activate the virtual environment
+
+```bash
+source .venv/bin/activate
+```
+
+---
+
+## 3. Install dependencies (first time only)
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 4. Verify the available books
+
+Open:
+
+```text
+books.yaml
+```
+
+Example:
+
+```yaml
+books:
+
+  engineering:
+    manuscript: ../HomeLab-Engineering/manuscript.md
+    cover: ../HomeLab-Engineering/assets/cover.png
+    output_name: HomeLab-Engineering
+
+  memoir:
+    manuscript: ../Project-memoir/manuscript.md
+    cover: ../Project-memoir/assets/cover.png
+    output_name: Project-Memoir
+```
+
+---
+
+## 5. Generate a PDF
+
+Engineering Home
+
+```bash
+python run.py engineering
+```
+
+Project Memoir
+
+```bash
+python run.py memoir
+```
+
+---
+
+## Output
+
+Generated Typst source:
+
+```text
+generated/
+```
+
+Generated PDF:
+
+```text
+output/
+```
+
+Example:
+
+```text
+output/
+    HomeLab-Engineering.pdf
+    Project-Memoir.pdf
+```
+
+## Typical Daily Workflow
+
+```bash
+cd ~/Documents/Projects/vtr-press
 
 source .venv/bin/activate
 
-pip install -r requirements.txt
+git pull
 
-python publish.py
+python run.py engineering
+```
+
+or
+
+```bash
+python run.py memoir
+```
 
 ## Current Capabilities
 

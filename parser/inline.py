@@ -31,7 +31,8 @@ def parse_inline(book: Book) -> None:
 
         elif isinstance(item, Part):
             for chapter in item.chapters:
-                _walk_blocks(chapter.blocks)
+                for scene in chapter.scenes:
+                    _walk_blocks(scene.blocks)
 
 
 def _walk_blocks(blocks: list[Block]) -> None:
