@@ -79,6 +79,30 @@ class _Renderer:
         # Tracks whether the table of contents has been inserted.
         self._contents_inserted = False
 
+
+    # ------------------------------------------------------------------
+    # Typst Escaping
+    # ------------------------------------------------------------------
+
+    def _escape_text(self, text: str) -> str:
+        """Escape plain text for Typst."""
+
+        return (
+            text
+            .replace("\\", "\\\\")
+            .replace("#", "\\#")
+        )
+
+    def _escape_string(self, text: str) -> str:
+        """Escape Typst string literals."""
+
+        return (
+            text
+            .replace("\\", "\\\\")
+            .replace('"', '\\"')
+        )
+
+
     # ------------------------------------------------------------------
     # Public
     # ------------------------------------------------------------------
@@ -110,10 +134,10 @@ class _Renderer:
 
         # Optional document variables for future use.
         if md.title:
-            self.lines.append(f'#let book_title = "{md.title}"')
+            self.lines.append(f'#let book_title = "{self._escape_string(md.title)}"')
 
         if md.author:
-            self.lines.append(f'#let book_author = "{md.author}"')
+            self.lines.append(f'#let book_author = "{self._escape_string(md.author)}"')
         self.lines.append("")
 
     # ------------------------------------------------------------------
@@ -167,13 +191,13 @@ class _Renderer:
         self.lines.append("")
 
         self.lines.append(
-            f'#text(size: 28pt, weight: "bold")[{md.title}]'
+            f'#text(size: 28pt, weight: "bold")[{self._escape_text(md.title)}]'
         )
 
         if md.subtitle:
             self.lines.append("")
             self.lines.append(
-                f'#text(size: 15pt)[{md.subtitle}]'
+                f'#text(size: 15pt)[{self._escape_text(md.subtitle)}]'
             )
 
         self.lines.append("")
@@ -181,7 +205,7 @@ class _Renderer:
         self.lines.append("")
 
         self.lines.append(
-            f'#text(size: 16pt)[{md.author}]'
+            f'#text(size: 16pt)[{self._escape_text(md.author)}]'
         )
 
         self.lines.append("")
@@ -191,7 +215,7 @@ class _Renderer:
         self.lines.append("#align(center)[")
         self.lines.append('  #image("../assets/publisher/logo.png", width: 20mm)')
         self.lines.append("  #v(2mm)")
-        self.lines.append(f'  #text(size: 11pt)[{md.copyright_year}]')
+        self.lines.append(f'  #text(size: 11pt)[{self._escape_text(md.copyright_year)}]')
         self.lines.append("]")
 
         self.lines.append("")
@@ -262,13 +286,17 @@ class _Renderer:
         """Render a Typst heading."""
 
         if outlined:
-            self.lines.append(f'{"=" * level} {title}')
+            self.lines.append(
+                f'{"=" * level} {self._escape_text(title)}'
+            )
             return
 
         self.lines.append("#heading(")
         self.lines.append(f"  level: {level},")
         self.lines.append("  outlined: false,")
-        self.lines.append(f")[{title}]")
+        self.lines.append(
+            f")[{self._escape_text(title)}]"
+        )
 
     # ------------------------------------------------------------------
     # Part
@@ -310,7 +338,7 @@ class _Renderer:
             self.lines.append("#v(0.8em)")
 
             self.lines.append(
-                f'#text(weight: "bold")[{scene.title}]'
+                f'#text(weight: "bold")[{self._escape_text(scene.title)}]'
             )
             self.lines.append("")
             self.lines.append("#v(0.5em)")
@@ -394,7 +422,9 @@ class _Renderer:
 
         for i, line in enumerate(verse.lines):
 
-            self.lines.append(line)
+            self.lines.append(
+                self._escape_text(line)
+            )
 
             if i < len(verse.lines) - 1:
                 self.lines.append("#linebreak()")
@@ -409,7 +439,7 @@ class _Renderer:
     def _render_inline(self, node: Inline) -> str:
 
         if isinstance(node, Text):
-            return node.text
+            return self._escape_text(node.text)
 
         if isinstance(node, Bold):
             return "*" + "".join(
@@ -424,9 +454,12 @@ class _Renderer:
             ) + "_"
 
         if isinstance(node, Code):
-            return f"`{node.text}`"
+            return f"`{self._escape_text(node.text)}`"
 
         if isinstance(node, Link):
-            return f'link("{node.url}")[{node.text}]'
+            return (
+                f'link("{node.url}")'
+                f'[{self._escape_text(node.text)}]'
+            )
 
         raise TypeError(f"Unsupported inline: {type(node).__name__}")

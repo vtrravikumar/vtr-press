@@ -86,6 +86,11 @@ def read(path: str | Path) -> tuple[Metadata, str]:
     except yaml.YAMLError as exc:
         raise FrontMatterError("Invalid YAML front matter.") from exc
 
+    if not isinstance(data, dict):
+        raise FrontMatterError(
+            "YAML front matter must contain key-value pairs."
+        )
+
     metadata = Metadata(
         title=data.get("title", ""),
         subtitle=data.get("subtitle", ""),
