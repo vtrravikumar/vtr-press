@@ -65,6 +65,7 @@ def publish_epub(
 def publish_all(
     path: str | Path,
     cover_path: str | Path | None = None,
+    typst_cover_path: str | None = None,
 ) -> tuple[str, bytes]:
     """
     Compile a Markdown manuscript into Typst and EPUB.
@@ -77,6 +78,9 @@ def publish_all(
     cover_path:
         Path to the cover image.
 
+    typst_cover_path:
+        Cover image path as it should appear in the generated Typst source.
+
     Returns
     -------
     tuple[str, bytes]
@@ -85,8 +89,11 @@ def publish_all(
 
     book = read_book(path)
 
+    if typst_cover_path is None:
+        typst_cover_path = "/assets/books/current/cover.png"
+
     return (
-        render_typst(book),
+        render_typst(book, typst_cover_path),
         render_epub(book, cover_path),
     )
 

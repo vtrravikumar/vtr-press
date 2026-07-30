@@ -4,6 +4,8 @@ Render a Book AST into Typst source.
 
 from __future__ import annotations
 
+import re
+
 from model import (
     Book,
     Part,
@@ -22,57 +24,25 @@ from model import (
     SectionKind,
 )
 
-# ------------------------------------------------------------------
-# Typst document preamble
-# ------------------------------------------------------------------
-
-TYPST_PREAMBLE = """
-#set page(
-  paper: "a5",
-  margin: (
-    x: 18mm,
-    y: 22mm,
-  ),
-  numbering: none,
-)
-
-#set text(
-    font: "Libertinus Serif",
-    size: 11pt,
-)
-
-#show heading.where(level: 1): set text(
-  size: 18pt,
-  weight: "bold",
-)
-
-#show heading.where(level: 2): set text(
-  size: 16pt,
-  weight: "bold",
-)
-
-#show heading.where(level: 3): set text(
-  size: 15pt,
-  weight: "bold",
-)
-
-#set par(justify: true)
-
-""".strip()
+DEFAULT_THEME_IMPORT = "../themes/classic/theme.typ"
 
 
-def render(book: Book) -> str:
+def render(
+    book: Book,
+    cover_path: str = "/assets/books/current/cover.png",
+) -> str:
     """Render a Book AST into Typst."""
 
-    renderer = _Renderer()
+    renderer = _Renderer(cover_path)
     return renderer.render(book)
 
 
 class _Renderer:
     """Typst renderer."""
 
-    def __init__(self) -> None:
+    def __init__(self, cover_path: str) -> None:
         self.lines: list[str] = []
+        self.cover_path = cover_path
 
         # Tracks whether we've already rendered the first printable page.
         self._first_page = True
@@ -88,7 +58,7 @@ class _Renderer:
         """Escape plain text for Typst."""
 
         return (
-            text
+            self._plain(text)
             .replace("\\", "\\\\")
             .replace("#", "\\#")
         )
@@ -97,11 +67,28 @@ class _Renderer:
         """Escape Typst string literals."""
 
         return (
-            text
+            self._plain(text)
             .replace("\\", "\\\\")
             .replace('"', '\\"')
         )
 
+    def _plain(self, value: object) -> str:
+        """Return a safe string for Typst output."""
+
+        if value is None:
+            return ""
+
+        return str(value)
+
+    def _running_title(self, title: str) -> str:
+        """Return a title suitable for running heads."""
+
+        return re.sub(
+            r"^chapter\s+\S+\s*[-–—:]\s*",
+            "",
+            title,
+            flags=re.IGNORECASE,
+        )
 
     # ------------------------------------------------------------------
     # Public
@@ -127,17 +114,18 @@ class _Renderer:
     def _render_preamble(self, book: Book) -> None:
         """Emit the Typst document preamble."""
 
-        self.lines.append(TYPST_PREAMBLE)
-        self.lines.append("")
-
         md = book.metadata
 
-        # Optional document variables for future use.
-        if md.title:
-            self.lines.append(f'#let book_title = "{self._escape_string(md.title)}"')
-
-        if md.author:
-            self.lines.append(f'#let book_author = "{self._escape_string(md.author)}"')
+        self.lines.append(f'#import "{DEFAULT_THEME_IMPORT}": *')
+        self.lines.append("")
+        self.lines.append("#initialize-theme(")
+        self.lines.append(
+            f'  book-title: "{self._escape_string(md.title)}",'
+        )
+        self.lines.append(
+            f'  book-author: "{self._escape_string(md.author)}",'
+        )
+        self.lines.append(")")
         self.lines.append("")
 
     # ------------------------------------------------------------------
@@ -147,33 +135,10 @@ class _Renderer:
     def _render_cover(self) -> None:
         """Render a full-page digital cover."""
 
-        # Override margins for the cover page only.
-        self.lines.append("#set page(")
-        self.lines.append("  margin: 0mm,")
-        self.lines.append(")")
-        self.lines.append("")
-
         self.lines.append(
-            '#image('
-            '"../assets/books/current/cover.png", '
-            'width: 100%, '
-            'height: 100%'
-            ')'
+            f'#render-cover("{self._escape_string(self.cover_path)}")'
         )
-
         self.lines.append("")
-        self.lines.append("#pagebreak()")
-        self.lines.append("")
-
-        # Restore normal margins for the remainder of the book.
-        self.lines.append("#set page(")
-        self.lines.append("  margin: (")
-        self.lines.append("    x: 18mm,")
-        self.lines.append("    y: 22mm,")
-        self.lines.append("  ),")
-        self.lines.append(")")
-        self.lines.append("")
-
 
     # ------------------------------------------------------------------
     # Title Page
@@ -184,44 +149,20 @@ class _Renderer:
 
         md = book.metadata
 
-        self.lines.append("#align(center)[")
-        self.lines.append("")
-
-        self.lines.append("#v(20%)")
-        self.lines.append("")
-
+        self.lines.append("#render-title-page(")
         self.lines.append(
-            f'#text(size: 28pt, weight: "bold")[{self._escape_text(md.title)}]'
+            f'  title: "{self._escape_string(md.title)}",'
         )
-
-        if md.subtitle:
-            self.lines.append("")
-            self.lines.append(
-                f'#text(size: 15pt)[{self._escape_text(md.subtitle)}]'
-            )
-
-        self.lines.append("")
-        self.lines.append("#v(12%)")
-        self.lines.append("")
-
         self.lines.append(
-            f'#text(size: 16pt)[{self._escape_text(md.author)}]'
+            f'  subtitle: "{self._escape_string(md.subtitle)}",'
         )
-
-        self.lines.append("")
-        self.lines.append("")
-        self.lines.append("#v(20%)")
-        self.lines.append("")
-        self.lines.append("#align(center)[")
-        self.lines.append('  #image("../assets/publisher/logo.png", width: 20mm)')
-        self.lines.append("  #v(2mm)")
-        self.lines.append(f'  #text(size: 11pt)[{self._escape_text(md.copyright_year)}]')
-        self.lines.append("]")
-
-        self.lines.append("")
-        self.lines.append("]")
-        self.lines.append("")
-        self.lines.append("#pagebreak()")
+        self.lines.append(
+            f'  author: "{self._escape_string(md.author)}",'
+        )
+        self.lines.append(
+            f'  copyright-year: "{self._escape_string(md.copyright_year)}",'
+        )
+        self.lines.append(")")
         self.lines.append("")
 
     # ------------------------------------------------------------------
@@ -246,19 +187,7 @@ class _Renderer:
 
         self.lines.append("#pagebreak()")
         self.lines.append("")
-
-        self.lines.append("#align(left)[")
-        self.lines.append("  #text(")
-        self.lines.append("    size: 22pt,")
-        self.lines.append('    weight: "bold",')
-        self.lines.append("  )[Contents]")
-        self.lines.append("]")
-        self.lines.append("")
-
-        self.lines.append("#v(1em)")
-        self.lines.append("")
-
-        self.lines.append("#outline(title: none)")
+        self.lines.append("#render-contents()")
         self.lines.append("")
 
 
@@ -269,8 +198,7 @@ class _Renderer:
     def _start_main_matter(self) -> None:
         """Begin page numbering for the main matter."""
 
-        self.lines.append("#set page(numbering: \"1\")")
-        self.lines.append("#counter(page).update(1)")
+        self.lines.append("#start-main-matter()")
         self.lines.append("")
 
     # ------------------------------------------------------------------
@@ -305,6 +233,8 @@ class _Renderer:
     def _render_part(self, part: Part) -> None:
 
         self._page_break()
+        self.lines.append("#part-page()")
+        self.lines.append("")
 
         self._render_heading(1, part.title)
         self.lines.append("")
@@ -319,6 +249,12 @@ class _Renderer:
     def _render_chapter(self, chapter: Chapter) -> None:
 
         self._page_break()
+        self.lines.append(
+            "#chapter-page("
+            f'"{self._escape_string(self._running_title(chapter.title))}"'
+            ")"
+        )
+        self.lines.append("")
 
         self._render_heading(2, chapter.title)
         self.lines.append("")
@@ -335,13 +271,9 @@ class _Renderer:
 
         if scene.title:
 
-            self.lines.append("#v(0.8em)")
-
             self.lines.append(
-                f'#text(weight: "bold")[{self._escape_text(scene.title)}]'
+                f'#render-scene-title[{self._escape_text(scene.title)}]'
             )
-            self.lines.append("")
-            self.lines.append("#v(0.5em)")
             self.lines.append("")
 
         for block in scene.blocks:
@@ -354,25 +286,46 @@ class _Renderer:
 
     def _render_section(self, section: Section) -> None:
 
+        needs_page_break = True
+
         # Insert the Contents page immediately before the Prologue.
         if (
             not self._contents_inserted
             and section.kind == SectionKind.PROLOGUE
         ):
             self._render_contents()
+            self.lines.append("#pagebreak()")
+            self.lines.append("")
 
             # Start numbering from the Prologue.
             self._start_main_matter()
 
             self._contents_inserted = True
+            needs_page_break = False
 
-        self._page_break()
+        if needs_page_break:
+            self._page_break()
 
         outlined = section.kind not in {
             SectionKind.COPYRIGHT,
             SectionKind.DEDICATION,
             SectionKind.THIRUKKURAL,
         }
+
+        if section.kind in {
+            SectionKind.COPYRIGHT,
+            SectionKind.THIRUKKURAL,
+        }:
+            self.lines.append("#front-matter-page()")
+            self.lines.append("")
+
+        elif outlined:
+            self.lines.append(
+                "#running-section-page("
+                f'"{self._escape_string(section.title)}"'
+                ")"
+            )
+            self.lines.append("")
 
         self._render_heading(
             2,
@@ -382,8 +335,21 @@ class _Renderer:
 
         self.lines.append("")
 
+        centered_section = section.kind in {
+            SectionKind.COPYRIGHT,
+            SectionKind.THIRUKKURAL,
+        }
+
+        if centered_section:
+            self.lines.append("#centered-front-matter[")
+            self.lines.append("")
+
         for block in section.blocks:
             self._render_block(block)
+
+        if centered_section:
+            self.lines.append("]")
+            self.lines.append("")
     # ------------------------------------------------------------------
     # Blocks
     # ------------------------------------------------------------------

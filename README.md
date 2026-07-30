@@ -59,7 +59,7 @@ vtr-press/
 ├── parser/
 ├── renderer/
 ├── writer/
-├── theme/
+├── themes/
 
 ├── model.py
 ├── publish.py
@@ -80,6 +80,8 @@ Publishing formats are presentation.
 The manuscript should never change simply because a new output format is added.
 
 VTR Press keeps those concerns separate through a shared document model and independent renderers.
+
+Current Release: **v0.6.0**
 
 ## License
 

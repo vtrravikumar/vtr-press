@@ -74,17 +74,21 @@ def main() -> None:
     # Stage book assets
     #
 
-    book_assets = ROOT / "assets" / "books" / "current"
+    cover_suffix = cover.suffix.lower() or ".png"
+    cover_filename = f"cover{cover_suffix}"
+    book_assets = GENERATED_DIR / "assets" / "books" / output_name
     book_assets.mkdir(parents=True, exist_ok=True)
+    staged_cover = book_assets / cover_filename
 
     shutil.copy2(
         cover,
-        book_assets / "cover.png",
+        staged_cover,
     )
 
     typst_source, epub_source = publish_all(
         manuscript,
         cover,
+        f"/generated/assets/books/{output_name}/{cover_filename}",
     )
 
     typ_file = GENERATED_DIR / f"{output_name}.typ"
