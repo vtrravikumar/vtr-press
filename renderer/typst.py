@@ -88,7 +88,6 @@ class _Renderer:
         self._render_cover()
         self._render_title_page(book)
         for item in book.sections:
-            print(type(item).__name__, item.title)
             if isinstance(item, Section):
                 self._render_section(item)
 

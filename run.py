@@ -116,15 +116,10 @@ def main() -> None:
     )
 
     print()
-    print("✓ Success")
+    print(f"✓ PDF   output/{config['output_name']}.pdf")
+    print(f"✓ EPUB  output/{config['output_name']}.epub")
     print()
-    print(f"Book      : {book_name}")
-    print(f"Source    : {manuscript}")
-    print(f"Typst     : {typ_file}")
-    print(f"PDF       : {pdf_file}")
-    print(f"EPUB      : {epub_file}")
-    print()
-
+    print("Done.")
 
 if __name__ == "__main__":
     main()

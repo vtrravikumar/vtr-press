@@ -1,142 +1,59 @@
 # VTR Press
 
-VTR Press is a lightweight publishing engine for transforming structured Markdown manuscripts into professional publishing formats.
+VTR Press is an open-source publishing engine created by V.T.R. Ravi Kumar for producing professionally typeset books from structured Markdown manuscripts.
 
-The engine is designed to be independent of any specific book. A single manuscript can be rendered into multiple publication formats without modification.
+It separates content from presentation through a shared document model, allowing the same manuscript to be rendered into multiple publication formats without modification.
 
-# Quick Start
+## Features
 
-## 1. Open a terminal
+- PDF generation using Typst
+- EPUB 3 generation
+- Shared document model (AST)
+- Support for Parts, Chapters and optional Scenes
+- Front matter (Copyright, Dedication, Preface, Prologue, etc.)
+- Verse blocks
+- Inline formatting (bold, italic, code, links)
+- Format-independent architecture
+
+## Project Status
+
+Current release: **v0.5.0**
+
+Stable:
+
+- PDF
+- EPUB
+
+Planned:
+
+- HTML renderer
+- Print-ready PDF
+- Themes
+- Accessibility improvements
+
+## Quick Start
 
 ```bash
-cd ~/Documents/Projects/vtr-press
-```
+git clone https://github.com/<username>/vtr-press.git
+cd vtr-press
 
-> Adjust the path if your Projects directory is elsewhere.
-
----
-
-## 2. Activate the virtual environment
-
-```bash
+python3 -m venv .venv
 source .venv/bin/activate
-```
 
----
-
-## 3. Install dependencies (first time only)
-
-```bash
 pip install -r requirements.txt
-```
 
----
-
-## 4. Verify the available books
-
-Open:
-
-```text
-books.yaml
-```
-
-Example:
-
-```yaml
-books:
-
-  engineering:
-    manuscript: ../HomeLab-Engineering/manuscript.md
-    cover: ../HomeLab-Engineering/assets/cover.png
-    output_name: HomeLab-Engineering
-
-  memoir:
-    manuscript: ../Project-memoir/manuscript.md
-    cover: ../Project-memoir/assets/cover.png
-    output_name: Project-Memoir
-```
-
----
-
-## 5. Generate a PDF
-
-Engineering Home
-
-```bash
-python run.py engineering
-```
-
-Project Memoir
-
-```bash
 python run.py memoir
-```
-
----
-
-## Output
-
-Generated Typst source:
-
-```text
-generated/
-```
-
-Generated PDF:
-
-```text
-output/
-```
-
-Example:
-
-```text
-output/
-    HomeLab-Engineering.pdf
-    Project-Memoir.pdf
-```
-
-## Typical Daily Workflow
-
-```bash
-cd ~/Documents/Projects/vtr-press
-
-source .venv/bin/activate
-
-git pull
-
-python run.py engineering
 ```
 
 or
 
 ```bash
-python run.py memoir
+python run.py engineering
 ```
-
-## Current Capabilities
-
-- ✅ Markdown parser
-- ✅ Book abstract syntax tree (AST)
-- ✅ Typst renderer
-- ✅ PDF generation
-
-## In Progress
-
-- EPUB renderer
-- EPUB writer
-
-## Planned
-
-- HTML renderer
-- DOCX renderer
-- Kindle support
-
----
 
 ## Repository Structure
 
-```
+```text
 vtr-press/
 
 ├── parser/
@@ -146,7 +63,7 @@ vtr-press/
 
 ├── model.py
 ├── publish.py
-├── exceptions.py
+├── run.py
 
 ├── docs/
 ├── assets/
@@ -154,52 +71,16 @@ vtr-press/
 └── output/
 ```
 
----
-
-## Development Environment
-
-Create a virtual environment:
-
-```bash
-python3 -m venv .venv
-```
-
-Activate it (macOS/Linux):
-
-```bash
-source .venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-Deactivate:
-
-```bash
-deactivate
-```
-
----
-
-## Running
-
-The publishing engine is currently under active development.
-
-Eventually the primary entry point will be:
-
-```bash
-python publish.py
-```
-
----
-
 ## Philosophy
 
 Books are content.
 
-VTR Press transforms manuscripts into professional publication formats.
+Publishing formats are presentation.
 
-Adding a new output format should never require changing the manuscript itself.
+The manuscript should never change simply because a new output format is added.
+
+VTR Press keeps those concerns separate through a shared document model and independent renderers.
+
+## License
+
+MIT License
