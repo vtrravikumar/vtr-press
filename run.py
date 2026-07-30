@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from publish import publish
+from publish import publish_all
 
 
 ROOT = Path(__file__).parent
@@ -82,14 +82,20 @@ def main() -> None:
         book_assets / "cover.png",
     )
 
-    typst_source = publish(manuscript)
+    typst_source, epub_source = publish_all(
+        manuscript,
+        cover,
+    )
 
     typ_file = GENERATED_DIR / f"{output_name}.typ"
+    epub_file = OUTPUT_DIR / f"{output_name}.epub"
 
     typ_file.write_text(
         typst_source,
         encoding="utf-8",
     )
+
+    epub_file.write_bytes(epub_source)
 
     pdf_file = OUTPUT_DIR / f"{output_name}.pdf"
 
@@ -116,6 +122,7 @@ def main() -> None:
     print(f"Source    : {manuscript}")
     print(f"Typst     : {typ_file}")
     print(f"PDF       : {pdf_file}")
+    print(f"EPUB      : {epub_file}")
     print()
 
 

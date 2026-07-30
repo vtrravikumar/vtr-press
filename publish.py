@@ -1,7 +1,7 @@
 """
 Publication pipeline.
 
-Convert a Markdown manuscript into Typst source.
+Convert a Markdown manuscript into publication outputs.
 """
 
 from __future__ import annotations
@@ -12,7 +12,8 @@ from model import Book
 from parser.reader import read
 from parser.structure import parse_structure
 from parser.inline import parse_inline
-from renderer.typst import render
+from renderer.epub import render as render_epub
+from renderer.typst import render as render_typst
 
 
 def publish(path: str | Path) -> str:
@@ -30,11 +31,78 @@ def publish(path: str | Path) -> str:
         Typst source.
     """
 
+    book = read_book(path)
+
+    return render_typst(book)
+
+
+def publish_epub(
+    path: str | Path,
+    cover_path: str | Path | None = None,
+) -> bytes:
+    """
+    Compile a Markdown manuscript into EPUB.
+
+    Parameters
+    ----------
+    path:
+        Path to the Markdown manuscript.
+
+    cover_path:
+        Path to the cover image.
+
+    Returns
+    -------
+    bytes
+        EPUB package bytes.
+    """
+
+    book = read_book(path)
+
+    return render_epub(book, cover_path)
+
+
+def publish_all(
+    path: str | Path,
+    cover_path: str | Path | None = None,
+) -> tuple[str, bytes]:
+    """
+    Compile a Markdown manuscript into Typst and EPUB.
+
+    Parameters
+    ----------
+    path:
+        Path to the Markdown manuscript.
+
+    cover_path:
+        Path to the cover image.
+
+    Returns
+    -------
+    tuple[str, bytes]
+        Typst source and EPUB package bytes.
+    """
+
+    book = read_book(path)
+
+    return (
+        render_typst(book),
+        render_epub(book, cover_path),
+    )
+
+
+def read_book(path: str | Path) -> Book:
+    """
+    Read and parse a Markdown manuscript into a Book AST.
+    """
+
     metadata, body = read(path)
 
     book = parse_structure(metadata, body)
 
-    return publish_book(book)
+    parse_inline(book)
+
+    return book
 
 
 def publish_book(book: Book) -> str:
@@ -54,4 +122,30 @@ def publish_book(book: Book) -> str:
 
     parse_inline(book)
 
-    return render(book)
+    return render_typst(book)
+
+
+def publish_epub_book(
+    book: Book,
+    cover_path: str | Path | None = None,
+) -> bytes:
+    """
+    Compile a parsed Book into EPUB.
+
+    Parameters
+    ----------
+    book:
+        Parsed document AST.
+
+    cover_path:
+        Path to the cover image.
+
+    Returns
+    -------
+    bytes
+        EPUB package bytes.
+    """
+
+    parse_inline(book)
+
+    return render_epub(book, cover_path)
