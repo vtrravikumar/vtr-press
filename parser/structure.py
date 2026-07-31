@@ -36,6 +36,7 @@ SECTION_MAP = {
     "acknowledgements": SectionKind.ACKNOWLEDGEMENTS,
     "epilogue": SectionKind.EPILOGUE,
     "about the author": SectionKind.ABOUT_AUTHOR,
+    "back cover": SectionKind.BACK_COVER, 
 }
 
 

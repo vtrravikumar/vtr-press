@@ -62,6 +62,7 @@ class _Renderer:
             self._plain(text)
             .replace("\\", "\\\\")
             .replace("#", "\\#")
+            .replace("@", "\\@")
         )
 
     def _escape_string(self, text: str) -> str:
@@ -332,6 +333,10 @@ class _Renderer:
             self.lines.append("#front-matter-page[")
             self.lines.append("")
 
+        elif section.kind == SectionKind.BACK_COVER:
+            self.lines.append("#back-cover-page[")
+            self.lines.append("")
+
         elif outlined:
             self.lines.append(
                 "#running-section-page("
@@ -340,13 +345,13 @@ class _Renderer:
             )
             self.lines.append("")
 
-        self._render_heading(
-            2,
-            section.title,
-            outlined=outlined,
-        )
-
-        self.lines.append("")
+        if section.kind != SectionKind.BACK_COVER:
+            self._render_heading(
+                2,
+                section.title,
+                outlined=outlined,
+            )
+            self.lines.append("")
 
         centered_section = section.kind in {
             SectionKind.COPYRIGHT,
@@ -369,9 +374,11 @@ class _Renderer:
             SectionKind.COPYRIGHT,
             SectionKind.DEDICATION,
             SectionKind.THIRUKKURAL,
+            SectionKind.BACK_COVER,
         } or outlined:
             self.lines.append("]")
             self.lines.append("")
+
     # ------------------------------------------------------------------
     # Blocks
     # ------------------------------------------------------------------

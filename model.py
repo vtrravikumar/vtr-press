@@ -123,6 +123,7 @@ class SectionKind(Enum):
     ACKNOWLEDGEMENTS = auto()
     EPILOGUE = auto()
     ABOUT_AUTHOR = auto()
+    BACK_COVER = auto()  
     OTHER = auto()
 
 

@@ -12,6 +12,7 @@
   running-section-page,
   render-scene-title,
   centered-front-matter,
+  back-cover-page,
 )
 
 

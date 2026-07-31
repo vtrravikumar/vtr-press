@@ -97,6 +97,11 @@
   ]
 }
 
+#let back-cover-page(body) = {
+  plain-page[
+    #body
+  ]
+}
 
 #let render-scene-title(title) = {
   v(0.8em)
