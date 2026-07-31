@@ -1,4 +1,4 @@
-#import "page.typ": setup-page, start-main-matter
+#import "page.typ": setup-page, main-matter
 #import "typography.typ": setup-typography
 #import "headings.typ": setup-headings
 #import "metadata.typ": setup-metadata
@@ -15,12 +15,18 @@
 )
 
 
-#let initialize-theme(book-title: "", book-author: "") = {
-  setup-page()
-  setup-typography()
-  setup-headings()
-  setup-metadata(
+#let initialize-theme(
+  body,
+  book-title: "",
+  book-author: "",
+) = [
+  #setup-page()
+  #setup-typography()
+  #setup-headings()
+  #setup-metadata(
     book-title: book-title,
     book-author: book-author,
   )
-}
+
+  #body
+]

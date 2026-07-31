@@ -48,6 +48,7 @@ class _Renderer:
         self._first_page = True
         # Tracks whether the table of contents has been inserted.
         self._contents_inserted = False
+        self._main_matter_open = False
 
 
     # ------------------------------------------------------------------
@@ -105,6 +106,9 @@ class _Renderer:
             elif isinstance(item, Part):
                 self._render_part(item)
 
+        if self._main_matter_open:
+            self.lines.append("]")
+
         return "\n".join(self.lines).rstrip() + "\n"
 
     # ------------------------------------------------------------------
@@ -118,7 +122,7 @@ class _Renderer:
 
         self.lines.append(f'#import "{DEFAULT_THEME_IMPORT}": *')
         self.lines.append("")
-        self.lines.append("#initialize-theme(")
+        self.lines.append("#show: initialize-theme.with(")
         self.lines.append(
             f'  book-title: "{self._escape_string(md.title)}",'
         )
@@ -138,6 +142,8 @@ class _Renderer:
         self.lines.append(
             f'#render-cover("{self._escape_string(self.cover_path)}")'
         )
+        self.lines.append("")
+        self.lines.append("#pagebreak()")
         self.lines.append("")
 
     # ------------------------------------------------------------------
@@ -163,6 +169,8 @@ class _Renderer:
             f'  copyright-year: "{self._escape_string(md.copyright_year)}",'
         )
         self.lines.append(")")
+        self.lines.append("")
+        self.lines.append("#pagebreak()")
         self.lines.append("")
 
     # ------------------------------------------------------------------
@@ -198,8 +206,9 @@ class _Renderer:
     def _start_main_matter(self) -> None:
         """Begin page numbering for the main matter."""
 
-        self.lines.append("#start-main-matter()")
+        self.lines.append("#main-matter[")
         self.lines.append("")
+        self._main_matter_open = True
 
     # ------------------------------------------------------------------
     # Heading
@@ -233,11 +242,12 @@ class _Renderer:
     def _render_part(self, part: Part) -> None:
 
         self._page_break()
-        self.lines.append("#part-page()")
+        self.lines.append("#part-page[")
         self.lines.append("")
 
         self._render_heading(1, part.title)
         self.lines.append("")
+        self.lines.append("]")
 
         for chapter in part.chapters:
             self._render_chapter(chapter)
@@ -252,7 +262,7 @@ class _Renderer:
         self.lines.append(
             "#chapter-page("
             f'"{self._escape_string(self._running_title(chapter.title))}"'
-            ")"
+            ")["
         )
         self.lines.append("")
 
@@ -261,6 +271,8 @@ class _Renderer:
 
         for scene in chapter.scenes:
             self._render_scene(scene)
+
+        self.lines.append("]")
 
     # ------------------------------------------------------------------
     # Scene
@@ -314,16 +326,17 @@ class _Renderer:
 
         if section.kind in {
             SectionKind.COPYRIGHT,
+            SectionKind.DEDICATION,
             SectionKind.THIRUKKURAL,
         }:
-            self.lines.append("#front-matter-page()")
+            self.lines.append("#front-matter-page[")
             self.lines.append("")
 
         elif outlined:
             self.lines.append(
                 "#running-section-page("
                 f'"{self._escape_string(section.title)}"'
-                ")"
+                ")["
             )
             self.lines.append("")
 
@@ -337,6 +350,7 @@ class _Renderer:
 
         centered_section = section.kind in {
             SectionKind.COPYRIGHT,
+            SectionKind.DEDICATION,
             SectionKind.THIRUKKURAL,
         }
 
@@ -348,6 +362,14 @@ class _Renderer:
             self._render_block(block)
 
         if centered_section:
+            self.lines.append("]")
+            self.lines.append("")
+
+        if section.kind in {
+            SectionKind.COPYRIGHT,
+            SectionKind.DEDICATION,
+            SectionKind.THIRUKKURAL,
+        } or outlined:
             self.lines.append("]")
             self.lines.append("")
     # ------------------------------------------------------------------

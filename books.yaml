@@ -7,5 +7,5 @@ books:
 
   memoir:
     manuscript: ../Project-memoir/manuscript.md
-    cover: ../Project-memoir/assets/cover.png
+    cover: ../Project-memoir/assets/book_cover.png
     output_name: Project-Memoir

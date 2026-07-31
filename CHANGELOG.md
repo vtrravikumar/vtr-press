@@ -60,3 +60,11 @@ The format loosely follows Keep a Changelog while remaining focused on manuscrip
 ### Fixed
 - Prevented invalid Typst generation from unescaped manuscript content
 - Invalid YAML mappings now raise FrontMatterError
+  
+## v0.7.1 - 2026-07-31
+
+### Fixed
+
+- Fixed front matter rendering regression introduced by theme externalization.
+- Corrected Dedication page rendering.
+- Restored consistent A5 layout across all front matter pages.
