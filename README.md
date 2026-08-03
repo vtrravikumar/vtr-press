@@ -70,6 +70,25 @@ vtr-press/
 ├── generated/
 └── output/
 ```
+## Your First Book
+
+Start by copying the sample manuscript.
+
+```bash
+cp examples/sample-manuscript.md mybook.md
+```
+
+Update the metadata.
+
+Create a cover image.
+
+Add an entry to `books.yaml`.
+
+Run:
+
+```bash
+python run.py mybook
+```
 
 ## Philosophy
 

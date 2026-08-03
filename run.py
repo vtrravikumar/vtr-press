@@ -60,12 +60,10 @@ def main() -> None:
 
     GENERATED_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    
 
     config = books[book_name]
 
     cover = (ROOT / config["cover"]).resolve()
-
     manuscript = (ROOT / config["manuscript"]).resolve()
 
     output_name = config["output_name"]
@@ -76,14 +74,20 @@ def main() -> None:
 
     cover_suffix = cover.suffix.lower() or ".png"
     cover_filename = f"cover{cover_suffix}"
+
     book_assets = GENERATED_DIR / "assets" / "books" / output_name
     book_assets.mkdir(parents=True, exist_ok=True)
+
     staged_cover = book_assets / cover_filename
 
     shutil.copy2(
         cover,
         staged_cover,
     )
+
+    #
+    # Generate publication formats
+    #
 
     typst_source, epub_source = publish_all(
         manuscript,
@@ -92,6 +96,7 @@ def main() -> None:
     )
 
     typ_file = GENERATED_DIR / f"{output_name}.typ"
+    pdf_file = OUTPUT_DIR / f"{output_name}.pdf"
     epub_file = OUTPUT_DIR / f"{output_name}.epub"
 
     typ_file.write_text(
@@ -101,7 +106,9 @@ def main() -> None:
 
     epub_file.write_bytes(epub_source)
 
-    pdf_file = OUTPUT_DIR / f"{output_name}.pdf"
+    #
+    # Compile PDF
+    #
 
     print()
     print("Compiling Typst...")
@@ -119,11 +126,30 @@ def main() -> None:
         check=True,
     )
 
+    #
+    # Publish artifacts to ISBN workspace
+    #
+
+    isbn_dir = ROOT / "isbn" / output_name
+    isbn_dir.mkdir(parents=True, exist_ok=True)
+
+    for artifact in (pdf_file, epub_file):
+        shutil.copy2(
+            artifact,
+            isbn_dir / artifact.name,
+        )
+
+    #
+    # Success
+    #
+
     print()
-    print(f"✓ PDF   output/{config['output_name']}.pdf")
-    print(f"✓ EPUB  output/{config['output_name']}.epub")
+    print(f"✓ PDF    output/{pdf_file.name}")
+    print(f"✓ EPUB   output/{epub_file.name}")
+    print(f"✓ ISBN   isbn/{output_name}/")
     print()
     print("Done.")
+
 
 if __name__ == "__main__":
     main()
