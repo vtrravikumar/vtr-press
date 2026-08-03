@@ -453,7 +453,7 @@ class _Renderer:
 
         if isinstance(node, Link):
             return (
-                f'link("{node.url}")'
+                f'link("{self._escape_string(node.url)}")'
                 f'[{self._escape_text(node.text)}]'
             )
 
