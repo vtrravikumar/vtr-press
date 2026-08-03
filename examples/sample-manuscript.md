@@ -9,33 +9,37 @@ paper: a5
 language: en
 ---
 
-# Copyright
+## Copyright
 
 Copyright © 2026 Jane Doe
 
 All rights reserved.
 
-# Dedication
+## Dedication
 
 For everyone who loves books.
 
-# Thirukkural
+## Thirukkural
 
+:::verse
 அகர முதல எழுத்தெல்லாம் ஆதி
 பகவன் முதற்றே உலகு.
+:::
 
+:::verse
 *As the letter A is the first of all letters,
 so the Eternal God is first in the world.*
+:::
 
-# Prologue
+## Prologue
 
 This sample manuscript demonstrates the supported features of VTR Press.
 
-# Part I - Getting Started
+## Part I - Getting Started
 
-## Chapter 1 - Welcome
+### Chapter 1 - Welcome
 
-### First Scene
+#### First Scene
 
 This is a normal paragraph.
 
@@ -59,16 +63,16 @@ Books are forever.
 
 Another paragraph.
 
-## Chapter 2 - A Second Chapter
+### Chapter 2 - A Second Chapter
 
-### Another Scene
+#### Another Scene
 
 Scenes can contain multiple paragraphs.
 
-# Epilogue
+## Epilogue
 
 Thank you for reading.
 
-# About the Author
+## About the Author
 
 Jane Doe is a fictional author used to demonstrate the VTR Press publishing engine.

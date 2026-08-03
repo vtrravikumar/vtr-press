@@ -89,6 +89,36 @@ Run:
 ```bash
 python run.py mybook
 ```
+## Running Tests
+
+Install the development dependencies:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Run the regression suite:
+
+```bash
+pytest tests/ -v
+```
+
+
+## Quality
+
+VTR Press includes an automated regression test suite covering:
+
+- Markdown parser
+- Document structure
+- YAML front matter
+- Typst renderer
+- EPUB renderer
+- End-to-end publishing pipeline
+
+Run the suite with:
+```bash
+pytest tests/ -v
+```
 
 ## Philosophy
 
