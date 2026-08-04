@@ -24,6 +24,7 @@
   subtitle: "",
   author: "",
   copyright-year: "",
+  show-publisher-logo: true,
 ) = {
   plain-page[
     #align(center)[
@@ -43,8 +44,10 @@
       #v(20%)
 
       #align(center)[
-        #image("/assets/publisher/logo.png", width: 20mm)
-        #v(2mm)
+        #if show-publisher-logo {
+          image("/assets/publisher/logo.png", width: 20mm)
+          v(2mm)
+        }
         #text(size: 11pt)[#copyright-year]
       ]
     ]

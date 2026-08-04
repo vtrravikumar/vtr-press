@@ -13,7 +13,7 @@ from parser.reader import read
 from parser.structure import parse_structure
 from parser.inline import parse_inline
 from renderer.epub import render as render_epub
-from renderer.typst import render as render_typst
+from renderer.typst import RenderOptions, render as render_typst
 
 
 def publish(path: str | Path) -> str:
@@ -66,6 +66,7 @@ def publish_all(
     path: str | Path,
     cover_path: str | Path | None = None,
     typst_cover_path: str | None = None,
+    render_options: RenderOptions | None = None,
 ) -> tuple[str, bytes]:
     """
     Compile a Markdown manuscript into Typst and EPUB.
@@ -81,6 +82,9 @@ def publish_all(
     typst_cover_path:
         Cover image path as it should appear in the generated Typst source.
 
+    render_options:
+        Options for Typst rendering. EPUB rendering is unaffected.
+
     Returns
     -------
     tuple[str, bytes]
@@ -93,7 +97,7 @@ def publish_all(
         typst_cover_path = "/assets/books/current/cover.png"
 
     return (
-        render_typst(book, typst_cover_path),
+        render_typst(book, typst_cover_path, render_options),
         render_epub(book, cover_path),
     )
 
@@ -112,7 +116,10 @@ def read_book(path: str | Path) -> Book:
     return book
 
 
-def publish_book(book: Book) -> str:
+def publish_book(
+    book: Book,
+    render_options: RenderOptions | None = None,
+) -> str:
     """
     Compile a parsed Book into Typst.
 
@@ -129,7 +136,7 @@ def publish_book(book: Book) -> str:
 
     parse_inline(book)
 
-    return render_typst(book)
+    return render_typst(book, options=render_options)
 
 
 def publish_epub_book(

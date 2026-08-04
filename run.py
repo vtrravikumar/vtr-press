@@ -6,6 +6,7 @@ Usage
 
 python run.py engineering
 python run.py memoir
+python run.py memoir print
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from pathlib import Path
 import yaml
 
 from publish import publish_all
+from renderer.typst import RenderOptions
 
 
 ROOT = Path(__file__).parent
@@ -36,15 +38,27 @@ def load_books() -> dict:
 
 def main() -> None:
 
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in {2, 3}:
         print("Usage:")
         print("    python run.py <book>")
+        print("    python run.py <book> print")
         print()
         print("Example:")
         print("    python run.py engineering")
+        print("    python run.py memoir print")
         sys.exit(1)
 
     book_name = sys.argv[1]
+    print_mode = len(sys.argv) == 3
+
+    if print_mode and sys.argv[2] != "print":
+        print(f'Unknown publishing mode "{sys.argv[2]}"')
+        print()
+        print("Available optional modes:")
+        print("  - print")
+        sys.exit(1)
+
+    render_options = RenderOptions(print_mode=print_mode)
 
     books = load_books()
 
@@ -93,6 +107,7 @@ def main() -> None:
         manuscript,
         cover,
         f"/generated/assets/books/{output_name}/{cover_filename}",
+        render_options=render_options,
     )
 
     typ_file = GENERATED_DIR / f"{output_name}.typ"

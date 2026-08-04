@@ -11,6 +11,7 @@ from io import BytesIO
 import pytest
 
 from publish import publish, publish_all, publish_epub, read_book
+from renderer.typst import RenderOptions
 
 
 def test_publish_produces_typst_source(valid_manuscript_path):
@@ -31,6 +32,19 @@ def test_publish_all_returns_consistent_typst_and_epub(valid_manuscript_path):
     typst_source, epub_bytes = publish_all(valid_manuscript_path)
 
     assert "The Sample Book" in typst_source
+    zf = zipfile.ZipFile(BytesIO(epub_bytes))
+    assert zf.testzip() is None
+
+
+def test_publish_all_accepts_print_render_options(valid_manuscript_path):
+    typst_source, epub_bytes = publish_all(
+        valid_manuscript_path,
+        render_options=RenderOptions(print_mode=True),
+    )
+
+    assert "#render-cover(" not in typst_source
+    assert "show-publisher-logo: false" in typst_source
+
     zf = zipfile.ZipFile(BytesIO(epub_bytes))
     assert zf.testzip() is None
 
