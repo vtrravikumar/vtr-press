@@ -33,8 +33,12 @@ env/
 # Build output
 # ------------------------------------------------------------------
 
+# Generated publishing artifacts
 generated/
 output/
+
+# Publisher submission workspace
+isbn/
 
 # ------------------------------------------------------------------
 # Python build artifacts

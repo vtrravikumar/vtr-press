@@ -177,8 +177,6 @@ def _print_book(metadata: Metadata) -> Book:
         title="Copyright",
         blocks=[
             Paragraph(children=[Text("First Edition - 2026")]),
-            Paragraph(children=[Text("Published by")]),
-            Paragraph(children=[Text("VTR Press\nChennai, India")]),
             Paragraph(children=[Text("Copyright (c) 2026 Jane Doe.")]),
             Paragraph(children=[Text("ISBN: 978-1-2345-6789-0")]),
         ],
@@ -288,8 +286,7 @@ def test_render_normal_mode_keeps_cover_and_default_title_page(sample_metadata):
     assert "#render-cover(" in out
     assert "#back-cover-page[" in out
     assert "show-publisher-logo" not in out
-    assert "Published by" in out
-    assert "VTR Press" in out
+    assert "#render-publisher-imprint()" in out
 
 
 def test_render_print_mode_skips_cover_and_hides_title_page_logo(sample_metadata):
@@ -301,9 +298,10 @@ def test_render_print_mode_skips_cover_and_hides_title_page_logo(sample_metadata
     assert "#render-cover(" not in out
     assert "#back-cover-page[" not in out
     assert "show-publisher-logo: false" in out
+    assert "#render-publisher-imprint()" not in out
 
 
-def test_render_print_mode_removes_only_copyright_publisher_branding(sample_metadata):
+def test_render_print_mode_leaves_copyright_body_unchanged(sample_metadata):
     out = render(
         _print_book(sample_metadata),
         options=RenderOptions(print_mode=True),
@@ -312,8 +310,45 @@ def test_render_print_mode_removes_only_copyright_publisher_branding(sample_meta
     prologue_idx = out.index("running-section-page")
     copyright_page = out[copyright_idx:prologue_idx]
 
-    assert "Published by" not in copyright_page
-    assert "VTR Press" not in copyright_page
-    assert "Chennai, India" not in copyright_page
     assert "Copyright (c) 2026 Jane Doe." in copyright_page
     assert "ISBN: 978-1-2345-6789-0" in copyright_page
+
+
+@pytest.mark.parametrize(
+    "publisher_text",
+    [
+        "Published by VTR Press",
+        "VTR Press.",
+        "VTR Press\nChennai, India",
+    ],
+)
+def test_render_print_mode_does_not_sniff_copyright_text(
+    sample_metadata,
+    publisher_text,
+):
+    copyright_section = Section(
+        kind=SectionKind.COPYRIGHT,
+        title="Copyright",
+        blocks=[
+            Paragraph(children=[Text("First Edition - 2026")]),
+            Paragraph(children=[Text(publisher_text)]),
+            Paragraph(children=[Text("Copyright (c) 2026 Jane Doe.")]),
+        ],
+    )
+    prologue = Section(
+        kind=SectionKind.PROLOGUE,
+        title="Prologue",
+        blocks=[Paragraph(children=[Text("Prologue text.")])],
+    )
+
+    out = render(
+        Book(metadata=sample_metadata, sections=[copyright_section, prologue]),
+        options=RenderOptions(print_mode=True),
+    )
+
+    copyright_idx = out.index("#front-matter-page[")
+    prologue_idx = out.index("running-section-page")
+    copyright_page = out[copyright_idx:prologue_idx]
+
+    assert publisher_text in copyright_page
+    assert "#render-publisher-imprint()" not in copyright_page

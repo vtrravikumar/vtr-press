@@ -71,6 +71,16 @@
 }
 
 
+#let render-publisher-imprint() = {
+  v(1em)
+  align(center)[
+    #text(size: 10pt)[Published by]
+    #linebreak()
+    #text(size: 10pt, weight: "bold")[VTR Press]
+  ]
+}
+
+
 #let part-page(body) = {
   plain-page[
     #body

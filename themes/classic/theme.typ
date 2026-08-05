@@ -6,6 +6,7 @@
   render-cover,
   render-title-page,
   render-contents,
+  render-publisher-imprint,
   part-page,
   front-matter-page,
   chapter-page,

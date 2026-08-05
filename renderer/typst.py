@@ -392,10 +392,14 @@ class _Renderer:
             self.lines.append("")
 
         for block in section.blocks:
-            if self._skip_block(section, block):
-                continue
-
             self._render_block(block)
+
+        if (
+            section.kind == SectionKind.COPYRIGHT
+            and not self.options.print_mode
+        ):
+            self.lines.append("#render-publisher-imprint()")
+            self.lines.append("")
 
         if centered_section:
             self.lines.append("]")
@@ -427,51 +431,6 @@ class _Renderer:
 
         raise TypeError(f"Unsupported block: {type(block).__name__}")
 
-    def _skip_block(self, section: Section, block: Block) -> bool:
-        """Return whether a block should be omitted for the active mode."""
-
-        if not self.options.print_mode:
-            return False
-
-        if section.kind != SectionKind.COPYRIGHT:
-            return False
-
-        if not isinstance(block, Paragraph):
-            return False
-
-        text = self._plain_block_text(block)
-        if text == "published by":
-            return True
-
-        first_line = text.splitlines()[0] if text else ""
-        return first_line == "vtr press"
-
-    def _plain_block_text(self, block: Paragraph) -> str:
-        """Extract normalized text from a paragraph for render decisions."""
-
-        text = "".join(self._plain_inline_text(node) for node in block.children)
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
-        return "\n".join(lines).lower()
-
-    def _plain_inline_text(self, node: Inline) -> str:
-        """Extract text from inline nodes without Typst formatting."""
-
-        if isinstance(node, Text):
-            return node.text
-
-        if isinstance(node, (Bold, Italic)):
-            return "".join(
-                self._plain_inline_text(child)
-                for child in node.children
-            )
-
-        if isinstance(node, Code):
-            return node.text
-
-        if isinstance(node, Link):
-            return node.text
-
-        return ""
     # ------------------------------------------------------------------
     # Paragraph
     # ------------------------------------------------------------------

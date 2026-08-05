@@ -120,6 +120,26 @@ Run the suite with:
 pytest tests/ -v
 ```
 
+### Generate a standard edition
+
+```bash
+python run.py memoir
+```
+
+Produces:
+- PDF (with publisher branding)
+- EPUB
+
+### Generate a publisher-ready print interior
+
+```bash
+python run.py memoir print
+```
+
+Produces:
+- Interior PDF suitable for print-on-demand submission
+- EPUB (unchanged)
+
 ## Philosophy
 
 Books are content.
