@@ -12,6 +12,9 @@ import pytest
 
 from publish import publish, publish_all, publish_epub, read_book
 from renderer.typst import RenderOptions
+from renderer.typst import render as render_typst
+from renderer.epub import render as render_epub
+from model import Book, Metadata, Paragraph, Section, SectionKind, Text
 
 
 def test_publish_produces_typst_source(valid_manuscript_path):
@@ -75,3 +78,41 @@ def test_shipped_example_manuscript_parses(repo_root):
     typst_source = publish(example_path)
 
     assert "The Sample Book" in typst_source
+
+
+# ============================================================================
+# Cross-renderer: BACK_COVER section (print-only marketing matter)
+# ============================================================================
+
+def test_back_cover_appears_in_typst_but_not_in_epub(sample_metadata):
+    """
+    The Back Cover section is required for print workflows (cover
+    generation) but must never surface in the EPUB, which should end
+    with the last real reading content (e.g. Epilogue / About the
+    Author) instead.
+    """
+
+    epilogue = Section(
+        kind=SectionKind.EPILOGUE,
+        title="Epilogue",
+        blocks=[Paragraph(children=[Text("Thank you for reading.")])],
+    )
+    back_cover = Section(
+        kind=SectionKind.BACK_COVER,
+        title="Back Cover",
+        blocks=[Paragraph(children=[Text("A gripping tale of loss and hope.")])],
+    )
+    book = Book(metadata=sample_metadata, sections=[epilogue, back_cover])
+
+    typst_source = render_typst(book)
+    assert "#back-cover-page[" in typst_source
+
+    epub_bytes = render_epub(book)
+    zf = zipfile.ZipFile(BytesIO(epub_bytes))
+    epub_text = b"".join(
+        zf.read(n) for n in zf.namelist() if n.endswith(".xhtml")
+    )
+
+    assert b"Back Cover" not in epub_text
+    assert b"A gripping tale of loss and hope." not in epub_text
+    assert b"Thank you for reading." in epub_text

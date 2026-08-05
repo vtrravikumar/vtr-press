@@ -171,24 +171,51 @@ def test_link_href_is_attribute_escaped(sample_metadata, tiny_cover):
 # Cross-renderer note: BACK_COVER section
 # ============================================================================
 
-def test_back_cover_section_still_renders_a_heading_in_epub(sample_metadata, tiny_cover):
+def test_back_cover_section_is_omitted_from_epub(sample_metadata, tiny_cover):
     """
-    Documents a current asymmetry: the Typst renderer suppresses the
-    heading for SectionKind.BACK_COVER (see test_typst_renderer.py),
-    but the EPUB renderer has no special case for it and renders the
-    normal '<h2>{title}</h2>' like any other section.
-
-    If EPUB gains a matching special case, update this test alongside
-    the change -- don't just delete it.
+    The Back Cover section is print-only marketing matter (see
+    renderer/typst.py, which still renders it via #back-cover-page[).
+    The EPUB must omit it entirely: no heading, no body text, and no
+    stray empty page in the reading order.
     """
 
     data = render(_minimal_book(sample_metadata), tiny_cover)
     zf = zipfile.ZipFile(BytesIO(data))
 
-    back_cover_html = b"".join(
-        zf.read(n)
-        for n in zf.namelist()
-        if n.endswith(".xhtml") and b"Back cover blurb" in zf.read(n)
+    all_text = b"".join(
+        zf.read(n) for n in zf.namelist() if n.endswith(".xhtml")
     )
 
-    assert b"<h2>Back Cover</h2>" in back_cover_html
+    assert b"Back Cover" not in all_text
+    assert b"Back cover blurb." not in all_text
+
+
+def test_back_cover_omission_leaves_no_empty_document_in_spine(
+    sample_metadata, tiny_cover
+):
+    """
+    Omitting the Back Cover section must remove it from the spine
+    entirely -- not leave behind an empty chapter/page placeholder.
+    """
+
+    with_back_cover = render(_minimal_book(sample_metadata), tiny_cover)
+
+    prologue_only_book = _minimal_book(sample_metadata)
+    prologue_only_book.sections = [
+        section
+        for section in prologue_only_book.sections
+        if not isinstance(section, Section)
+        or section.kind != SectionKind.BACK_COVER
+    ]
+    without_back_cover_section = render(prologue_only_book, tiny_cover)
+
+    zf_with = zipfile.ZipFile(BytesIO(with_back_cover))
+    zf_without = zipfile.ZipFile(BytesIO(without_back_cover_section))
+
+    docs_with = [n for n in zf_with.namelist() if n.endswith(".xhtml")]
+    docs_without = [n for n in zf_without.namelist() if n.endswith(".xhtml")]
+
+    # A book with a Back Cover section (skipped by the renderer) must
+    # produce the exact same set of documents as a book that never had
+    # one -- proving nothing is rendered in its place.
+    assert docs_with == docs_without

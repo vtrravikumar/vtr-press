@@ -256,6 +256,9 @@ class _Renderer:
         for item in book.sections:
 
             if isinstance(item, Section):
+                if self._skip_section(item):
+                    continue
+
                 self._render_section(item)
 
             elif isinstance(item, Part):
@@ -413,6 +416,19 @@ class _Renderer:
     # ------------------------------------------------------------------
     # Section
     # ------------------------------------------------------------------
+
+    def _skip_section(self, section: Section) -> bool:
+        """
+        Return whether a top-level section should be omitted from the EPUB.
+
+        The Back Cover is print-only marketing matter (and, for print
+        mode, a placeholder for the physical back cover artwork). EPUB
+        readers should end with the final reading content -- typically
+        the Epilogue or "About the Author" -- rather than a back-cover
+        blurb that only makes sense on a physical book.
+        """
+
+        return section.kind == SectionKind.BACK_COVER
 
     def _render_section(self, section: Section) -> None:
         """Render a top-level non-part section."""
