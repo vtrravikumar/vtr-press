@@ -9,3 +9,8 @@ books:
     manuscript: ../Project-memoir/manuscript.md
     cover: ../Project-memoir/assets/book_cover.png
     output_name: Project-Memoir
+
+  ride:
+    manuscript: ../../Projects/RideTogether/docs/architecture/SolutionArchitecture.md
+    cover: ../Project-memoir/assets/book_cover.png
+    output_name: RideTogetherSAD
