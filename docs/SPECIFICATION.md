@@ -1,35 +1,121 @@
-# Manuscript Specification v1.0
+# VTR Press Specification
 
-YAML Front Matter
+## Purpose
 
-Required:
-title
-subtitle
-author
-version
-paper
-language
+This document defines the manuscript specification supported by VTR Press.
 
-Hierarchy
+The specification describes the information an author may provide and the publishing conventions that VTR Press applies during rendering.
 
-#     Book Title
+Implementation details such as renderers, themes and output formats are intentionally excluded.
 
-##    Front Matter
-##    Part
-##    Prologue
-##    Epilogue
-##    Back Matter
+---
 
-###   Chapter
+# Supported Document Types
 
-Paragraphs
+VTR Press supports multiple document types.
 
-Lists
+Currently supported:
 
-Quotes
+- book
+- technical-document
 
-Code blocks
+If the document type is omitted, VTR Press assumes:
 
-Images
+```yaml
+type: book
+```
 
-Tables
+Additional document types may be introduced without changing the manuscript format.
+
+---
+
+# Metadata
+
+A manuscript begins with an optional YAML metadata block.
+
+Example:
+
+```yaml
+---
+title: Building RideTogether
+subtitle: Solution Architecture
+
+author: VTR Ravi Kumar
+
+type: technical-document
+
+project: RideTogether
+category: Solution Architecture
+identifier: RT-SAD-001
+
+version: 1.0
+status: Draft
+date: 2026-08-06
+
+keywords:
+  - architecture
+  - ride together
+---
+```
+
+Metadata describes the document.
+
+It does not describe how the document should be rendered.
+
+---
+
+# Document Structure
+
+A manuscript consists of Markdown content following the metadata block.
+
+Typical elements include:
+
+- headings
+- paragraphs
+- lists
+- images
+- tables
+- code blocks
+- hyperlinks
+- appendices
+
+The same manuscript may be rendered into multiple publication formats.
+
+---
+
+# Publishing Conventions
+
+Publishing conventions are determined automatically from the document type.
+
+Examples include:
+
+| Document Type | Default Behaviour |
+|--------------|-------------------|
+| book | A5 layout, cover page, chapter-oriented structure |
+| technical-document | A4 layout, numbered sections, appendix support |
+
+Authors should not configure layout, typography or page settings unless explicitly supported by the specification.
+
+---
+
+# Compatibility
+
+The manuscript format is considered the stable public interface of VTR Press.
+
+Existing manuscripts should continue to render without modification wherever possible.
+
+When new metadata fields are introduced, sensible defaults should preserve existing behaviour.
+
+---
+
+# Future Evolution
+
+Future document types may include:
+
+- white-paper
+- user-guide
+- design-specification
+- api-reference
+- research-paper
+
+These document types will reuse the same manuscript format while applying different publishing conventions.
