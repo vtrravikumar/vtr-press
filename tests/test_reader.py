@@ -41,6 +41,7 @@ def test_reads_valid_front_matter(write_manuscript):
     assert metadata.version == "2.0"
     assert metadata.paper == "a5"
     assert metadata.language == "en"
+    assert metadata.type == "book"
     assert body.startswith("## Prologue")
 
 
@@ -57,6 +58,38 @@ def test_copyright_year_is_coerced_to_string(write_manuscript):
     assert isinstance(metadata.copyright_year, str)
 
 
+# ============================================================================
+# Document type
+# ============================================================================
+
+def test_type_defaults_to_book_when_omitted(write_manuscript):
+    """Existing manuscripts with no `type` field must behave as `book`."""
+
+    path = write_manuscript("---\ntitle: T\n---\nBody\n")
+
+    metadata, _ = read(path)
+
+    assert metadata.type == "book"
+
+
+def test_type_explicit_book(write_manuscript):
+    path = write_manuscript("---\ntitle: T\ntype: book\n---\nBody\n")
+
+    metadata, _ = read(path)
+
+    assert metadata.type == "book"
+
+
+def test_type_explicit_technical_document(write_manuscript):
+    path = write_manuscript(
+        "---\ntitle: T\ntype: technical-document\n---\nBody\n"
+    )
+
+    metadata, _ = read(path)
+
+    assert metadata.type == "technical-document"
+
+
 def test_missing_front_matter_returns_default_metadata(write_manuscript):
     """A manuscript with no '---' delimiters is valid: defaults + full body."""
 
@@ -66,6 +99,7 @@ def test_missing_front_matter_returns_default_metadata(write_manuscript):
 
     assert metadata.title == ""
     assert metadata.author == ""
+    assert metadata.type == "book"
     assert "Just body text" in body
 
 
@@ -165,4 +199,5 @@ def test_empty_front_matter_block_returns_default_metadata(write_manuscript):
     metadata, body = read(path)
 
     assert metadata.title == ""
+    assert metadata.type == "book"
     assert body.strip() == "Body"

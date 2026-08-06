@@ -29,6 +29,8 @@ class Metadata:
     subtitle: str = ""
     author: str = ""
 
+    type: str = "book"
+
     edition: str = ""
     version: str = ""
 

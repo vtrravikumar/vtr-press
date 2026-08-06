@@ -96,6 +96,8 @@ def read(path: str | Path) -> tuple[Metadata, str]:
         subtitle=data.get("subtitle", ""),
         author=data.get("author", ""),
 
+        type=data.get("type", "book"),
+
         edition=data.get("edition", ""),
         version=data.get("version", ""),
         copyright_year=str(data.get("copyright_year", "")),
