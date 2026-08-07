@@ -1,6 +1,3 @@
-
-               
-               
 # VTR Press Architecture
 
 ## Overview
@@ -9,6 +6,16 @@ VTR Press is a publishing platform that transforms a single manuscript into one 
 
 The architecture separates content, presentation, and output so that manuscripts remain stable while publishing capabilities continue to evolve.
 
+## Architecture Status
+
+This document describes the target architecture toward which VTR Press is evolving.
+
+The current implementation may differ in some areas.
+
+VTR Press evolves incrementally through small, releasable improvements rather than large architectural rewrites.
+
+---
+
 ```
 Markdown Manuscript
         │
@@ -16,7 +23,7 @@ Markdown Manuscript
       Parser
         │
         ▼
-   Document AST
+ Document Model
         │
  ┌──────┴─────────┐
  ▼                ▼
@@ -30,15 +37,13 @@ PDF          XHTML Documents
                  │
                  ▼
                EPUB
-
-
 ```
 
 ---
 
-## Components
+# Components
 
-### Manuscript
+## Manuscript
 
 The manuscript is the single source of truth.
 
@@ -48,7 +53,7 @@ The manuscript should remain human-readable and independent of any rendering tec
 
 ---
 
-### Parser
+## Parser
 
 The parser reads the manuscript and extracts:
 
@@ -60,7 +65,7 @@ The parser produces a document model that is independent of any output format.
 
 ---
 
-### Document Model
+## Document Model
 
 The document model represents the logical structure of the manuscript.
 
@@ -77,9 +82,11 @@ Typical elements include:
 
 All renderers consume the same document model.
 
+The internal implementation of the document model may evolve over time without affecting the manuscript specification.
+
 ---
 
-### Renderer
+## Renderer
 
 A renderer transforms the document model into a publishable format.
 
@@ -94,7 +101,7 @@ Additional renderers may be introduced without changing the manuscript format.
 
 ---
 
-### Theme
+## Theme
 
 Themes define the visual presentation of a document.
 
@@ -111,7 +118,7 @@ Themes are selected automatically based on the document type.
 
 ---
 
-### Output
+## Output
 
 The final published artifact.
 
@@ -124,13 +131,28 @@ Future output formats may be supported as the publishing platform evolves.
 
 ---
 
-## Design Principles
+# Design Principles
 
-The architecture is guided by four principles:
+The architecture is guided by five principles:
 
 - Single source of truth
 - Convention over configuration
 - Separation of responsibilities
 - Backward compatibility
+- Incremental evolution
 
 These principles ensure that manuscripts remain stable while the publishing engine continues to evolve.
+
+---
+
+# Non-Goals
+
+The architecture does not attempt to:
+
+- expose renderer-specific features within manuscripts
+- require authors to understand publishing internals
+- optimise for every possible document type from day one
+- replace working components without demonstrated value
+- perform large-scale architectural rewrites
+
+Architectural improvements should always preserve a working, releasable publishing platform.

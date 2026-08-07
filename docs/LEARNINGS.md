@@ -1,22 +1,22 @@
-# Learnings from VTR Press v1
+# Learnings from VTR Press
 
 ## Purpose
 
-VTR Press v2 is not a rewrite of VTR Press v1.
+This document captures the engineering lessons learned while designing, implementing, and publishing real documents using VTR Press.
 
-It is the result of the engineering experience gained while designing, implementing and publishing real books using VTR Press v1.
+These lessons form the foundation for future architectural decisions and guide the continued evolution of the publishing platform.
 
-This document captures the important lessons learned during that journey. These lessons form the foundation of every architectural decision in VTR Press v2.
+Every significant architectural decision should be traceable to one or more of these lessons.
 
 ---
 
 # Lesson 001 — Build from Experience, Not Assumptions
 
-VTR Press v1 successfully proved that a lightweight Markdown-based publishing workflow can produce high-quality books.
+VTR Press has demonstrated that a lightweight Markdown-based publishing workflow can produce high-quality publications.
 
-VTR Press v2 should build upon that experience rather than attempting to redesign publishing from theory.
+Future architectural improvements should build upon that experience rather than attempting to redesign publishing from theory.
 
-Every major architectural decision should be traceable to a real lesson learned while building or using VTR Press v1.
+Every major architectural decision should be supported by real experience gained while building or using VTR Press.
 
 ---
 
@@ -36,7 +36,7 @@ They should not define the architecture of the publishing engine.
 
 The manuscript describes the document.
 
-It should remain simple, human-readable and focused on content.
+It should remain simple, human-readable, and focused on content.
 
 Rendering decisions should never leak into the manuscript unless explicitly overridden.
 
@@ -50,13 +50,13 @@ It should not describe how the document is rendered.
 
 Examples include:
 
-* document type
-* title
-* author
-* version
-* publication status
+- document type
+- title
+- author
+- version
+- publication status
 
-Page size, typography, themes and layout belong to the publishing engine.
+Page size, typography, themes, and layout belong to the publishing engine.
 
 ---
 
@@ -100,7 +100,7 @@ The renderer should determine presentation.
 
 Every supported publication should ultimately share a common document model.
 
-Books, technical documents and future publication types differ primarily in interpretation and presentation rather than fundamental structure.
+Books, technical documents, and future publication types differ primarily in interpretation and presentation rather than fundamental structure.
 
 ---
 
@@ -120,12 +120,12 @@ Different publication types have different publishing conventions.
 
 Examples include:
 
-* cover pages
-* title pages
-* page numbering
-* front matter
-* appendices
-* revision history
+- cover pages
+- title pages
+- page numbering
+- front matter
+- appendices
+- revision history
 
 These behaviours belong to the publishing workflow rather than the manuscript.
 
@@ -137,28 +137,28 @@ Every publication should be written once.
 
 All output formats should be generated from the same document model.
 
-PDF, EPUB and future formats should represent different renderers rather than different authoring workflows.
+PDF, EPUB, and future formats should represent different renderers rather than different authoring workflows.
 
 ---
 
 # Lesson 012 — Architecture Before Implementation
 
-The architecture of VTR Press v2 should be defined before implementation begins.
+Significant architectural changes should be understood before implementation begins.
 
-Engineering principles, document model, publishing pipeline and component responsibilities should be agreed before writing production code.
+Engineering principles, document models, publishing pipelines, and component responsibilities should be agreed before major architectural work is undertaken.
 
-The objective is to minimise architectural drift and allow implementation to follow a clear design.
+The objective is to minimise architectural drift while allowing the implementation to evolve incrementally.
 
 ---
 
 # Closing Thoughts
 
-VTR Press v1 demonstrated that a focused publishing toolkit could successfully produce professional-quality books.
+VTR Press has proven that a focused publishing toolkit can successfully produce professional-quality publications.
 
-VTR Press v2 builds upon those achievements with a broader vision.
+As the platform evolves, these lessons ensure that architectural improvements remain grounded in practical experience rather than theoretical design.
 
-The objective is not to replace VTR Press v1.
+The objective is not to pursue architectural perfection through large rewrites.
 
-The objective is to create a publishing engine capable of supporting multiple document classes while preserving a simple and enjoyable authoring experience.
+The objective is to continuously evolve VTR Press into a publishing platform capable of supporting multiple classes of publications while preserving a simple and enjoyable authoring experience.
 
-Every decision in VTR Press v2 should be guided by these lessons.
+Every future architectural decision should be guided by these lessons.

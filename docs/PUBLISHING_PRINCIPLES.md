@@ -10,7 +10,7 @@ The publisher's responsibility is to determine its presentation.
 
 ---
 
-## Convention over Configuration
+# Convention over Configuration
 
 Authors should not be required to understand page layouts, typography, or rendering engines.
 
@@ -26,7 +26,7 @@ should automatically apply the appropriate publishing conventions.
 
 ---
 
-## Single Source of Truth
+# Single Source of Truth
 
 A manuscript should be written once and published in multiple formats without modification.
 
@@ -39,13 +39,14 @@ Additional formats may be introduced without changing the manuscript.
 
 ---
 
-## Separation of Responsibilities
+# Separation of Responsibilities
 
 The publishing pipeline consists of independent responsibilities.
 
 - Manuscript — content
 - Parser — interpretation
-- Renderer — presentation
+- Document Model — logical structure
+- Renderer — publication generation
 - Theme — visual identity
 - Output — published document
 
@@ -53,7 +54,7 @@ Each component should remain independently replaceable.
 
 ---
 
-## Backward Compatibility
+# Backward Compatibility
 
 Existing manuscripts should continue to render without modification.
 
@@ -61,7 +62,7 @@ Where new metadata is introduced, sensible defaults should preserve previous beh
 
 ---
 
-## Readability First
+# Readability First
 
 Manuscripts are intended to be read and maintained by people.
 
@@ -69,7 +70,17 @@ Publishing features should never compromise the readability of the source docume
 
 ---
 
-## Extensibility
+# Incremental Evolution
+
+VTR Press evolves through small, releasable improvements.
+
+Architectural improvements should be delivered alongside new capabilities rather than through large rewrites.
+
+Each release should leave the publishing platform cleaner, more maintainable, and more extensible than before.
+
+---
+
+# Extensibility
 
 VTR Press is designed to support multiple document types.
 
@@ -82,7 +93,7 @@ Future document types should be introduced by extending the publishing engine ra
 
 ---
 
-## Minimalism
+# Minimalism
 
 Every feature should solve a real publishing problem.
 

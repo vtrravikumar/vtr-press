@@ -6,7 +6,9 @@ This document defines the manuscript specification supported by VTR Press.
 
 The specification describes the information an author may provide and the publishing conventions that VTR Press applies during rendering.
 
-Implementation details such as renderers, themes and output formats are intentionally excluded.
+Implementation details such as parsers, document models, renderers, themes, and output formats are intentionally excluded.
+
+The manuscript specification is the stable public contract between authors and VTR Press.
 
 ---
 
@@ -62,6 +64,8 @@ Metadata describes the document.
 
 It does not describe how the document should be rendered.
 
+Publishing decisions remain the responsibility of VTR Press.
+
 ---
 
 # Document Structure
@@ -94,13 +98,15 @@ Examples include:
 | book | A5 layout, cover page, chapter-oriented structure |
 | technical-document | A4 layout, numbered sections, appendix support |
 
-Authors should not configure layout, typography or page settings unless explicitly supported by the specification.
+Authors should not configure layout, typography, or page settings unless explicitly supported by the specification.
 
 ---
 
 # Compatibility
 
 The manuscript format is considered the stable public interface of VTR Press.
+
+Internal implementation may evolve without affecting compliant manuscripts.
 
 Existing manuscripts should continue to render without modification wherever possible.
 
@@ -119,3 +125,5 @@ Future document types may include:
 - research-paper
 
 These document types will reuse the same manuscript format while applying different publishing conventions.
+
+The introduction of new document types should not require changes to existing manuscripts.

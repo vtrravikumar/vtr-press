@@ -4,7 +4,7 @@
 
 VTR Press is evolving from a book publishing toolkit into a general-purpose publishing platform capable of producing multiple document types from a single manuscript.
 
-The long-term goal is to allow authors to focus entirely on writing while VTR Press applies appropriate publishing conventions automatically.
+The long-term goal is to allow authors to focus entirely on writing while VTR Press automatically applies appropriate publishing conventions.
 
 ---
 
@@ -16,6 +16,8 @@ Current capabilities include:
 - PDF publishing
 - EPUB publishing
 - Book publishing workflow
+
+The platform is now evolving to support multiple publication types while preserving a stable manuscript specification.
 
 ---
 
@@ -37,9 +39,25 @@ Initial support includes:
 Continue evolving the publishing engine through:
 
 - Common document model
-- Shared rendering pipeline
+- Shared publishing pipeline
 - Automatic theme selection
 - Backward compatibility
+
+---
+
+## Architecture Evolution
+
+Continue improving the architecture through small, incremental refactorings.
+
+Every architectural improvement should:
+
+- deliver user value
+- preserve a releasable product
+- reduce technical debt
+- improve extensibility
+- avoid unnecessary rewrites
+
+The objective is continuous architectural improvement rather than large redesign efforts.
 
 ---
 
@@ -51,6 +69,8 @@ Current reference manuscripts include:
 
 - Engineering Memoir
 - RideTogether Solution Architecture Document
+
+These manuscripts serve as regression tests for architectural evolution and publishing capabilities.
 
 ---
 
@@ -69,7 +89,7 @@ Future output formats may include:
 - HTML
 - DOCX
 
-These additions should extend the publishing engine without changing the manuscript format.
+These additions should extend the publishing platform without changing the manuscript specification.
 
 ---
 
@@ -77,4 +97,4 @@ These additions should extend the publishing engine without changing the manuscr
 
 A manuscript should be written once and published anywhere.
 
-As VTR Press evolves, the manuscript remains stable while publishing capabilities continue to expand.
+As VTR Press evolves, the manuscript remains the stable public contract while the publishing engine continues to expand its capabilities through incremental evolution.
