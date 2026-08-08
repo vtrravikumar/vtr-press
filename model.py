@@ -109,6 +109,25 @@ class Verse(Block):
 
     lines: list[str] = field(default_factory=list)
 
+
+@dataclass(slots=True)
+class Subheading(Block):
+    """
+    A heading (level 3 or deeper) that appears directly within a
+    Section rather than within a Part/Chapter. Used for numbered
+    subsections in non-narrative documents (e.g. "1.1 Purpose" under
+    "1. Introduction"), where the manuscript has no Part context for
+    the existing Chapter/Scene grammar to attach to.
+
+    This is an additive, flat block -- it does not introduce nesting.
+    Subsequent Paragraph/Verse/Subheading blocks in the same Section's
+    `blocks` list simply follow it in document order, the same way
+    Paragraph and Verse already coexist there.
+    """
+
+    title: str = ""
+    level: int = 3
+
 # ============================================================================
 # Section Kinds
 # ============================================================================

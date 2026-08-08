@@ -14,6 +14,7 @@ from model import (
     Scene,
     Section,
     Paragraph,
+    Subheading,
     Verse,
     Text,
     Bold,
@@ -427,6 +428,11 @@ class _Renderer:
 
         if isinstance(block, Verse):
             self._render_verse(block)
+            return
+
+        if isinstance(block, Subheading):
+            self._render_heading(block.level, block.title)
+            self.lines.append("")
             return
 
         raise TypeError(f"Unsupported block: {type(block).__name__}")

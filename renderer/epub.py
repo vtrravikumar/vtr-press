@@ -20,6 +20,7 @@ from model import (
     Scene,
     Section,
     Paragraph,
+    Subheading,
     Verse,
     Text,
     Bold,
@@ -533,6 +534,10 @@ class _Renderer:
 
         if isinstance(block, Verse):
             return self._render_verse(block)
+
+        if isinstance(block, Subheading):
+            level = block.level if block.level in (3, 4, 5, 6) else 3
+            return f"<h{level}>{_text(block.title)}</h{level}>"
 
         raise TypeError(f"Unsupported block: {type(block).__name__}")
 

@@ -23,6 +23,7 @@ from model import (
     Scene,
     Section,
     SectionKind,
+    Subheading,
     Text,
 )
 from renderer.epub import _attr, _text, render
@@ -219,3 +220,29 @@ def test_back_cover_omission_leaves_no_empty_document_in_spine(
     # produce the exact same set of documents as a book that never had
     # one -- proving nothing is rendered in its place.
     assert docs_with == docs_without
+
+
+# ============================================================================
+# Subheading rendering
+# ============================================================================
+
+def test_subheading_renders_as_matching_heading_level(sample_metadata, tiny_cover):
+    section = Section(
+        kind=SectionKind.OTHER,
+        title="Introduction",
+        blocks=[
+            Subheading(title="Purpose", level=3),
+            Paragraph(children=[Text("Explains why.")]),
+            Subheading(title="ADR-001", level=4),
+        ],
+    )
+    book = Book(metadata=sample_metadata, sections=[section])
+
+    data = render(book, tiny_cover)
+    zf = zipfile.ZipFile(BytesIO(data))
+    all_text = b"".join(
+        zf.read(n) for n in zf.namelist() if n.endswith(".xhtml")
+    )
+
+    assert b"<h3>Purpose</h3>" in all_text
+    assert b"<h4>ADR-001</h4>" in all_text

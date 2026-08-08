@@ -21,6 +21,7 @@ from model import (
     Part,
     Section,
     SectionKind,
+    Subheading,
     Text,
     Verse,
 )
@@ -238,7 +239,7 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
             continue
 
         # ----------------------------------------------------------
-        # Chapter
+        # Chapter (inside a Part) / Subheading (inside a Section)
         # ----------------------------------------------------------
 
         if line.startswith("### "):
@@ -246,26 +247,36 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
             flush_paragraph()
             flush_verse()
 
-            if current_part is None:
-                raise StructureError(
-                    f"Chapter found outside a Part: {line}"
+            title = line[4:].strip()
+
+            if current_part is not None:
+
+                chapter_number += 1
+
+                current_chapter = Chapter(
+                    number=chapter_number,
+                    title=title,
                 )
 
-            chapter_number += 1
+                current_part.chapters.append(current_chapter)
 
-            current_chapter = Chapter(
-                number=chapter_number,
-                title=line[4:].strip(),
-            )
+                current_scene = None
 
-            current_part.chapters.append(current_chapter)
+            elif current_section is not None:
 
-            current_scene = None
+                current_section.blocks.append(
+                    Subheading(title=title, level=3)
+                )
+
+            else:
+                raise StructureError(
+                    f"Subheading found outside a Section or Part: {line}"
+                )
 
             continue
 
         # ----------------------------------------------------------
-        # Scene
+        # Scene (inside a Chapter) / Subheading (inside a Section)
         # ----------------------------------------------------------
 
         if line.startswith("#### "):
@@ -273,18 +284,29 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
             flush_paragraph()
             flush_verse()
 
-            if current_chapter is None:
-                raise StructureError(
-                    f"Scene found outside a Chapter: {line}"
+            title = line[5:].strip()
+
+            if current_chapter is not None:
+
+                current_scene = Scene(
+                    title=title,
                 )
 
-            current_scene = Scene(
-                title=line[5:].strip(),
-            )
+                current_chapter.scenes.append(current_scene)
 
-            current_chapter.scenes.append(current_scene)
+            elif current_section is not None:
+
+                current_section.blocks.append(
+                    Subheading(title=title, level=4)
+                )
+
+            else:
+                raise StructureError(
+                    f"Subheading found outside a Section or Chapter: {line}"
+                )
 
             continue
+
 
         # ----------------------------------------------------------
         # Regular paragraph

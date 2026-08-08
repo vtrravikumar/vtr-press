@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 
 from exceptions import StructureError
-from model import Metadata, Part, Section, SectionKind, Verse, Paragraph
+from model import Metadata, Part, Section, SectionKind, Subheading, Verse, Paragraph
 from parser.structure import parse_structure
 
 
@@ -220,3 +220,73 @@ def test_multiline_paragraph_is_joined_with_newline():
     text = book.sections[0].blocks[0].children[0].text
 
     assert text == "Line one\nLine two continues."
+
+
+# ============================================================================
+# Subheadings (### / #### outside a Part)
+# ============================================================================
+
+def test_subsection_under_section_produces_subheading():
+    body = (
+        "## Introduction\n\n"
+        "### Purpose\n\n"
+        "Explains why.\n\n"
+        "### Scope\n\n"
+        "Explains what.\n"
+    )
+
+    book = _parse(body)
+    section = book.sections[0]
+
+    assert [type(b).__name__ for b in section.blocks] == [
+        "Subheading", "Paragraph", "Subheading", "Paragraph",
+    ]
+    assert section.blocks[0].title == "Purpose"
+    assert section.blocks[0].level == 3
+    assert section.blocks[2].title == "Scope"
+
+
+def test_level_four_under_section_also_produces_subheading():
+    body = (
+        "## Appendix\n\n"
+        "### Architecture Decision Records\n\n"
+        "#### ADR-001\n\n"
+        "Some decision text.\n"
+    )
+
+    book = _parse(body)
+    section = book.sections[0]
+
+    assert section.blocks[0].title == "Architecture Decision Records"
+    assert section.blocks[0].level == 3
+    assert section.blocks[1].title == "ADR-001"
+    assert section.blocks[1].level == 4
+
+
+def test_chapter_and_scene_inside_a_part_are_unaffected():
+    """
+    The pre-existing Part -> Chapter -> Scene grammar must be completely
+    untouched: ### and #### inside a Part still produce Chapter/Scene,
+    never Subheading.
+    """
+
+    body = (
+        "## Part I\n\n"
+        "### Chapter 1\n\n"
+        "#### Scene One\n\n"
+        "Body text.\n"
+    )
+
+    book = _parse(body)
+    part = book.sections[0]
+
+    assert isinstance(part, Part)
+    assert part.chapters[0].title == "Chapter 1"
+    assert part.chapters[0].scenes[0].title == "Scene One"
+
+
+def test_subheading_outside_any_section_or_part_raises():
+    body = "### Purpose\n\nText.\n"
+
+    with pytest.raises(StructureError):
+        _parse(body)

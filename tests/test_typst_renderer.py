@@ -23,6 +23,7 @@ from model import (
     Scene,
     Section,
     SectionKind,
+    Subheading,
     Text,
 )
 from renderer.typst import RenderOptions, _Renderer, render
@@ -352,3 +353,25 @@ def test_render_print_mode_does_not_sniff_copyright_text(
 
     assert publisher_text in copyright_page
     assert "#render-publisher-imprint()" not in copyright_page
+
+
+# ============================================================================
+# Subheading rendering
+# ============================================================================
+
+def test_subheading_renders_as_outlined_heading_at_its_level(sample_metadata):
+    section = Section(
+        kind=SectionKind.OTHER,
+        title="Introduction",
+        blocks=[
+            Subheading(title="Purpose", level=3),
+            Paragraph(children=[Text("Explains why.")]),
+            Subheading(title="ADR-001", level=4),
+        ],
+    )
+    book = Book(metadata=sample_metadata, sections=[section])
+
+    out = render(book)
+
+    assert "=== Purpose" in out
+    assert "==== ADR-001" in out

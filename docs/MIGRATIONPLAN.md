@@ -1,0 +1,203 @@
+# VTR Press Migration Plan
+
+## Purpose
+
+This document tracks the incremental migration of VTR Press from a
+book-specific engine toward the generic, multi-document-class
+publishing engine described in `ARCHITECTURE.md`, `SPECIFICATION.md`,
+`PUBLISHING_PRINCIPLES.md`, and `LEARNINGS.md`.
+
+It is the execution companion to those documents: they describe the
+target state and the principles; this document tracks the approved
+phases, their status, and the decisions made (or still open) while
+getting there.
+
+**Ground rule**: no large rewrite. Every phase must leave the product
+in a releasable state. `type: book` manuscripts must never regress,
+at any point in this plan, for any phase.
+
+---
+
+## How to read this document
+
+Each phase has:
+- **Goal** — what becomes true once it ships.
+- **Status** — Not started / In progress / Shipped / Superseded.
+- **Tasks** — the concrete increments within the phase.
+- **Depends on** — what must already be shipped.
+- **Note** — anything about the phase's durability (e.g. "this is a
+  deliberate stopgap, expected to be superseded").
+
+Update status and notes as work lands. This document should always
+reflect reality, not the original plan — if a phase's approach
+changes during implementation, edit it here rather than letting this
+file drift out of sync with the code.
+
+---
+
+## Phase A — Unblock the RideTogether manuscript
+
+**Goal**: the RideTogether Solution Architecture Document parses and
+renders end-to-end on the current (book-shaped) parser, using the
+technical theme.
+
+**Status**: Not started
+
+| Task | Description | Depends on |
+|---|---|---|
+| A1 | Add a leading `##` heading to the RideTogether manuscript before its preamble content. Manuscript edit only, no code. | — |
+| A2 | Add a `Subheading` block type + one additive branch in `parser/structure.py` so `###` can mean "subsection of a Section," not only "Chapter of a Part." | A1 (to confirm the *next* real error) |
+| A3 | Add matching cases in `renderer/typst.py` and `renderer/epub.py` for the new `Subheading` block (both currently hard-fail on unknown block types). | A2 |
+
+**Note**: A2's `Subheading` design is an *interleaved block*, not a
+nested tree — it is expected to carry forward into Phase D's flat
+block-stream model largely as-is, possibly generalizing directly into
+that model's `Heading` block type. (Earlier drafts of this plan
+described A2 as likely throwaway work once Phase D lands — that was
+incorrect and is corrected here.)
+
+---
+
+## Phase B — Close renderer gaps found while building the technical theme
+
+**Goal**: technical documents get a working Table of Contents, correct
+page numbering, and no stray blank leading page.
+
+**Status**: Not started
+
+| Task | Description | Depends on |
+|---|---|---|
+| B1 | Generalize the Contents/page-numbering trigger, currently hardcoded to `SectionKind.PROLOGUE` (book-only), to something like "first outlined section." | Phase A |
+| B2 | Decouple the cover/pagebreak call from unconditional execution — the renderer must know not to call `render-cover()` + `#pagebreak()` at all for a document type that doesn't want a cover. | Phase A |
+
+**Note — read before touching either task**: both B1 and B2 are
+**deliberate stopgaps**, not final architecture. Once Phase D's
+interpretation layer exists, "where does main matter begin" and
+"does this document get a cover" should become convention-profile
+properties the renderer reads generically, not renderer `if`-branches.
+Label them as stopgaps in their own commits/tickets so they aren't
+mistaken for permanent design later.
+
+---
+
+## Phase C — Automatic theme selection
+
+**Goal**: `python run.py <book>` selects the correct theme
+automatically from `metadata.type`, with no manual theme-path edits.
+
+**Status**: Not started
+
+| Task | Description | Depends on |
+|---|---|---|
+| C1 | Replace the hardcoded `DEFAULT_THEME_IMPORT` in `renderer/typst.py` with a type→theme lookup, defaulting to classic for `book`/omitted. | Phase B (technical documents should be genuinely working before auto-selection chooses them) |
+| C2 | Decide and record the open questions this exposes (see Decision Log below). | — |
+
+---
+
+## Phase D — Generic document model migration
+
+**Goal**: new document types stop requiring parser changes. Structure
+comes from a shared model; only interpretation (per type) and
+presentation (per theme) differ.
+
+**Status**: Not started
+
+**Scope note**: this phase is designed to comfortably support **books,
+technical documents, white papers, tutorials, and API references**
+(the last with caveats — see Decision Log). **Documentation websites
+and notebooks are explicitly out of scope for this phase** — they
+imply a different output paradigm (multi-file, navigable) or a
+different input paradigm (executable cells) respectively, and are
+tracked as separate future architectural questions, not solved as a
+side effect of this migration.
+
+| Task | Description | Depends on |
+|---|---|---|
+| D0 | **Design-validation checkpoint.** Write the interpretation layer's contract on paper (or as a throwaway spike): what goes in, what comes out, which decisions belong to parser vs. interpretation vs. renderer. Validate it against *both* book's rules (Part→Chapter→Scene, Scene requires Chapter) and technical-document's rules (numbered sections, subsections, appendices) before writing any real code. | Phase C |
+| D1 | Introduce a flat, ordered block-stream model (`Heading(level, title)`, `Paragraph`, `Verse`, etc. — Pandoc-AST-style, no pre-built parent/child nesting) as new, additive code in `model.py`. Does not touch `Part`/`Chapter`/`Scene`/`Section`. | D0 |
+| D2 | Build the new parser as a second, parallel path producing the flat block stream from Markdown headings. Unreachable for `type: book` — the existing parser keeps handling books untouched. | D1 |
+| D3 | Wire dispatch so `type: technical-document` (only, initially) routes through the new parser; `type: book` (including omitted) is unaffected. | D2 |
+| D4 | Validate against 2–3 real manuscripts, **including at least one that is structurally different from RideTogether** (table-heavy, unusually deep, etc.) — not just another similarly-shaped prose document. | D3 |
+| D5 | *(Explicitly optional — revisit with evidence, not a foregone next step.)* Decide whether to migrate `book` onto the generic model too, retiring `Part`/`Chapter`/`Scene` as dataclasses. Only worth evaluating once D1–D4 have proven themselves against real content. | D4 (+ a fixed revisit window — see Decision Log) |
+
+---
+
+## Decision Log
+
+Decisions that need to be made explicitly, on purpose, rather than
+falling out as accidents of whatever gets built first. Update this
+table as each is resolved — record the decision and the date, don't
+delete the row.
+
+| # | Decision needed | Status | Resolution |
+|---|---|---|---|
+| 1 | Is `metadata.type` an open string forever, or a validated/closed set? Confirmed today it accepts any string silently — no validation exists. | Open | — |
+| 2 | Is a cover image mandatory for technical documents? `run.py`/`books.yaml` currently assume yes for all types. | Open | — |
+| 3 | Formalize or retire the dead `Metadata.paper` field now that `type` drives page size. | Open | — |
+| 4 | Does metadata schema validation become type-aware (e.g. technical-document requires an `identifier`), or stay permissively open forever? | Open | — |
+| 5 | What error classes does the parser own vs. the interpretation layer, in writing, before more convention profiles make this expensive to untangle? | Open | — |
+| 6 | Is a lightweight (type, format) → renderer/theme registry worth introducing alongside Phase C's dispatch, before renderer files grow further? | Open | — |
+| 7 | Does every document type owe the same "must render identically forever" guarantee that published, ISBN-registered books do, or is that guarantee specific to book until other types accumulate real published content? | Open | — |
+| 8 | Fixed revisit window for D5 (book unification) — decide within how long of D4 landing, so dual-model debt doesn't linger indefinitely by default. | Open | — |
+
+---
+
+## Architectural principles this plan must honor
+
+Pulled from `docs/LEARNINGS.md`, restated here as constraints on every
+phase above — if a task in this plan would violate one of these, stop
+and revisit the task, don't proceed and hope it's fine:
+
+- **Lesson 003 / 005 / 006**: the manuscript stays simple and
+  human-readable; conventions apply automatically; authors are never
+  expected to understand the rendering engine.
+- **Lesson 004**: metadata describes *what* the document is, never
+  *how* it's rendered.
+- **Lesson 007**: parser understands syntax; the publishing engine
+  (interpretation layer) interprets the document; the renderer
+  determines presentation. Three layers, not two — this is the
+  principle Phase D exists to actually implement.
+- **Lesson 008**: one document model, shared by every publication
+  type — differences are in interpretation and presentation, not
+  fundamental structure.
+- **Lesson 009**: themes control presentation only, never document
+  structure. Changing a theme must never require a manuscript change.
+- **Lesson 011**: one manuscript, multiple output formats via
+  different renderers — not different authoring workflows per format.
+
+---
+
+## Success Criteria
+
+How to tell, objectively, whether this migration is working — not
+"the docs feel complete," but checkable outcomes:
+
+- **Parser**: zero book-specific concepts outside a convention
+  profile. Adding document type N+1 requires zero parser changes.
+  Structural errors are caught before render time. Zero
+  `if metadata.type ==` branches in parser code.
+- **Renderer**: adding a new document *type* requires zero renderer
+  changes (only a new convention profile + theme). Adding a new
+  *output format* requires one new renderer that works across all
+  existing types. Zero direct `metadata.type` string comparisons in
+  renderer code.
+- **Extensibility**: a new type touches exactly one convention
+  profile, one theme, one example manuscript — nothing else.
+  Time-to-add-a-type trends down, not flat or up, as more types ship.
+- **Coupling/cohesion**: `metadata.type` is read in exactly one
+  dispatch point. Book-specific code is fully contained in its
+  convention profile. Themes contain zero structural decisions.
+- **Maintainability**: a reusable "manuscript + type → expected
+  structure" test harness exists, not per-type one-off tests.
+  Hard-won implementation gotchas get written down as they're found.
+- **Onboarding**: a new contributor, from the docs alone, can name
+  which of the three layers owns any given decision. "Where do I add
+  a new document type" has one canonical documented answer.
+
+---
+
+## Revision history
+
+| Date | Change |
+|---|---|
+| Initial draft | Phases A–D defined following the parser architecture review and the "generic model / migration strategy" architectural review. D1 revised from a recursive `Node` tree to a flat block-stream model; D0 (design-validation checkpoint) added; B1/B2 explicitly labeled as stopgaps; documentation websites and notebooks descoped from Phase D; Decision Log items 1, 4, 6, 7, 8 added. |
