@@ -330,16 +330,27 @@ class _Renderer:
 
         needs_page_break = True
 
-        # Insert the Contents page immediately before the Prologue.
-        if (
-            not self._contents_inserted
-            and section.kind == SectionKind.PROLOGUE
-        ):
+        outlined = section.kind not in {
+            SectionKind.COPYRIGHT,
+            SectionKind.DEDICATION,
+            SectionKind.THIRUKKURAL,
+        }
+
+        # Insert the Contents page and begin main-matter numbering at
+        # the first section that participates in the outline. For a
+        # book, that's normally the Prologue (Copyright/Dedication/
+        # Thirukkural are front matter, not outlined). For a technical
+        # document with no Prologue, it's whichever ordinary section
+        # comes first -- without this, such a document never opens
+        # main-matter at all, and any outlined section appearing
+        # before this point would render with the raw, un-reset page
+        # counter instead of the properly numbered main matter.
+        if not self._contents_inserted and outlined:
             self._render_contents()
             self.lines.append("#pagebreak()")
             self.lines.append("")
 
-            # Start numbering from the Prologue.
+            # Start numbering from this section.
             self._start_main_matter()
 
             self._contents_inserted = True
@@ -347,12 +358,6 @@ class _Renderer:
 
         if needs_page_break:
             self._page_break()
-
-        outlined = section.kind not in {
-            SectionKind.COPYRIGHT,
-            SectionKind.DEDICATION,
-            SectionKind.THIRUKKURAL,
-        }
 
         if section.kind in {
             SectionKind.COPYRIGHT,

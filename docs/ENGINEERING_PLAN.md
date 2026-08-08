@@ -83,6 +83,21 @@ commit, since nothing existing is modified, only extended.
 
 ---
 
+### Phase A Execution Note
+
+The original VP-002/A1 hypothesis was invalidated by testing the real
+RideTogether manuscript.
+
+The anticipated preamble error did not occur. Instead, the first real
+blocker was a heading-hierarchy incompatibility requiring the Subheading
+capability described in A2.
+
+As a result, the implementation of VP-002 expanded beyond the original
+A1 scope and delivered the effective A2/A3 capability in one validated
+increment.
+
+No separate manuscript-only A1 change was required.
+
 ## Task A1 — Manuscript preamble fix
 
 | | |

@@ -375,3 +375,123 @@ def test_subheading_renders_as_outlined_heading_at_its_level(sample_metadata):
 
     assert "=== Purpose" in out
     assert "==== ADR-001" in out
+
+
+# ============================================================================
+# B1 -- Contents/main-matter trigger generalized to "first outlined section"
+# ============================================================================
+
+def _technical_document_book(metadata: Metadata) -> Book:
+    """
+    A technical-document-shaped book: ordinary (SectionKind.OTHER)
+    sections only, no Prologue at all. Before this change, such a
+    document never opened main-matter and never got a Contents page,
+    because the trigger was hardcoded to SectionKind.PROLOGUE.
+    """
+
+    intro = Section(
+        kind=SectionKind.OTHER,
+        title="Introduction",
+        blocks=[Paragraph(children=[Text("Intro text.")])],
+    )
+    overview = Section(
+        kind=SectionKind.OTHER,
+        title="System Overview",
+        blocks=[Paragraph(children=[Text("Overview text.")])],
+    )
+
+    return Book(metadata=metadata, sections=[intro, overview])
+
+
+def test_technical_document_without_prologue_gets_contents_and_main_matter(
+    sample_metadata,
+):
+    out = render(_technical_document_book(sample_metadata))
+
+    assert out.count("#render-contents()") == 1
+    assert "#main-matter[" in out
+
+    lines = out.splitlines()
+    main_matter_idx = next(
+        i for i, l in enumerate(lines) if l == "#main-matter["
+    )
+    contents_idx = next(
+        i for i, l in enumerate(lines) if l == "#render-contents()"
+    )
+    intro_idx = next(
+        i for i, l in enumerate(lines)
+        if "running-section-page" in l and "Introduction" in l
+    )
+
+    # Contents, then main-matter opens, then the first section renders
+    # inside it -- in that order.
+    assert contents_idx < main_matter_idx < intro_idx
+
+
+def test_book_with_front_matter_before_prologue_still_triggers_at_prologue(
+    sample_metadata,
+):
+    """
+    Regression guard for the exact real-world shape found in the
+    RideTogether manuscript: a document type: book whose FIRST
+    outlined section legitimately isn't Prologue (e.g. an ordinary
+    section like "Document Philosophy" comes first). This must now
+    open Contents/main-matter at that first outlined section, not
+    silently wait for a Prologue that may come later or never.
+    """
+
+    document_philosophy = Section(
+        kind=SectionKind.OTHER,
+        title="Document Philosophy",
+        blocks=[Paragraph(children=[Text("Philosophy text.")])],
+    )
+    prologue = Section(
+        kind=SectionKind.PROLOGUE,
+        title="Prologue",
+        blocks=[Paragraph(children=[Text("Prologue text.")])],
+    )
+
+    book = Book(
+        metadata=sample_metadata,
+        sections=[document_philosophy, prologue],
+    )
+
+    out = render(book)
+
+    assert out.count("#render-contents()") == 1
+
+    lines = out.splitlines()
+    main_matter_idx = next(
+        i for i, l in enumerate(lines) if l == "#main-matter["
+    )
+    philosophy_idx = next(
+        i for i, l in enumerate(lines)
+        if "running-section-page" in l and "Document Philosophy" in l
+    )
+
+    # main-matter must open BEFORE the first outlined section, so that
+    # section renders with correct (reset) page numbering rather than
+    # the raw pre-main-matter counter.
+    assert main_matter_idx < philosophy_idx
+
+
+def test_copyright_dedication_thirukkural_still_precede_contents(
+    sample_metadata,
+):
+    """
+    Front-matter-kind sections (not outlined) must still render before
+    Contents/main-matter opens -- confirms the "first outlined section"
+    trigger doesn't accidentally fire on non-outlined sections.
+    """
+
+    out = render(_minimal_book(sample_metadata))
+
+    lines = out.splitlines()
+    copyright_idx = next(
+        i for i, l in enumerate(lines) if "#front-matter-page[" in l
+    )
+    contents_idx = next(
+        i for i, l in enumerate(lines) if l == "#render-contents()"
+    )
+
+    assert copyright_idx < contents_idx

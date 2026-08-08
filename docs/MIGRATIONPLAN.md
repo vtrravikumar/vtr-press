@@ -41,13 +41,38 @@ file drift out of sync with the code.
 renders end-to-end on the current (book-shaped) parser, using the
 technical theme.
 
-**Status**: Not started
+**Status**: Shipped
 
-| Task | Description | Depends on |
+| Task | Status | Outcome |
 |---|---|---|
-| A1 | Add a leading `##` heading to the RideTogether manuscript before its preamble content. Manuscript edit only, no code. | — |
-| A2 | Add a `Subheading` block type + one additive branch in `parser/structure.py` so `###` can mean "subsection of a Section," not only "Chapter of a Part." | A1 (to confirm the *next* real error) |
-| A3 | Add matching cases in `renderer/typst.py` and `renderer/epub.py` for the new `Subheading` block (both currently hard-fail on unknown block types). | A2 |
+| A1 | Superseded | The expected "Paragraph found outside a Section or Chapter" error did not occur against the real RideTogether manuscript. No manuscript-only fix was required. |
+| A2 | Shipped | Added `Subheading` block support for technical-document subsection structure. |
+| A3 | Shipped | Added `Subheading` rendering support to Typst and EPUB. |
+
+
+### Phase A Implementation Note
+
+The original A1 assumption was invalidated when the real RideTogether
+manuscript was tested.
+
+The manuscript reached a different heading-hierarchy failure. Investigation
+of the actual parser and manuscript showed that technical-document
+subsections required a `Subheading` block.
+
+The implementation therefore proceeded directly to the A2/A3 capability,
+including parser, model, Typst renderer, EPUB renderer, and regression
+coverage.
+
+Validation completed with:
+- 94/94 tests passing
+- RideTogether PDF generated successfully
+- RideTogether EPUB generated successfully
+- Fresh-clone verification successful
+
+This is an intentional example of the migration plan being updated to
+reflect implementation reality rather than preserving an incorrect
+original assumption.
+
 
 **Note**: A2's `Subheading` design is an *interleaved block*, not a
 nested tree — it is expected to carry forward into Phase D's flat
