@@ -103,7 +103,6 @@ author: Jane Doe
 edition: First Edition
 version: "1.0"
 copyright_year: 2026
-paper: a5
 language: en
 ---
 """
@@ -148,7 +147,6 @@ def sample_metadata() -> Metadata:
         edition="First Edition",
         version="1.0",
         copyright_year="2026",
-        paper="a5",
         language="en",
     )
 

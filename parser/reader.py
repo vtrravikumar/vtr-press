@@ -12,7 +12,7 @@ from pathlib import Path
 import yaml
 
 from exceptions import FrontMatterError
-from model import Metadata
+from model import Metadata, SUPPORTED_DOCUMENT_TYPES
 
 
 def read(path: str | Path) -> tuple[Metadata, str]:
@@ -35,7 +35,8 @@ def read(path: str | Path) -> tuple[Metadata, str]:
         If the manuscript file does not exist.
 
     FrontMatterError
-        If the YAML front matter is missing or invalid.
+        If the YAML front matter is missing or invalid, or if `type`
+        is present but not one of SUPPORTED_DOCUMENT_TYPES.
     """
 
     path = Path(path)
@@ -91,18 +92,26 @@ def read(path: str | Path) -> tuple[Metadata, str]:
             "YAML front matter must contain key-value pairs."
         )
 
+    doc_type = data.get("type", "book")
+
+    if doc_type not in SUPPORTED_DOCUMENT_TYPES:
+        supported = ", ".join(SUPPORTED_DOCUMENT_TYPES)
+        raise FrontMatterError(
+            f'Unknown document type "{doc_type}". '
+            f"Supported types are: {supported}."
+        )
+
     metadata = Metadata(
         title=data.get("title", ""),
         subtitle=data.get("subtitle", ""),
         author=data.get("author", ""),
 
-        type=data.get("type", "book"),
+        type=doc_type,
 
         edition=data.get("edition", ""),
         version=data.get("version", ""),
         copyright_year=str(data.get("copyright_year", "")),
 
-        paper=data.get("paper", ""),
         language=data.get("language", ""),
     )
 

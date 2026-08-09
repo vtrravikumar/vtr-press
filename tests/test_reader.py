@@ -23,7 +23,6 @@ def test_reads_valid_front_matter(write_manuscript):
         "edition: First Edition\n"
         'version: "2.0"\n'
         "copyright_year: 2025\n"
-        "paper: a5\n"
         "language: en\n"
         "---\n"
         "\n"
@@ -39,7 +38,6 @@ def test_reads_valid_front_matter(write_manuscript):
     assert metadata.author == "An Author"
     assert metadata.edition == "First Edition"
     assert metadata.version == "2.0"
-    assert metadata.paper == "a5"
     assert metadata.language == "en"
     assert metadata.type == "book"
     assert body.startswith("## Prologue")
@@ -201,3 +199,107 @@ def test_empty_front_matter_block_returns_default_metadata(write_manuscript):
     assert metadata.title == ""
     assert metadata.type == "book"
     assert body.strip() == "Body"
+
+
+# ============================================================================
+# Metadata.paper is retired (C2 decision 3)
+# ============================================================================
+
+def test_paper_field_is_no_longer_on_metadata():
+    """
+    Metadata.paper was dead data (parsed but never consumed anywhere)
+    even before this change -- page size is now entirely determined
+    by the document type -> theme mapping. The field is removed
+    outright, not just left unused.
+    """
+
+    from model import Metadata
+
+    metadata = Metadata()
+
+    assert not hasattr(metadata, "paper")
+
+
+def test_paper_in_front_matter_is_silently_ignored_not_an_error(
+    write_manuscript,
+):
+    """
+    A manuscript that still has `paper:` in its front matter (an old
+    manuscript not yet cleaned up) must not fail to parse -- unknown
+    YAML keys are simply ignored, same as any other unrecognized key.
+    """
+
+    path = write_manuscript(
+        "---\ntitle: T\npaper: a5\n---\nBody\n"
+    )
+
+    metadata, body = read(path)
+
+    assert metadata.title == "T"
+    assert not hasattr(metadata, "paper")
+
+
+# ============================================================================
+# type validation (C2 decision 1) -- unknown type is a hard error
+# ============================================================================
+
+def test_type_book_is_accepted(write_manuscript):
+    path = write_manuscript("---\ntitle: T\ntype: book\n---\nBody\n")
+
+    metadata, _ = read(path)
+
+    assert metadata.type == "book"
+
+
+def test_type_omitted_defaults_to_book(write_manuscript):
+    path = write_manuscript("---\ntitle: T\n---\nBody\n")
+
+    metadata, _ = read(path)
+
+    assert metadata.type == "book"
+
+
+def test_type_technical_document_is_accepted(write_manuscript):
+    path = write_manuscript(
+        "---\ntitle: T\ntype: technical-document\n---\nBody\n"
+    )
+
+    metadata, _ = read(path)
+
+    assert metadata.type == "technical-document"
+
+
+def test_unknown_type_raises_front_matter_error(write_manuscript):
+    path = write_manuscript(
+        "---\ntitle: T\ntype: white-paper\n---\nBody\n"
+    )
+
+    with pytest.raises(FrontMatterError):
+        read(path)
+
+
+def test_unknown_type_error_identifies_the_bad_value_and_supported_types(
+    write_manuscript,
+):
+    path = write_manuscript(
+        "---\ntitle: T\ntype: white-paper\n---\nBody\n"
+    )
+
+    with pytest.raises(FrontMatterError) as exc_info:
+        read(path)
+
+    message = str(exc_info.value)
+    assert "white-paper" in message
+    assert "book" in message
+    assert "technical-document" in message
+
+
+def test_no_front_matter_at_all_still_defaults_to_book(write_manuscript):
+    """The "no front matter block" path must also default to book,
+    not just the "front matter present, type key absent" path."""
+
+    path = write_manuscript("Just body text, no front matter.\n")
+
+    metadata, _ = read(path)
+
+    assert metadata.type == "book"

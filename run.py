@@ -20,6 +20,8 @@ import yaml
 
 from publish import publish_all
 from renderer.typst import RenderOptions
+from parser.reader import read
+from exceptions import FrontMatterError
 
 
 ROOT = Path(__file__).parent
@@ -77,27 +79,54 @@ def main() -> None:
 
     config = books[book_name]
 
-    cover = (ROOT / config["cover"]).resolve()
     manuscript = (ROOT / config["manuscript"]).resolve()
-
     output_name = config["output_name"]
+
+    # A cover is required for type: book; optional for every other
+    # type (see VP-006/B2, which already makes cover *rendering*
+    # book-only -- this makes the cover *requirement* consistent with
+    # that). The manuscript's own declared type decides this, not
+    # whether books.yaml happens to have a "cover" entry.
+    try:
+        metadata, _ = read(manuscript)
+    except FrontMatterError as exc:
+        print(f"Error reading manuscript: {exc}")
+        sys.exit(1)
+
+    cover_config = config.get("cover")
+
+    if metadata.type == "book" and not cover_config:
+        print(
+            f'Book "{book_name}" is type "book" and requires a '
+            f'"cover" entry in books.yaml.'
+        )
+        sys.exit(1)
+
+    cover = (ROOT / cover_config).resolve() if cover_config else None
 
     #
     # Stage book assets
     #
 
-    cover_suffix = cover.suffix.lower() or ".png"
-    cover_filename = f"cover{cover_suffix}"
+    typst_cover_path = None
 
-    book_assets = GENERATED_DIR / "assets" / "books" / output_name
-    book_assets.mkdir(parents=True, exist_ok=True)
+    if cover is not None:
+        cover_suffix = cover.suffix.lower() or ".png"
+        cover_filename = f"cover{cover_suffix}"
 
-    staged_cover = book_assets / cover_filename
+        book_assets = GENERATED_DIR / "assets" / "books" / output_name
+        book_assets.mkdir(parents=True, exist_ok=True)
 
-    shutil.copy2(
-        cover,
-        staged_cover,
-    )
+        staged_cover = book_assets / cover_filename
+
+        shutil.copy2(
+            cover,
+            staged_cover,
+        )
+
+        typst_cover_path = (
+            f"/generated/assets/books/{output_name}/{cover_filename}"
+        )
 
     #
     # Generate publication formats
@@ -106,7 +135,7 @@ def main() -> None:
     typst_source, epub_source = publish_all(
         manuscript,
         cover,
-        f"/generated/assets/books/{output_name}/{cover_filename}",
+        typst_cover_path,
         render_options=render_options,
     )
 

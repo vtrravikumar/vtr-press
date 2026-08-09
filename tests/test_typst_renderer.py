@@ -628,13 +628,20 @@ def test_omitted_type_defaults_to_classic_theme(sample_metadata):
     assert out.splitlines()[0] == '#import "../themes/classic/theme.typ": *'
 
 
-def test_unrecognized_type_falls_back_to_classic_theme(sample_metadata):
+def test_renderer_theme_lookup_still_falls_back_for_directly_constructed_metadata(
+    sample_metadata,
+):
     """
-    Decision Log item 1 (MIGRATIONPLAN.md) is still open: whether an
-    unrecognized `type` should be a hard error instead. Until that's
-    decided, the lookup stays permissive -- this test documents the
-    current, deliberate fallback behavior rather than leaving it as
-    an untested implicit assumption.
+    Decision Log item 1 is now resolved: an unrecognized `type` must
+    be a hard error -- but that validation lives at the parse
+    boundary (parser/reader.py), the sole entry point for every real
+    manuscript. renderer/typst.py's own THEME_IMPORT_BY_TYPE.get(...)
+    fallback is intentionally left permissive below that boundary, so
+    that a Metadata constructed directly (as this test, and any other
+    test in this file, does -- bypassing the parser entirely) doesn't
+    require every such fixture to use a supported type. This is not
+    the "unknown type" user-facing behavior; that's covered in
+    tests/test_reader.py.
     """
 
     unknown_metadata = replace(sample_metadata, type="white-paper")

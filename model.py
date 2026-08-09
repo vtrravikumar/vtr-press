@@ -21,6 +21,15 @@ from enum import Enum, auto
 # Metadata
 # ============================================================================
 
+# The document types the publishing engine currently understands. Any
+# other value in a manuscript's `type` front matter field is rejected
+# at parse time (see parser/reader.py) rather than silently falling
+# back to a default -- this is also the single source of truth for
+# renderer/typst.py's THEME_IMPORT_BY_TYPE, which must have exactly
+# these keys.
+SUPPORTED_DOCUMENT_TYPES = ("book", "technical-document")
+
+
 @dataclass(slots=True)
 class Metadata:
     """Book metadata extracted from YAML."""
@@ -36,7 +45,6 @@ class Metadata:
 
     copyright_year: str = ""
 
-    paper: str = ""
     language: str = ""
 
 

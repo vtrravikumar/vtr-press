@@ -28,12 +28,14 @@ from model import (
 
 DEFAULT_THEME_IMPORT = "../themes/classic/theme.typ"
 
-# Type -> theme import path. Any type not listed here (including an
-# omitted or unrecognized value) falls back to DEFAULT_THEME_IMPORT
-# (classic/book) -- see Decision Log item 1 in MIGRATIONPLAN.md for
-# whether an unrecognized value should instead be a hard error; this
-# lookup deliberately stays permissive for now so that decision isn't
-# smuggled in as a side effect of this change.
+# Type -> theme import path. An unrecognized (or omitted) type falls
+# back to DEFAULT_THEME_IMPORT (classic/book) at this level -- but
+# every real manuscript is validated against SUPPORTED_DOCUMENT_TYPES
+# in parser/reader.py before it ever reaches this dict, and an
+# unrecognized value is rejected there with a clear error (Decision
+# Log item 1, resolved). This fallback exists only for callers that
+# construct a Book/Metadata directly, bypassing the parser (as many
+# tests in this file do).
 THEME_IMPORT_BY_TYPE: dict[str, str] = {
     "book": DEFAULT_THEME_IMPORT,
     "technical-document": "../themes/technical/theme.typ",

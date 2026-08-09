@@ -131,12 +131,12 @@ permanent design later.
 **Goal**: `python run.py <book>` selects the correct theme
 automatically from `metadata.type`, with no manual theme-path edits.
 
-**Status**: In progress (C1 shipped, C2 decisions pending)
+**Status**: Shipped (C1 + C2)
 
 | Task | Status | Description | Depends on |
 |---|---|---|---|
 | C1 | **Shipped** | Replaced the hardcoded `DEFAULT_THEME_IMPORT` in `renderer/typst.py` with `THEME_IMPORT_BY_TYPE`, a type→theme lookup, defaulting to classic for `book`/omitted/unrecognized. | Phase B |
-| C2 | Pending | Decide and record the open questions this exposes (see Decision Log below). Proposed resolutions drafted, awaiting confirmation. | — |
+| C2 | **Shipped** | Decided and implemented the three open questions this exposed — see Decision Log items 1–3. | — |
 
 **Verified**: `python run.py ride` (RideTogether, `type: technical-document`)
 now generates and compiles via the technical theme automatically, with
@@ -183,9 +183,9 @@ delete the row.
 
 | # | Decision needed | Status | Resolution |
 |---|---|---|---|
-| 1 | Is `metadata.type` an open string forever, or a validated/closed set? Confirmed today it accepts any string silently — no validation exists. | Open | — |
-| 2 | Is a cover image mandatory for technical documents? `run.py`/`books.yaml` currently assume yes for all types. | Open | — |
-| 3 | Formalize or retire the dead `Metadata.paper` field now that `type` drives page size. | Open | — |
+| 1 | Is `metadata.type` an open string forever, or a validated/closed set? Confirmed today it accepts any string silently — no validation exists. | **Resolved** | Closed set: `book`, `technical-document` (`SUPPORTED_DOCUMENT_TYPES` in `model.py`). Unrecognized values now raise `FrontMatterError` at parse time, identifying the bad value and the supported types. Omitted `type` still defaults to `book`. |
+| 2 | Is a cover image mandatory for technical documents? `run.py`/`books.yaml` currently assume yes for all types. | **Resolved** | Cover is required only for `type: book`. `books.yaml`'s `cover:` key is now optional; `run.py` reads the manuscript's declared type before deciding whether to require/stage it. Consistent with VP-006/B2, which already makes cover *rendering* book-only. |
+| 3 | Formalize or retire the dead `Metadata.paper` field now that `type` drives page size. | **Resolved** | Retired outright — field removed from `Metadata`, extraction removed from `parser/reader.py`, and the now-meaningless key removed from `examples/sample-manuscript.md`. A leftover `paper:` key in an older manuscript is silently ignored (unknown YAML key), not an error. |
 | 4 | Does metadata schema validation become type-aware (e.g. technical-document requires an `identifier`), or stay permissively open forever? | Open | — |
 | 5 | What error classes does the parser own vs. the interpretation layer, in writing, before more convention profiles make this expensive to untangle? | Open | — |
 | 6 | Is a lightweight (type, format) → renderer/theme registry worth introducing alongside Phase C's dispatch, before renderer files grow further? | Open | — |
