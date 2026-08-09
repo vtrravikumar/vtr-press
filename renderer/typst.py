@@ -28,6 +28,17 @@ from model import (
 
 DEFAULT_THEME_IMPORT = "../themes/classic/theme.typ"
 
+# Type -> theme import path. Any type not listed here (including an
+# omitted or unrecognized value) falls back to DEFAULT_THEME_IMPORT
+# (classic/book) -- see Decision Log item 1 in MIGRATIONPLAN.md for
+# whether an unrecognized value should instead be a hard error; this
+# lookup deliberately stays permissive for now so that decision isn't
+# smuggled in as a side effect of this change.
+THEME_IMPORT_BY_TYPE: dict[str, str] = {
+    "book": DEFAULT_THEME_IMPORT,
+    "technical-document": "../themes/technical/theme.typ",
+}
+
 
 @dataclass(slots=True)
 class RenderOptions:
@@ -147,7 +158,9 @@ class _Renderer:
 
         md = book.metadata
 
-        self.lines.append(f'#import "{DEFAULT_THEME_IMPORT}": *')
+        theme_import = THEME_IMPORT_BY_TYPE.get(md.type, DEFAULT_THEME_IMPORT)
+
+        self.lines.append(f'#import "{theme_import}": *')
         self.lines.append("")
         self.lines.append("#show: initialize-theme.with(")
         self.lines.append(

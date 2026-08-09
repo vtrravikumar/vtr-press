@@ -27,7 +27,7 @@ from model import (
     Subheading,
     Text,
 )
-from renderer.typst import RenderOptions, _Renderer, render
+from renderer.typst import RenderOptions, THEME_IMPORT_BY_TYPE, _Renderer, render
 
 
 def _renderer() -> _Renderer:
@@ -593,3 +593,65 @@ def test_technical_document_print_mode_still_gets_no_cover(sample_metadata):
     )
 
     assert "#render-cover(" not in out
+
+
+# ============================================================================
+# C1 -- automatic theme selection from metadata.type
+# ============================================================================
+
+def test_technical_document_type_selects_technical_theme(sample_metadata):
+    technical_metadata = replace(sample_metadata, type="technical-document")
+    out = render(_technical_document_book(technical_metadata))
+
+    assert out.splitlines()[0] == '#import "../themes/technical/theme.typ": *'
+
+
+def test_explicit_book_type_selects_classic_theme(sample_metadata):
+    book_metadata = replace(sample_metadata, type="book")
+    out = render(_minimal_book(book_metadata))
+
+    assert out.splitlines()[0] == '#import "../themes/classic/theme.typ": *'
+
+
+def test_omitted_type_defaults_to_classic_theme(sample_metadata):
+    """
+    metadata.type defaults to "book" (see model.py / VP-001), so a
+    manuscript with no `type` field at all must resolve identically
+    to an explicit `type: book` -- this is the path every existing
+    manuscript actually relies on, not just the explicit-book case.
+    """
+
+    assert sample_metadata.type == "book"
+
+    out = render(_minimal_book(sample_metadata))
+
+    assert out.splitlines()[0] == '#import "../themes/classic/theme.typ": *'
+
+
+def test_unrecognized_type_falls_back_to_classic_theme(sample_metadata):
+    """
+    Decision Log item 1 (MIGRATIONPLAN.md) is still open: whether an
+    unrecognized `type` should be a hard error instead. Until that's
+    decided, the lookup stays permissive -- this test documents the
+    current, deliberate fallback behavior rather than leaving it as
+    an untested implicit assumption.
+    """
+
+    unknown_metadata = replace(sample_metadata, type="white-paper")
+    out = render(_minimal_book(unknown_metadata))
+
+    assert out.splitlines()[0] == '#import "../themes/classic/theme.typ": *'
+
+
+def test_theme_import_by_type_is_the_single_source_of_dispatch():
+    """
+    Guards against a future edit adding a second, inconsistent
+    dispatch mechanism -- there should be exactly one place that maps
+    type to theme.
+    """
+
+    assert THEME_IMPORT_BY_TYPE["book"] == "../themes/classic/theme.typ"
+    assert (
+        THEME_IMPORT_BY_TYPE["technical-document"]
+        == "../themes/technical/theme.typ"
+    )

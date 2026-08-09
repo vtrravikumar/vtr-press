@@ -131,12 +131,18 @@ permanent design later.
 **Goal**: `python run.py <book>` selects the correct theme
 automatically from `metadata.type`, with no manual theme-path edits.
 
-**Status**: Not started
+**Status**: In progress (C1 shipped, C2 decisions pending)
 
-| Task | Description | Depends on |
-|---|---|---|
-| C1 | Replace the hardcoded `DEFAULT_THEME_IMPORT` in `renderer/typst.py` with a type→theme lookup, defaulting to classic for `book`/omitted. | Phase B (technical documents should be genuinely working before auto-selection chooses them) |
-| C2 | Decide and record the open questions this exposes (see Decision Log below). | — |
+| Task | Status | Description | Depends on |
+|---|---|---|---|
+| C1 | **Shipped** | Replaced the hardcoded `DEFAULT_THEME_IMPORT` in `renderer/typst.py` with `THEME_IMPORT_BY_TYPE`, a type→theme lookup, defaulting to classic for `book`/omitted/unrecognized. | Phase B |
+| C2 | Pending | Decide and record the open questions this exposes (see Decision Log below). Proposed resolutions drafted, awaiting confirmation. | — |
+
+**Verified**: `python run.py ride` (RideTogether, `type: technical-document`)
+now generates and compiles via the technical theme automatically, with
+zero manual override — uniform A4 throughout, no orphan pages, cover
+correctly present/absent per B2's rule. Book manuscript output
+(`examples/sample-manuscript.md`) confirmed byte-identical before/after.
 
 ---
 
