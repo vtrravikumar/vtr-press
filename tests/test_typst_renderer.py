@@ -495,3 +495,61 @@ def test_copyright_dedication_thirukkural_still_precede_contents(
     )
 
     assert copyright_idx < contents_idx
+
+
+# ============================================================================
+# Contents pagebreak must not collide with the title page's own pagebreak
+# ============================================================================
+
+def test_contents_pagebreak_suppressed_when_nothing_precedes_it(
+    sample_metadata,
+):
+    """
+    When the very first section is also the one that triggers Contents
+    (no front matter in between -- a technical document with no
+    Prologue), the title page's own trailing #pagebreak() and
+    _render_contents()'s leading pagebreak must not both fire: that
+    produces two consecutive #pagebreak() calls with nothing rendered
+    between them, which Typst then renders as an extra, empty page at
+    its own default page size rather than the theme's.
+    """
+
+    out = render(_technical_document_book(sample_metadata))
+    lines = out.splitlines()
+
+    title_page_idx = next(
+        i for i, l in enumerate(lines) if l == "#render-title-page("
+    )
+    contents_idx = next(
+        i for i, l in enumerate(lines) if l == "#render-contents()"
+    )
+
+    between = [
+        l for l in lines[title_page_idx:contents_idx] if l.strip()
+    ]
+
+    assert between.count("#pagebreak()") == 1
+
+
+def test_contents_pagebreak_still_present_when_front_matter_precedes_it(
+    sample_metadata,
+):
+    """
+    For a book (front matter -- Copyright etc. -- before Contents),
+    the pagebreak immediately before #render-contents() must still be
+    emitted, exactly as before this fix.
+    """
+
+    out = render(_minimal_book(sample_metadata))
+    lines = out.splitlines()
+
+    contents_idx = next(
+        i for i, l in enumerate(lines) if l == "#render-contents()"
+    )
+
+    # The nearest non-blank line before #render-contents() must be a
+    # pagebreak -- Contents still gets its own page.
+    preceding = next(
+        l for l in reversed(lines[:contents_idx]) if l.strip()
+    )
+    assert preceding == "#pagebreak()"

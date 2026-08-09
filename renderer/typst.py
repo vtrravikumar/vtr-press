@@ -215,8 +215,18 @@ class _Renderer:
     def _render_contents(self) -> None:
         """Render the table of contents."""
 
-        self.lines.append("#pagebreak()")
-        self.lines.append("")
+        # Route this through _page_break() (rather than an
+        # unconditional raw #pagebreak()) so the _first_page
+        # suppression applies here too. Without it, a document whose
+        # first section is also the one that triggers Contents (no
+        # front matter in between -- e.g. a technical document with
+        # no Prologue) gets two consecutive #pagebreak() calls with
+        # nothing rendered between them: the title page's own trailing
+        # pagebreak, immediately followed by this one. That produces
+        # a genuinely empty page with no enclosing page-styling
+        # function active, which Typst then renders at its own
+        # built-in default page size rather than the theme's.
+        self._page_break()
         self.lines.append("#render-contents()")
         self.lines.append("")
 
