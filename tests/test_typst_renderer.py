@@ -10,6 +10,7 @@ themes/classic/*.typ templates.
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 
 import pytest
 
@@ -553,3 +554,42 @@ def test_contents_pagebreak_still_present_when_front_matter_precedes_it(
         l for l in reversed(lines[:contents_idx]) if l.strip()
     )
     assert preceding == "#pagebreak()"
+
+
+# ============================================================================
+# B2 -- cover only rendered for type: book (and only outside print mode)
+# ============================================================================
+
+def test_book_normal_mode_still_gets_cover(sample_metadata):
+    """type: book (the default) is unaffected by this change."""
+
+    out = render(_minimal_book(sample_metadata))
+
+    assert "#render-cover(" in out
+
+
+def test_technical_document_normal_mode_gets_no_cover(sample_metadata):
+    """
+    Non-print-mode rendering previously called render-cover()
+    unconditionally. For a technical document, the theme's
+    render-cover is a no-op, but the renderer's own trailing
+    #pagebreak() still produced a genuinely blank leading page. The
+    renderer must now skip the call entirely for this type.
+    """
+
+    technical_metadata = replace(sample_metadata, type="technical-document")
+    out = render(_technical_document_book(technical_metadata))
+
+    assert "#render-cover(" not in out
+
+
+def test_technical_document_print_mode_still_gets_no_cover(sample_metadata):
+    """Print mode already skipped cover for every type; must still."""
+
+    technical_metadata = replace(sample_metadata, type="technical-document")
+    out = render(
+        _technical_document_book(technical_metadata),
+        options=RenderOptions(print_mode=True),
+    )
+
+    assert "#render-cover(" not in out

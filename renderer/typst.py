@@ -113,7 +113,14 @@ class _Renderer:
 
     def render(self, book: Book) -> str:
         self._render_preamble(book)
-        if not self.options.print_mode:
+        # Cover is a print-and-book-only concept for now: print mode
+        # produces a print-on-demand interior with no embedded cover,
+        # and technical documents (per SPECIFICATION.md's A4/no-cover
+        # convention) don't get one either. This is a direct type
+        # check, not a convention-profile system -- Phase D is where
+        # "does this document get a cover" becomes a generic property
+        # the renderer reads rather than a type comparison here.
+        if not self.options.print_mode and book.metadata.type == "book":
             self._render_cover()
         self._render_title_page(book)
         for item in book.sections:

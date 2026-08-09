@@ -88,20 +88,41 @@ incorrect and is corrected here.)
 **Goal**: technical documents get a working Table of Contents, correct
 page numbering, and no stray blank leading page.
 
-**Status**: Not started
+**Status**: Shipped (B1 + B2)
 
-| Task | Description | Depends on |
-|---|---|---|
-| B1 | Generalize the Contents/page-numbering trigger, currently hardcoded to `SectionKind.PROLOGUE` (book-only), to something like "first outlined section." | Phase A |
-| B2 | Decouple the cover/pagebreak call from unconditional execution — the renderer must know not to call `render-cover()` + `#pagebreak()` at all for a document type that doesn't want a cover. | Phase A |
+| Task | Status | Description | Depends on |
+|---|---|---|---|
+| B1 | **Shipped** (`113f1e3`) | Generalized the Contents/page-numbering trigger, previously hardcoded to `SectionKind.PROLOGUE` (book-only), to "first outlined section." | Phase A |
+| B2 | **Shipped** | Decoupled the cover/pagebreak call from unconditional execution — the renderer now only calls `render-cover()` + `#pagebreak()` outside print mode for `type: book`. | Phase A |
 
-**Note — read before touching either task**: both B1 and B2 are
+**Finding discovered while validating B1, fixed separately (`114f6b7`)**:
+generalizing the Contents trigger to "first outlined section" made a
+previously-unreachable code path reachable — a document whose very
+first section is also the one that triggers Contents (no front matter
+in between, e.g. a technical document with no Prologue) hit two
+consecutive `#pagebreak()` calls with nothing rendered between them
+(the title page's own trailing pagebreak, immediately followed by
+`_render_contents()`'s own leading pagebreak). That produced a
+genuinely empty page with no enclosing page-styling function active,
+which Typst rendered at its own built-in default page size rather
+than the theme's — surfacing as an anomalous A4 page inside an
+otherwise-A5 (classic theme) or otherwise-A4 (technical theme,
+harmless there since it already matched) document. Fixed by routing
+`_render_contents()`'s pagebreak through the same `_page_break()`
+method every other section already uses, so the existing
+`_first_page` suppression applies here too. Confirmed pre-existing
+(not introduced by B1's diff) but only reachable once B1 shipped;
+confirmed unrelated to theme selection (reproduced with classic theme
+alone, no technical-theme involvement). Verified byte-identical book
+output before/after, both themes uniform page size after.
+
+**Note — read before touching B2**: both B1 and B2 are
 **deliberate stopgaps**, not final architecture. Once Phase D's
 interpretation layer exists, "where does main matter begin" and
 "does this document get a cover" should become convention-profile
 properties the renderer reads generically, not renderer `if`-branches.
-Label them as stopgaps in their own commits/tickets so they aren't
-mistaken for permanent design later.
+Label B2 as a stopgap in its own commit so it isn't mistaken for
+permanent design later.
 
 ---
 
