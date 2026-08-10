@@ -445,6 +445,12 @@ class _Renderer:
         lines = [f"<h2>{_text(section.title)}</h2>"]
 
         for block in section.blocks:
+            if (
+                section.kind == SectionKind.COPYRIGHT
+                and self._is_empty_isbn_paragraph(block)
+            ):
+                continue
+
             lines.append(self._render_block(block))
 
         self.documents.append(
@@ -553,6 +559,15 @@ class _Renderer:
             for node in paragraph.children
         )
         return f"<p>{content}</p>"
+
+    def _is_empty_isbn_paragraph(self, block: Block) -> bool:
+        """Return whether a paragraph is only an empty ISBN placeholder."""
+
+        if not isinstance(block, Paragraph):
+            return False
+
+        text = "".join(_inline_plain_text(node) for node in block.children)
+        return text.strip().casefold() in {"isbn", "isbn:"}
 
     # ------------------------------------------------------------------
     # Verse
@@ -824,6 +839,7 @@ class _Renderer:
             '    <dc:title id="title">'
             f'{_text(book.metadata.title or "Untitled")}'
             "</dc:title>",
+            '    <meta property="title-type" refines="#title">main</meta>',
             f"    <dc:language>{_text(language)}</dc:language>",
             f'    <meta property="dcterms:modified">{modified}</meta>',
         ]
@@ -961,6 +977,30 @@ def _media_type(name: str) -> str:
 
     media_type, _ = mimetypes.guess_type(name)
     return media_type or "image/png"
+
+
+def _inline_plain_text(node: Inline) -> str:
+    """Return plain text for renderer-level publication checks."""
+
+    if isinstance(node, Text):
+        return node.text
+
+    if isinstance(node, (Bold, Italic)):
+        return "".join(
+            _inline_plain_text(child)
+            for child in node.children
+        )
+
+    if isinstance(node, Code):
+        return node.text
+
+    if isinstance(node, Link):
+        return node.text
+
+    if isinstance(node, LineBreak):
+        return "\n"
+
+    return ""
 
 
 def _text(value: object) -> str:

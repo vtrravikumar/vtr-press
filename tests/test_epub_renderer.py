@@ -110,6 +110,50 @@ def test_container_xml_references_opf(sample_metadata, tiny_cover):
     assert ".opf" in container
 
 
+def test_opf_main_title_is_explicitly_refined_as_main(sample_metadata, tiny_cover):
+    """
+    Kindle Previewer (E20006/E21011) rejects an OPF with more than one
+    dc:title unless one of them is explicitly refined with
+    title-type="main". The subtitle was already refined as "subtitle";
+    the main title must be refined as "main" the same way, or Kindle
+    Previewer can't tell which dc:title is the actual book title.
+    """
+
+    data = render(_minimal_book(sample_metadata), tiny_cover)
+
+    zf = zipfile.ZipFile(BytesIO(data))
+    opf = zf.read("OEBPS/content.opf").decode("utf-8")
+
+    assert '<dc:title id="title">' in opf
+    assert (
+        '<meta property="title-type" refines="#title">main</meta>' in opf
+    )
+
+    # The refines target must actually match the title element's id --
+    # not just happen to contain the right substrings independently.
+    title_idx = opf.index('<dc:title id="title">')
+    refines_idx = opf.index(
+        '<meta property="title-type" refines="#title">main</meta>'
+    )
+    assert refines_idx > title_idx
+
+
+def test_opf_subtitle_is_still_refined_as_subtitle(sample_metadata, tiny_cover):
+    """Guards the existing, correct subtitle behavior against regression
+    while fixing the main title -- both must be able to coexist."""
+
+    data = render(_minimal_book(sample_metadata), tiny_cover)
+
+    zf = zipfile.ZipFile(BytesIO(data))
+    opf = zf.read("OEBPS/content.opf").decode("utf-8")
+
+    assert '<dc:title id="subtitle">' in opf
+    assert (
+        '<meta property="title-type" refines="#subtitle">subtitle</meta>'
+        in opf
+    )
+
+
 def test_render_without_cover_file_does_not_crash(sample_metadata, tmp_path):
     """Missing cover/logo files must degrade gracefully, not raise."""
 
@@ -220,6 +264,35 @@ def test_back_cover_omission_leaves_no_empty_document_in_spine(
     # produce the exact same set of documents as a book that never had
     # one -- proving nothing is rendered in its place.
     assert docs_with == docs_without
+
+
+def test_empty_isbn_placeholder_is_omitted(sample_metadata, tiny_cover):
+    book = _minimal_book(sample_metadata)
+    book.sections[0].blocks.append(Paragraph(children=[Text("ISBN:")]))
+
+    data = render(book, tiny_cover)
+    zf = zipfile.ZipFile(BytesIO(data))
+    all_text = b"".join(
+        zf.read(n) for n in zf.namelist() if n.endswith(".xhtml")
+    )
+
+    assert b"All rights reserved." in all_text
+    assert b"ISBN:" not in all_text
+
+
+def test_populated_isbn_is_kept(sample_metadata, tiny_cover):
+    book = _minimal_book(sample_metadata)
+    book.sections[0].blocks.append(
+        Paragraph(children=[Text("ISBN: 978-1-2345-6789-0")])
+    )
+
+    data = render(book, tiny_cover)
+    zf = zipfile.ZipFile(BytesIO(data))
+    all_text = b"".join(
+        zf.read(n) for n in zf.namelist() if n.endswith(".xhtml")
+    )
+
+    assert b"ISBN: 978-1-2345-6789-0" in all_text
 
 
 # ============================================================================

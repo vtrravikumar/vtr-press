@@ -316,6 +316,35 @@ def test_render_print_mode_leaves_copyright_body_unchanged(sample_metadata):
     assert "ISBN: 978-1-2345-6789-0" in copyright_page
 
 
+def test_render_omits_empty_isbn_placeholder(sample_metadata):
+    copyright_section = Section(
+        kind=SectionKind.COPYRIGHT,
+        title="Copyright",
+        blocks=[
+            Paragraph(children=[Text("First Edition - 2026")]),
+            Paragraph(children=[Text("ISBN:")]),
+        ],
+    )
+    prologue = Section(
+        kind=SectionKind.PROLOGUE,
+        title="Prologue",
+        blocks=[Paragraph(children=[Text("Prologue text.")])],
+    )
+
+    out = render(
+        Book(metadata=sample_metadata, sections=[copyright_section, prologue])
+    )
+
+    assert "First Edition - 2026" in out
+    assert "ISBN:" not in out
+
+
+def test_render_keeps_populated_isbn(sample_metadata):
+    out = render(_print_book(sample_metadata))
+
+    assert "ISBN: 978-1-2345-6789-0" in out
+
+
 @pytest.mark.parametrize(
     "publisher_text",
     [

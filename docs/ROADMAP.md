@@ -74,6 +74,21 @@ These manuscripts serve as regression tests for architectural evolution and publ
 
 ---
 
+### Architecture Review Pack
+
+Generate a concise Architecture Review Pack directly from a Solution Architecture manuscript.
+
+The Review Pack is a derived artifact generated from the technical document and is intended for architecture reviews, steering committees, and technical governance meetings.
+
+Goals:
+
+- Single source of truth.
+- No duplicated presentation.
+- Approximately 10-page executive architecture summary.
+- Automatically generated from the Solution Architecture manuscript.
+- PDF output initially.
+- Additional outputs (HTML, speaker notes, executive summaries) may follow.
+
 # Future Direction
 
 Future document types may include:

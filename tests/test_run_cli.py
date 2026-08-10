@@ -70,6 +70,7 @@ def fake_pipeline(monkeypatch, tmp_path):
     monkeypatch.setattr(run, "GENERATED_DIR", tmp_path / "generated")
     monkeypatch.setattr(run, "OUTPUT_DIR", tmp_path / "output")
     monkeypatch.setattr(run, "ROOT", tmp_path)
+    captured["root"] = tmp_path
 
     return {"configure": configure, "captured": captured}
 
@@ -82,6 +83,19 @@ def test_book_with_cover_succeeds(monkeypatch, fake_pipeline):
 
     assert fake_pipeline["captured"]["cover_path"] is not None
     assert fake_pipeline["captured"]["typst_cover_path"] is not None
+
+    manifest = (
+        fake_pipeline["captured"]["root"]
+        / "isbn"
+        / "TestBook"
+        / "publication-manifest.md"
+    )
+    manifest_text = manifest.read_text(encoding="utf-8")
+
+    assert "TestBook Publication Manifest" in manifest_text
+    assert "TestBook.pdf" in manifest_text
+    assert "TestBook.epub" in manifest_text
+    assert "SHA256:" in manifest_text
 
 
 def test_book_without_cover_exits_with_clear_error(

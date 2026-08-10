@@ -67,6 +67,7 @@ htmlcov/
 # Temporary / Patch files
 # ------------------------------------------------------------------
 
+tmp/
 *.tmp
 *.bak
 *.patch

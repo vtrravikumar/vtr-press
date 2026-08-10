@@ -430,6 +430,12 @@ class _Renderer:
             self.lines.append("")
 
         for block in section.blocks:
+            if (
+                section.kind == SectionKind.COPYRIGHT
+                and self._is_empty_isbn_paragraph(block)
+            ):
+                continue
+
             self._render_block(block)
 
         if (
@@ -484,6 +490,35 @@ class _Renderer:
             self._render_inline(node)
             for node in paragraph.children
         )
+
+    def _is_empty_isbn_paragraph(self, block: Block) -> bool:
+        """Return whether a paragraph is only an empty ISBN placeholder."""
+
+        if not isinstance(block, Paragraph):
+            return False
+
+        text = "".join(self._inline_plain_text(node) for node in block.children)
+        return text.strip().casefold() in {"isbn", "isbn:"}
+
+    def _inline_plain_text(self, node: Inline) -> str:
+        """Return plain text for renderer-level publication checks."""
+
+        if isinstance(node, Text):
+            return node.text
+
+        if isinstance(node, (Bold, Italic)):
+            return "".join(
+                self._inline_plain_text(child)
+                for child in node.children
+            )
+
+        if isinstance(node, Code):
+            return node.text
+
+        if isinstance(node, Link):
+            return node.text
+
+        return ""
 
     # ------------------------------------------------------------------
     # Verse

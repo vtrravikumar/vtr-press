@@ -11,6 +11,8 @@ python run.py memoir print
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+import hashlib
 import shutil
 import subprocess
 import sys
@@ -183,6 +185,12 @@ def main() -> None:
             isbn_dir / artifact.name,
         )
 
+    manifest_file = isbn_dir / "publication-manifest.md"
+    manifest_file.write_text(
+        publication_manifest(output_name, (pdf_file, epub_file)),
+        encoding="utf-8",
+    )
+
     #
     # Success
     #
@@ -191,8 +199,51 @@ def main() -> None:
     print(f"✓ PDF    output/{pdf_file.name}")
     print(f"✓ EPUB   output/{epub_file.name}")
     print(f"✓ ISBN   isbn/{output_name}/")
+    print(f"✓ Manifest isbn/{output_name}/{manifest_file.name}")
     print()
     print("Done.")
+
+
+def publication_manifest(output_name: str, artifacts: tuple[Path, ...]) -> str:
+    """Return a manifest for the latest generated publication artifacts."""
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    lines = [
+        f"# {output_name} Publication Manifest",
+        "",
+        f"Generated: {timestamp}",
+        "",
+        "Use the files listed here for the current publication pass.",
+        "",
+        "## Artifacts",
+        "",
+    ]
+
+    for artifact in artifacts:
+        lines.extend(
+            [
+                f"### {artifact.name}",
+                "",
+                f"- Size: {artifact.stat().st_size} bytes",
+                f"- SHA256: {_sha256(artifact)}",
+                "",
+            ]
+        )
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _sha256(path: Path) -> str:
+    """Return the SHA256 digest for a generated artifact."""
+
+    digest = hashlib.sha256()
+
+    with path.open("rb") as fp:
+        for chunk in iter(lambda: fp.read(1024 * 1024), b""):
+            digest.update(chunk)
+
+    return digest.hexdigest()
 
 
 if __name__ == "__main__":
