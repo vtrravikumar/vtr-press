@@ -12,5 +12,4 @@ books:
 
   ride:
     manuscript: ../../Projects/RideTogether/docs/architecture/SolutionArchitecture.md
-    cover: ../Project-memoir/assets/book_cover.png
     output_name: RideTogetherSAD

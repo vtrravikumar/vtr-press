@@ -152,7 +152,17 @@ correctly present/absent per B2's rule. Book manuscript output
 comes from a shared model; only interpretation (per type) and
 presentation (per theme) differ.
 
-**Status**: Not started
+**Status**: In progress (D0 design note complete, D1 blocked pending sign-off)
+
+**Design artifact**: `docs/DOCUMENT_MODEL_DESIGN.md` — validates the
+proposed flat block-stream model against every current book rule and
+every current technical-document rule. Found one genuine
+simplification (subsections no longer need a special parser case)
+and one piece of concrete supporting evidence (renderer/epub.py still
+hardcodes `SectionKind.PROLOGUE` for its own contents-index logic,
+never having received VP-005/B1's "first outlined section" fix —
+independent, present-tense evidence of exactly the kind of
+per-renderer drift a shared interpretation layer prevents).
 
 **Scope note**: this phase is designed to comfortably support **books,
 technical documents, white papers, tutorials, and API references**
@@ -163,14 +173,14 @@ different input paradigm (executable cells) respectively, and are
 tracked as separate future architectural questions, not solved as a
 side effect of this migration.
 
-| Task | Description | Depends on |
-|---|---|---|
-| D0 | **Design-validation checkpoint.** Write the interpretation layer's contract on paper (or as a throwaway spike): what goes in, what comes out, which decisions belong to parser vs. interpretation vs. renderer. Validate it against *both* book's rules (Part→Chapter→Scene, Scene requires Chapter) and technical-document's rules (numbered sections, subsections, appendices) before writing any real code. | Phase C |
-| D1 | Introduce a flat, ordered block-stream model (`Heading(level, title)`, `Paragraph`, `Verse`, etc. — Pandoc-AST-style, no pre-built parent/child nesting) as new, additive code in `model.py`. Does not touch `Part`/`Chapter`/`Scene`/`Section`. | D0 |
-| D2 | Build the new parser as a second, parallel path producing the flat block stream from Markdown headings. Unreachable for `type: book` — the existing parser keeps handling books untouched. | D1 |
-| D3 | Wire dispatch so `type: technical-document` (only, initially) routes through the new parser; `type: book` (including omitted) is unaffected. | D2 |
-| D4 | Validate against 2–3 real manuscripts, **including at least one that is structurally different from RideTogether** (table-heavy, unusually deep, etc.) — not just another similarly-shaped prose document. | D3 |
-| D5 | *(Explicitly optional — revisit with evidence, not a foregone next step.)* Decide whether to migrate `book` onto the generic model too, retiring `Part`/`Chapter`/`Scene` as dataclasses. Only worth evaluating once D1–D4 have proven themselves against real content. | D4 (+ a fixed revisit window — see Decision Log) |
+| Task | Status | Description | Depends on |
+|---|---|---|---|
+| D0 | **Design note complete; two decisions pending sign-off** | Design-validation checkpoint — see `docs/DOCUMENT_MODEL_DESIGN.md`. Two open, D1-blocking decisions found: (1) interpretation's output shape — recommend "annotate in place" over reconstructing a grouped structure; (2) where interpretation lives as code — recommend a new, small, dedicated module rather than folding into `renderer/`. **D1 must not start until both are explicitly confirmed**, not assumed from the recommendation alone. | Phase C |
+| D1 | Blocked on D0 sign-off | Introduce a flat, ordered block-stream model (`Heading(level, title)`, `Paragraph`, `Verse`, etc. — Pandoc-AST-style, no pre-built parent/child nesting) as new, additive code in `model.py`. Does not touch `Part`/`Chapter`/`Scene`/`Section`. | D0 |
+| D2 | Not started | Build the new parser as a second, parallel path producing the flat block stream from Markdown headings. Unreachable for `type: book` — the existing parser keeps handling books untouched. | D1 |
+| D3 | Not started | Wire dispatch so `type: technical-document` (only, initially) routes through the new parser; `type: book` (including omitted) is unaffected. | D2 |
+| D4 | Not started | Validate against 2–3 real manuscripts, **including at least one that is structurally different from RideTogether** (table-heavy, unusually deep, etc.) — not just another similarly-shaped prose document. | D3 |
+| D5 | Not started | *(Explicitly optional — revisit with evidence, not a foregone next step.)* Decide whether to migrate `book` onto the generic model too, retiring `Part`/`Chapter`/`Scene` as dataclasses. Only worth evaluating once D1–D4 have proven themselves against real content. | D4 (+ a fixed revisit window — see Decision Log) |
 
 ---
 
