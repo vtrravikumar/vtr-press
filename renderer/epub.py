@@ -436,10 +436,22 @@ class _Renderer:
 
         self._section_number += 1
 
-        if (
-            self._contents_index is None
-            and section.kind == SectionKind.PROLOGUE
-        ):
+        # Contents is inserted immediately before the first section
+        # that participates in the outline. For a book, that's
+        # normally the Prologue (Copyright/Dedication/Thirukkural are
+        # front matter, not outlined). For a technical document with
+        # no Prologue, it's whichever ordinary section comes first --
+        # mirrors renderer/typst.py's VP-005 fix (previously this was
+        # hardcoded to SectionKind.PROLOGUE here too, so a technical
+        # document's EPUB build silently never set _contents_index and
+        # fell back to a fixed, book-shaped position guess instead).
+        outlined = section.kind not in {
+            SectionKind.COPYRIGHT,
+            SectionKind.DEDICATION,
+            SectionKind.THIRUKKURAL,
+        }
+
+        if self._contents_index is None and outlined:
             self._contents_index = len(self.documents)
 
         lines = [f"<h2>{_text(section.title)}</h2>"]

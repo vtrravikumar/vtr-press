@@ -88,12 +88,13 @@ incorrect and is corrected here.)
 **Goal**: technical documents get a working Table of Contents, correct
 page numbering, and no stray blank leading page.
 
-**Status**: Shipped (B1 + B2)
+**Status**: Shipped (B1 + B2 + B3)
 
 | Task | Status | Description | Depends on |
 |---|---|---|---|
 | B1 | **Shipped** (`113f1e3`) | Generalized the Contents/page-numbering trigger, previously hardcoded to `SectionKind.PROLOGUE` (book-only), to "first outlined section." | Phase A |
 | B2 | **Shipped** | Decoupled the cover/pagebreak call from unconditional execution — the renderer now only calls `render-cover()` + `#pagebreak()` outside print mode for `type: book`. | Phase A |
+| B3 | **Shipped** | EPUB/Typst parity: `renderer/epub.py`'s own Contents-index trigger was still hardcoded to `SectionKind.PROLOGUE`, never having received B1's fix (B1 only touched `renderer/typst.py`). Generalized to the same "first outlined section" condition. Discovered while researching Phase D's D0 design note; fixed as its own narrowly-scoped ticket, no new architecture introduced. | B1 |
 
 **Finding discovered while validating B1, fixed separately (`114f6b7`)**:
 generalizing the Contents trigger to "first outlined section" made a

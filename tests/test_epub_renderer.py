@@ -319,3 +319,97 @@ def test_subheading_renders_as_matching_heading_level(sample_metadata, tiny_cove
 
     assert b"<h3>Purpose</h3>" in all_text
     assert b"<h4>ADR-001</h4>" in all_text
+
+
+# ============================================================================
+# Contents position -- "first outlined section" trigger (EPUB/Typst parity)
+# ============================================================================
+
+def _spine_order(data: bytes) -> list[str]:
+    import re
+
+    zf = zipfile.ZipFile(BytesIO(data))
+    opf = zf.read("OEBPS/content.opf").decode("utf-8")
+    return re.findall(r'<itemref idref="([^"]+)"', opf)
+
+
+def test_contents_inserted_before_prologue_for_a_book(sample_metadata, tiny_cover):
+    """Existing book behavior: Contents lands right before the Prologue,
+    after Copyright -- unchanged by this fix."""
+
+    data = render(_minimal_book(sample_metadata), tiny_cover)
+    spine = _spine_order(data)
+
+    contents_idx = spine.index("contents")
+    copyright_idx = next(i for i, s in enumerate(spine) if s == "section-001")
+
+    assert copyright_idx < contents_idx
+    assert spine[contents_idx + 1] == "section-002"  # Prologue
+
+
+def test_contents_inserted_before_first_outlined_section_without_prologue(
+    sample_metadata, tiny_cover
+):
+    """
+    A technical document with no Prologue at all must still get
+    Contents inserted at the right point -- immediately before the
+    first section that actually participates in the outline.
+    Previously this fell back to a fixed, book-shaped position guess
+    (insert after exactly 2 documents), which happened to coincide
+    with "no front matter at all" but silently broke the moment any
+    front-matter section (e.g. Copyright) preceded the first real
+    content section.
+    """
+
+    copyright_section = Section(
+        kind=SectionKind.COPYRIGHT,
+        title="Copyright",
+        blocks=[Paragraph(children=[Text("Copyright notice.")])],
+    )
+    introduction = Section(
+        kind=SectionKind.OTHER,
+        title="Introduction",
+        blocks=[Paragraph(children=[Text("Intro text.")])],
+    )
+
+    book = Book(
+        metadata=sample_metadata,
+        sections=[copyright_section, introduction],
+    )
+
+    data = render(book, tiny_cover)
+    spine = _spine_order(data)
+
+    contents_idx = spine.index("contents")
+    copyright_idx = spine.index("section-001")
+    introduction_idx = spine.index("section-002")
+
+    # Contents must come after Copyright (front matter, not outlined)
+    # and before Introduction (the actual first outlined section) --
+    # not shoved in front of Copyright by a fixed position guess.
+    assert copyright_idx < contents_idx < introduction_idx
+
+
+def test_contents_inserted_at_start_when_nothing_precedes_first_section(
+    sample_metadata, tiny_cover
+):
+    """A technical document whose very first section is itself the
+    first outlined section (no front matter at all) still gets
+    Contents immediately before it."""
+
+    introduction = Section(
+        kind=SectionKind.OTHER,
+        title="Introduction",
+        blocks=[Paragraph(children=[Text("Intro text.")])],
+    )
+
+    book = Book(metadata=sample_metadata, sections=[introduction])
+
+    data = render(book, tiny_cover)
+    spine = _spine_order(data)
+
+    contents_idx = spine.index("contents")
+    introduction_idx = spine.index("section-001")
+
+    assert contents_idx < introduction_idx
+    assert spine[contents_idx + 1] == "section-001"
