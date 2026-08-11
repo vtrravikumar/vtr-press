@@ -35,7 +35,6 @@ from model import (
 
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_COVER = ROOT / "assets" / "books" / "current" / "cover.png"
 DEFAULT_LOGO = ROOT / "assets" / "publisher" / "logo.png"
 
 
@@ -234,7 +233,17 @@ class _Renderer:
     """EPUB renderer."""
 
     def __init__(self, cover_path: str | Path | None = None) -> None:
-        self.cover_path = Path(cover_path) if cover_path is not None else DEFAULT_COVER
+        # cover_path=None means this document has no cover (e.g. a
+        # technical-document, per the C2 decision that a cover is
+        # required only for type: book) -- it must NOT fall back to
+        # any shared default image. Previously this fell back to
+        # DEFAULT_COVER, a single static asset shared by every book,
+        # which meant an EPUB built for a book with no explicit cover
+        # silently reused whatever image happened to be sitting at
+        # that path from an earlier, unrelated publication run.
+        self.cover_path: Path | None = (
+            Path(cover_path) if cover_path is not None else None
+        )
         self.logo_path = DEFAULT_LOGO
         self.documents: list[_Document] = []
         self.nav_points: list[_NavPoint] = []
@@ -938,7 +947,7 @@ class _Renderer:
     def _cover_name(self) -> str | None:
         """Return the packaged cover image name."""
 
-        if not self.cover_path.exists():
+        if self.cover_path is None or not self.cover_path.exists():
             return None
 
         suffix = self.cover_path.suffix.lower()

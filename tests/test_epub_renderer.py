@@ -165,6 +165,67 @@ def test_render_without_cover_file_does_not_crash(sample_metadata, tmp_path):
     assert zf.testzip() is None
 
 
+def test_no_cover_path_produces_no_cover_image_or_metadata(sample_metadata):
+    """
+    cover_path=None means this document has no cover -- e.g. a
+    technical-document, per the C2 decision that a cover is required
+    only for type: book. This must produce an EPUB with no cover
+    image and no cover metadata entry, not silently fall back to
+    some other, unrelated book's cover left over from a previous
+    publication run (the exact bug this test guards against).
+    """
+
+    data = render(_minimal_book(sample_metadata), cover_path=None)
+
+    zf = zipfile.ZipFile(BytesIO(data))
+    assert zf.testzip() is None
+
+    names = zf.namelist()
+    assert not any("images/cover" in n for n in names)
+
+    opf = zf.read("OEBPS/content.opf").decode("utf-8")
+    assert '<meta name="cover"' not in opf
+    assert "cover-image" not in opf
+
+
+def test_no_cover_path_does_not_fall_back_to_any_shared_default_image(
+    sample_metadata,
+):
+    """
+    Guards specifically against DEFAULT_COVER-style regressions: a
+    renderer constructed with no cover_path must never resolve to
+    some other, static, repo-level default image file -- only an
+    explicitly-provided cover_path may ever produce a cover.
+    """
+
+    from renderer.epub import _Renderer
+
+    renderer = _Renderer(cover_path=None)
+
+    assert renderer.cover_path is None
+    assert renderer._cover_name() is None
+
+
+def test_explicit_cover_still_works_when_no_cover_path_is_also_possible(
+    sample_metadata, tiny_cover
+):
+    """
+    Regression guard for the fix itself: making cover_path=None mean
+    "no cover" must not affect documents that DO provide a real
+    cover_path -- those must still get a proper cover image and
+    metadata, exactly as before.
+    """
+
+    data = render(_minimal_book(sample_metadata), tiny_cover)
+
+    zf = zipfile.ZipFile(BytesIO(data))
+    names = zf.namelist()
+    assert any("images/cover" in n for n in names)
+
+    opf = zf.read("OEBPS/content.opf").decode("utf-8")
+    assert '<meta name="cover" content="cover-image"/>' in opf
+
+
 # ============================================================================
 # HTML escaping
 # ============================================================================
