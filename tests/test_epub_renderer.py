@@ -474,3 +474,95 @@ def test_contents_inserted_at_start_when_nothing_precedes_first_section(
 
     assert contents_idx < introduction_idx
     assert spine[contents_idx + 1] == "section-001"
+
+
+# ============================================================================
+# TOC / nav_points population -- Section-level entries were missing
+# ============================================================================
+
+def test_book_toc_includes_prologue_and_epilogue_not_just_chapters(
+    sample_metadata, tiny_cover
+):
+    """
+    Regression guard: _render_section previously never added a
+    nav_points entry at all -- only _render_part did. A book's
+    Prologue/Epilogue/other top-level Sections were silently missing
+    from nav.xhtml/toc.ncx/contents.xhtml, masked by the fact that
+    Part/Chapter entries still appeared, so the TOC wasn't obviously
+    broken, just incomplete.
+    """
+
+    data = render(_minimal_book(sample_metadata), tiny_cover)
+    zf = zipfile.ZipFile(BytesIO(data))
+    nav = zf.read("OEBPS/nav.xhtml").decode("utf-8")
+
+    assert "Prologue" in nav
+    assert "Part I - Getting Started" in nav
+    assert "Chapter 1 - Welcome" in nav
+
+    # Copyright is front matter, not outlined -- correctly absent,
+    # matching renderer/typst.py's #outline() behavior.
+    assert "Copyright" not in nav
+
+    # Back Cover is skipped from the EPUB entirely (existing,
+    # unrelated behavior) -- must not appear either.
+    assert "Back Cover" not in nav
+
+
+def test_technical_document_toc_is_populated_for_every_section(sample_metadata):
+    """
+    The actual reported bug: a technical document has zero Parts, so
+    with the old code nav_points stayed completely empty and
+    nav.xhtml/toc.ncx/contents.xhtml all rendered with no entries at
+    all, even though the section XHTML files themselves existed.
+    """
+
+    sections = [
+        Section(
+            kind=SectionKind.OTHER,
+            title=title,
+            blocks=[Paragraph(children=[Text("Body text.")])],
+        )
+        for title in ("Introduction", "System Overview", "Appendix")
+    ]
+
+    book = Book(metadata=sample_metadata, sections=sections)
+
+    data = render(book)
+    zf = zipfile.ZipFile(BytesIO(data))
+
+    nav = zf.read("OEBPS/nav.xhtml").decode("utf-8")
+    ncx = zf.read("OEBPS/toc.ncx").decode("utf-8")
+    contents = zf.read("OEBPS/contents.xhtml").decode("utf-8")
+
+    for title in ("Introduction", "System Overview", "Appendix"):
+        assert title in nav
+        assert title in ncx
+        assert title in contents
+
+    assert nav.count("<li>") == 3
+    assert ncx.count("<navPoint") == 3
+    assert contents.count("<li>") == 3
+
+
+def test_technical_document_toc_entries_link_to_the_correct_documents(
+    sample_metadata,
+):
+    """Each TOC entry's href must point at the section's own document,
+    not merely contain the right title text somewhere."""
+
+    intro = Section(
+        kind=SectionKind.OTHER,
+        title="Introduction",
+        blocks=[Paragraph(children=[Text("Intro.")])],
+    )
+    book = Book(metadata=sample_metadata, sections=[intro])
+
+    data = render(book)
+    zf = zipfile.ZipFile(BytesIO(data))
+    nav = zf.read("OEBPS/nav.xhtml").decode("utf-8")
+
+    assert '<a href="front-001.xhtml">Introduction</a>' in nav
+
+    # The linked document must actually exist in the package.
+    assert "OEBPS/front-001.xhtml" in zf.namelist()

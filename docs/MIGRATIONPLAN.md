@@ -88,13 +88,14 @@ incorrect and is corrected here.)
 **Goal**: technical documents get a working Table of Contents, correct
 page numbering, and no stray blank leading page.
 
-**Status**: Shipped (B1 + B2 + B3)
+**Status**: Shipped (B1 + B2 + B3 + B4)
 
 | Task | Status | Description | Depends on |
 |---|---|---|---|
 | B1 | **Shipped** (`113f1e3`) | Generalized the Contents/page-numbering trigger, previously hardcoded to `SectionKind.PROLOGUE` (book-only), to "first outlined section." | Phase A |
 | B2 | **Shipped** | Decoupled the cover/pagebreak call from unconditional execution — the renderer now only calls `render-cover()` + `#pagebreak()` outside print mode for `type: book`. | Phase A |
 | B3 | **Shipped** | EPUB/Typst parity: `renderer/epub.py`'s own Contents-index trigger was still hardcoded to `SectionKind.PROLOGUE`, never having received B1's fix (B1 only touched `renderer/typst.py`). Generalized to the same "first outlined section" condition. Discovered while researching Phase D's D0 design note; fixed as its own narrowly-scoped ticket, no new architecture introduced. | B1 |
+| B4 | **Shipped** | EPUB TOC was empty for any document with no Parts (every technical-document, since it's all top-level Sections). Root cause: `_render_section` never added a `nav_points` entry at all — only `_render_part` did, a gap that predates B1/B3 entirely and also silently affected books (Prologue/Epilogue/etc. were missing from the TOC, just masked by Part/Chapter entries still appearing). Fixed by having `_render_section` append a nav point for outlined sections, matching `renderer/typst.py`'s `#outline()` treatment (Copyright/Dedication/Thirukkural excluded). Verified against the real RideTogether manuscript: all 15 sections now populate `nav.xhtml`, `toc.ncx`, and `contents.xhtml` correctly. **Known follow-up, not implemented**: `Subheading`-level entries don't nest under their parent section in the EPUB TOC yet, unlike the PDF outline, which does include them — a separate, smaller enhancement, not part of this fix. | B3 |
 
 **Finding discovered while validating B1, fixed separately (`114f6b7`)**:
 generalizing the Contents trigger to "first outlined section" made a

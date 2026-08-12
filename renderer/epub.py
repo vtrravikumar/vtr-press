@@ -474,14 +474,33 @@ class _Renderer:
 
             lines.append(self._render_block(block))
 
+        href = f"front-{self._section_number:03d}.xhtml"
+
         self.documents.append(
             _Document(
                 id=f"section-{self._section_number:03d}",
-                href=f"front-{self._section_number:03d}.xhtml",
+                href=href,
                 title=section.title,
                 body="\n".join(lines),
             )
         )
+
+        # Only sections that participate in the outline get a TOC
+        # entry -- matching renderer/typst.py's #outline(), which
+        # skips headings rendered with outlined: false (Copyright,
+        # Dedication, Thirukkural). Previously no Section ever added
+        # a nav point at all: only _render_part did, so a book's
+        # front-matter/back-matter Sections were silently missing
+        # from the TOC, and a technical document (which has no Parts
+        # at all) got a completely empty nav.xhtml/toc.ncx.
+        if outlined:
+            self.nav_points.append(
+                _NavPoint(
+                    title=section.title,
+                    href=href,
+                    children=[],
+                )
+            )
 
     # ------------------------------------------------------------------
     # Contents
