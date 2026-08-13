@@ -154,7 +154,7 @@ correctly present/absent per B2's rule. Book manuscript output
 comes from a shared model; only interpretation (per type) and
 presentation (per theme) differ.
 
-**Status**: In progress (D0 design note complete, D1 blocked pending sign-off)
+**Status**: In progress (D0 + D1 shipped; D2 not started)
 
 **Design artifact**: `docs/DOCUMENT_MODEL_DESIGN.md` — validates the
 proposed flat block-stream model against every current book rule and
@@ -178,7 +178,7 @@ side effect of this migration.
 | Task | Status | Description | Depends on |
 |---|---|---|---|
 | D0 | **Design note complete; two decisions pending sign-off** | Design-validation checkpoint — see `docs/DOCUMENT_MODEL_DESIGN.md`. Two open, D1-blocking decisions found: (1) interpretation's output shape — recommend "annotate in place" over reconstructing a grouped structure; (2) where interpretation lives as code — recommend a new, small, dedicated module rather than folding into `renderer/`. **D1 must not start until both are explicitly confirmed**, not assumed from the recommendation alone. | Phase C |
-| D1 | Blocked on D0 sign-off | Introduce a flat, ordered block-stream model (`Heading(level, title)`, `Paragraph`, `Verse`, etc. — Pandoc-AST-style, no pre-built parent/child nesting) as new, additive code in `model.py`. Does not touch `Part`/`Chapter`/`Scene`/`Section`. | D0 |
+| D1 | **Shipped** | Introduced the generic Document Model: `Heading`/`Document` in `model.py` (raw, syntax-only, additive), plus a new, small, dedicated `interpretation.py` module (Gap 2, resolved) with `NodeKind`, `InterpretedNode`, `InterpretedDocument` (Gap 1's "annotate in place" shape, resolved), and minimal illustrative `interpret_book()`/`interpret_technical_document()` functions proving — with executable tests, not just prose — that the same model represents both current document types' structural rules from `docs/DOCUMENT_MODEL_DESIGN.md` sections 3–4. Not wired into parsing, rendering, `publish.py`, or `run.py`. Verified byte-identical output for both `type: book` (`examples/sample-manuscript.md`) and `type: technical-document` (the real RideTogether manuscript, via `run.py ride` end-to-end) before/after. 20 new tests; full suite 155/155. | D0 |
 | D2 | Not started | Build the new parser as a second, parallel path producing the flat block stream from Markdown headings. Unreachable for `type: book` — the existing parser keeps handling books untouched. | D1 |
 | D3 | Not started | Wire dispatch so `type: technical-document` (only, initially) routes through the new parser; `type: book` (including omitted) is unaffected. | D2 |
 | D4 | Not started | Validate against 2–3 real manuscripts, **including at least one that is structurally different from RideTogether** (table-heavy, unusually deep, etc.) — not just another similarly-shaped prose document. | D3 |

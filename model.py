@@ -230,3 +230,57 @@ class Book:
 
     metadata: Metadata
     sections: list[Section | Part] = field(default_factory=list)
+
+
+# ============================================================================
+# Generic Document Model (Phase D, D1)
+# ============================================================================
+#
+# The types below are new, additive code for the Phase D migration --
+# see docs/DOCUMENT_MODEL_DESIGN.md (D0). They do not replace or
+# modify Book/Part/Chapter/Scene/Section/Subheading above, and nothing
+# in the current parser or renderers constructs or consumes them yet.
+# That wiring (a real parser producing Document, and renderers
+# consuming an interpreted form of it) is D2/D3 work, not D1.
+#
+# Heading reuses the existing Block ABC deliberately, rather than
+# introducing a parallel type hierarchy: Document.blocks is a flat
+# list.Block, exactly like Section.blocks already is, so a Document
+# can hold any mix of Heading/Paragraph/Verse in document order.
+#
+# Heading carries no semantic meaning -- no `kind`, no `outlined`,
+# nothing describing what a Part, Chapter, Section, or Copyright page
+# is. It records only what the manuscript's Markdown syntax actually
+# says: a level and a title. Deciding what a given heading *means*
+# for a given document type is interpretation's job (see
+# interpretation.py), not the model's.
+
+@dataclass(slots=True)
+class Heading(Block):
+    """
+    A heading recorded purely as Markdown syntax, with no semantic
+    meaning attached. This is the generic Document Model's building
+    block for structure -- level and title only. Whether a level-2
+    heading is a Part, a Section, a Copyright page, or something
+    else entirely is an interpretation-layer decision, not a parsing
+    fact.
+    """
+
+    level: int = 0
+    title: str = ""
+
+
+@dataclass(slots=True)
+class Document:
+    """
+    The generic, flat Document Model root. An ordered list of blocks
+    -- no recursive tree, no pre-built Part/Chapter/Scene nesting.
+    Structure comes from document order plus heading level; see
+    docs/DOCUMENT_MODEL_DESIGN.md section 1.
+
+    Distinct from Book (above), which remains the root type for the
+    existing, unmodified book-publishing path.
+    """
+
+    metadata: Metadata = field(default_factory=Metadata)
+    blocks: list[Block] = field(default_factory=list)
