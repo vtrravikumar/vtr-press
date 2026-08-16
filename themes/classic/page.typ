@@ -1,9 +1,15 @@
 #import "functions.typ": running-header, running-footer
 
 
+#let print-mode = sys.inputs.at("print-mode", default: "false") == "true"
+#let page-width = if print-mode { 128.524mm } else { 148mm }
+#let page-height = if print-mode { 198.374mm } else { 210mm }
+
+
 #let setup-page() = {
   set page(
-    paper: "a5",
+    width: page-width,
+    height: page-height,
     margin: (
       x: 18mm,
       y: 22mm,
@@ -15,7 +21,8 @@
 
 #let plain-page(body) = {
   set page(
-    paper: "a5",
+    width: page-width,
+    height: page-height,
     margin: (
       x: 18mm,
       y: 22mm,
@@ -31,7 +38,8 @@
 
 #let running-page(body) = {
   set page(
-    paper: "a5",
+    width: page-width,
+    height: page-height,
     margin: (
       x: 18mm,
       y: 22mm,
@@ -46,7 +54,8 @@
 
 #let main-matter(body) = {
   set page(
-    paper: "a5",
+    width: page-width,
+    height: page-height,
     margin: (
       x: 18mm,
       y: 22mm,

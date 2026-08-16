@@ -142,7 +142,12 @@ def main() -> None:
     )
 
     typ_file = GENERATED_DIR / f"{output_name}.typ"
-    pdf_file = OUTPUT_DIR / f"{output_name}.pdf"
+    pdf_filename = (
+        f"{output_name}-interior.pdf"
+        if print_mode
+        else f"{output_name}.pdf"
+    )
+    pdf_file = OUTPUT_DIR / pdf_filename
     epub_file = OUTPUT_DIR / f"{output_name}.epub"
 
     typ_file.write_text(
@@ -160,15 +165,25 @@ def main() -> None:
     print("Compiling Typst...")
     print()
 
-    subprocess.run(
+    compile_command = [
+        "typst",
+        "compile",
+        "--root",
+        str(ROOT),
+    ]
+
+    if print_mode:
+        compile_command.extend(["--input", "print-mode=true"])
+
+    compile_command.extend(
         [
-            "typst",
-            "compile",
-            "--root",
-            str(ROOT),
             str(typ_file),
             str(pdf_file),
-        ],
+        ]
+    )
+
+    subprocess.run(
+        compile_command,
         check=True,
     )
 
