@@ -1,5 +1,5 @@
 #import "functions.typ": current-chapter-title, running-footer
-#import "page.typ": plain-page, running-page
+#import "page.typ": plain-page, running-page, page-width, page-height
 
 
 #let render-cover(cover-path) = {
@@ -90,10 +90,13 @@
 
 #let print-part-page(body) = {
   set page(
-    paper: "a5",
+    width: page-width,
+    height: page-height,
     margin: (
-      x: 18mm,
-      y: 22mm,
+      inside: 20mm,
+      outside: 15mm,
+      top: 22mm,
+      bottom: 22mm,
     ),
     numbering: "1",
     header: none,
@@ -135,10 +138,13 @@
 
 #let blank-recto-pagebreak() = {
   set page(
-    paper: "a5",
+    width: page-width,
+    height: page-height,
     margin: (
-      x: 18mm,
-      y: 22mm,
+      inside: 20mm,
+      outside: 15mm,
+      top: 22mm,
+      bottom: 22mm,
     ),
     numbering: none,
     header: none,
