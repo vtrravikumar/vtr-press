@@ -8,12 +8,14 @@
   render-contents,
   render-publisher-imprint,
   part-page,
+  print-part-page,
   front-matter-page,
   chapter-page,
   running-section-page,
   render-scene-title,
   centered-front-matter,
   back-cover-page,
+  blank-recto-pagebreak,
 )
 
 

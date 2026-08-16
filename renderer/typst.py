@@ -77,6 +77,7 @@ class _Renderer:
         # Tracks whether the table of contents has been inserted.
         self._contents_inserted = False
         self._main_matter_open = False
+        self._print_book = False
 
 
     # ------------------------------------------------------------------
@@ -125,6 +126,10 @@ class _Renderer:
     # ------------------------------------------------------------------
 
     def render(self, book: Book) -> str:
+        self._print_book = (
+            self.options.print_mode
+            and book.metadata.type == "book"
+        )
         self._render_preamble(book)
         # Cover is a print-and-book-only concept for now: print mode
         # produces a print-on-demand interior with no embedded cover,
@@ -264,6 +269,12 @@ class _Renderer:
         self.lines.append("")
         self._main_matter_open = True
 
+    def _recto_page_break(self) -> None:
+        """Advance to the next right-hand page with blank inserts if needed."""
+
+        self.lines.append("#blank-recto-pagebreak()")
+        self.lines.append("")
+
     # ------------------------------------------------------------------
     # Heading
     # ------------------------------------------------------------------
@@ -295,24 +306,45 @@ class _Renderer:
 
     def _render_part(self, part: Part) -> None:
 
-        self._page_break()
-        self.lines.append("#part-page[")
+        if self._print_book:
+            if not self._contents_inserted:
+                self._render_contents()
+
+            self._recto_page_break()
+
+            if not self._main_matter_open:
+                self._start_main_matter()
+        else:
+            self._page_break()
+
+        part_page = "#print-part-page[" if self._print_book else "#part-page["
+        self.lines.append(part_page)
         self.lines.append("")
 
         self._render_heading(1, part.title)
         self.lines.append("")
         self.lines.append("]")
 
-        for chapter in part.chapters:
-            self._render_chapter(chapter)
+        for index, chapter in enumerate(part.chapters):
+            self._render_chapter(
+                chapter,
+                recto=self._print_book and index == 0,
+            )
 
     # ------------------------------------------------------------------
     # Chapter
     # ------------------------------------------------------------------
 
-    def _render_chapter(self, chapter: Chapter) -> None:
+    def _render_chapter(
+        self,
+        chapter: Chapter,
+        recto: bool = False,
+    ) -> None:
 
-        self._page_break()
+        if recto:
+            self._recto_page_break()
+        else:
+            self._page_break()
         self.lines.append(
             "#chapter-page("
             f'"{self._escape_string(self._running_title(chapter.title))}"'
@@ -382,8 +414,11 @@ class _Renderer:
             self.lines.append("#pagebreak()")
             self.lines.append("")
 
-            # Start numbering from this section.
-            self._start_main_matter()
+            if not self._print_book:
+                # Start numbering from this section. Print books keep
+                # front matter, including Prologue, unnumbered; their
+                # main matter begins at Part I instead.
+                self._start_main_matter()
 
             self._contents_inserted = True
             needs_page_break = False
@@ -401,6 +436,10 @@ class _Renderer:
 
         elif section.kind == SectionKind.BACK_COVER:
             self.lines.append("#back-cover-page[")
+            self.lines.append("")
+
+        elif outlined and self._print_book and not self._main_matter_open:
+            self.lines.append("#front-matter-page[")
             self.lines.append("")
 
         elif outlined:

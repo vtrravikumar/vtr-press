@@ -1,4 +1,4 @@
-#import "functions.typ": current-chapter-title
+#import "functions.typ": current-chapter-title, running-footer
 #import "page.typ": plain-page, running-page
 
 
@@ -88,6 +88,22 @@
 }
 
 
+#let print-part-page(body) = {
+  set page(
+    paper: "a5",
+    margin: (
+      x: 18mm,
+      y: 22mm,
+    ),
+    numbering: "1",
+    header: none,
+    footer: running-footer(),
+  )
+
+  body
+}
+
+
 #let front-matter-page(body) = {
   plain-page[
     #body
@@ -115,6 +131,23 @@
     #body
   ]
 }
+
+
+#let blank-recto-pagebreak() = {
+  set page(
+    paper: "a5",
+    margin: (
+      x: 18mm,
+      y: 22mm,
+    ),
+    numbering: none,
+    header: none,
+    footer: none,
+  )
+
+  pagebreak(to: "odd")
+}
+
 
 #let render-scene-title(title) = {
   v(0.8em)

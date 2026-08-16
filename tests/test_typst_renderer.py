@@ -200,6 +200,64 @@ def _print_book(metadata: Metadata) -> Book:
     )
 
 
+def _multi_part_print_book(metadata: Metadata) -> Book:
+    copyright_section = Section(
+        kind=SectionKind.COPYRIGHT,
+        title="Copyright",
+        blocks=[Paragraph(children=[Text("All rights reserved.")])],
+    )
+    prologue = Section(
+        kind=SectionKind.PROLOGUE,
+        title="Prologue",
+        blocks=[Paragraph(children=[Text("Prologue text.")])],
+    )
+    first_part = Part(
+        title="Part I - Foundations",
+        chapters=[
+            Chapter(
+                number=1,
+                title="Chapter 1 - First",
+                scenes=[
+                    Scene(
+                        title="Opening",
+                        blocks=[Paragraph(children=[Text("First body.")])],
+                    )
+                ],
+            ),
+            Chapter(
+                number=2,
+                title="Chapter 2 - Second",
+                scenes=[
+                    Scene(
+                        title="Next",
+                        blocks=[Paragraph(children=[Text("Second body.")])],
+                    )
+                ],
+            ),
+        ],
+    )
+    second_part = Part(
+        title="Part II - Practice",
+        chapters=[
+            Chapter(
+                number=3,
+                title="Chapter 3 - Third",
+                scenes=[
+                    Scene(
+                        title="Again",
+                        blocks=[Paragraph(children=[Text("Third body.")])],
+                    )
+                ],
+            )
+        ],
+    )
+
+    return Book(
+        metadata=metadata,
+        sections=[copyright_section, prologue, first_part, second_part],
+    )
+
+
 def test_render_includes_preamble_with_title_and_author(sample_metadata):
     out = render(_minimal_book(sample_metadata))
 
@@ -309,7 +367,7 @@ def test_render_print_mode_leaves_copyright_body_unchanged(sample_metadata):
         options=RenderOptions(print_mode=True),
     )
     copyright_idx = out.index("#front-matter-page[")
-    prologue_idx = out.index("running-section-page")
+    prologue_idx = out.index("== Prologue")
     copyright_page = out[copyright_idx:prologue_idx]
 
     assert "Copyright (c) 2026 Jane Doe." in copyright_page
@@ -378,11 +436,87 @@ def test_render_print_mode_does_not_sniff_copyright_text(
     )
 
     copyright_idx = out.index("#front-matter-page[")
-    prologue_idx = out.index("running-section-page")
+    prologue_idx = out.index("== Prologue")
     copyright_page = out[copyright_idx:prologue_idx]
 
     assert publisher_text in copyright_page
     assert "#render-publisher-imprint()" not in copyright_page
+
+
+def test_print_book_starts_main_matter_at_first_part(sample_metadata):
+    out = render(
+        _multi_part_print_book(sample_metadata),
+        options=RenderOptions(print_mode=True),
+    )
+
+    contents_idx = out.index("#render-contents()")
+    prologue_idx = out.index("== Prologue")
+    main_matter_idx = out.index("#main-matter[")
+    part_idx = out.index("= Part I - Foundations")
+
+    assert contents_idx < prologue_idx < main_matter_idx < part_idx
+    assert "#print-part-page[" in out
+
+
+def test_print_book_uses_recto_breaks_for_parts_and_first_chapters(
+    sample_metadata,
+):
+    out = render(
+        _multi_part_print_book(sample_metadata),
+        options=RenderOptions(print_mode=True),
+    )
+    lines = out.splitlines()
+
+    part_lines = [
+        i for i, line in enumerate(lines) if line == "#print-part-page["
+    ]
+    chapter_lines = [
+        i for i, line in enumerate(lines) if line.startswith("#chapter-page(")
+    ]
+    recto_lines = [
+        i for i, line in enumerate(lines)
+        if line == "#blank-recto-pagebreak()"
+    ]
+
+    assert len(part_lines) == 2
+    assert len(chapter_lines) == 3
+    assert len(recto_lines) == 4
+
+    for part_line in part_lines:
+        assert max(i for i in recto_lines if i < part_line)
+
+    assert max(i for i in recto_lines if i < chapter_lines[0]) > part_lines[0]
+    assert max(i for i in recto_lines if i < chapter_lines[2]) > part_lines[1]
+    assert not any(chapter_lines[0] < i < chapter_lines[1] for i in recto_lines)
+
+
+def test_print_book_prologue_is_unnumbered_front_matter(sample_metadata):
+    out = render(
+        _multi_part_print_book(sample_metadata),
+        options=RenderOptions(print_mode=True),
+    )
+
+    prologue_idx = out.index("== Prologue")
+    main_matter_idx = out.index("#main-matter[")
+    prologue_page_idx = out.rindex("#front-matter-page[", 0, prologue_idx)
+    prologue_source = out[prologue_page_idx:main_matter_idx]
+
+    assert "#front-matter-page[" in prologue_source
+    assert "running-section-page" not in prologue_source
+
+
+def test_recto_alignment_helpers_are_print_book_only(sample_metadata):
+    normal_out = render(_multi_part_print_book(sample_metadata))
+    technical_metadata = replace(sample_metadata, type="technical-document")
+    technical_out = render(
+        _technical_document_book(technical_metadata),
+        options=RenderOptions(print_mode=True),
+    )
+
+    assert "#blank-recto-pagebreak()" not in normal_out
+    assert "#print-part-page[" not in normal_out
+    assert "#blank-recto-pagebreak()" not in technical_out
+    assert "#print-part-page[" not in technical_out
 
 
 # ============================================================================
