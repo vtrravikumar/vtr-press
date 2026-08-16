@@ -10,6 +10,11 @@ books:
     cover: ../Project-memoir/assets/book_cover.png
     output_name: Project-Memoir
 
+  genz:
+    manuscript: ../GenZ/manuscript.md
+    cover: ../GenZ/assets/genzcover.png
+    output_name: GenZ
+
   ride:
     manuscript: ../../Projects/RideTogether/docs/architecture/SolutionArchitecture.md
     output_name: RideTogetherSAD
