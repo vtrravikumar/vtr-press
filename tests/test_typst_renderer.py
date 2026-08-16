@@ -367,7 +367,7 @@ def test_render_print_mode_leaves_copyright_body_unchanged(sample_metadata):
         options=RenderOptions(print_mode=True),
     )
     copyright_idx = out.index("#front-matter-page[")
-    prologue_idx = out.index("== Prologue")
+    prologue_idx = out.index(")[Prologue]")
     copyright_page = out[copyright_idx:prologue_idx]
 
     assert "Copyright (c) 2026 Jane Doe." in copyright_page
@@ -436,7 +436,7 @@ def test_render_print_mode_does_not_sniff_copyright_text(
     )
 
     copyright_idx = out.index("#front-matter-page[")
-    prologue_idx = out.index("== Prologue")
+    prologue_idx = out.index(")[Prologue]")
     copyright_page = out[copyright_idx:prologue_idx]
 
     assert publisher_text in copyright_page
@@ -450,7 +450,7 @@ def test_print_book_starts_main_matter_at_first_part(sample_metadata):
     )
 
     contents_idx = out.index("#render-contents()")
-    prologue_idx = out.index("== Prologue")
+    prologue_idx = out.index(")[Prologue]")
     main_matter_idx = out.index("#main-matter[")
     part_idx = out.index("= Part I - Foundations")
 
@@ -496,13 +496,28 @@ def test_print_book_prologue_is_unnumbered_front_matter(sample_metadata):
         options=RenderOptions(print_mode=True),
     )
 
-    prologue_idx = out.index("== Prologue")
+    prologue_idx = out.index(")[Prologue]")
     main_matter_idx = out.index("#main-matter[")
     prologue_page_idx = out.rindex("#front-matter-page[", 0, prologue_idx)
     prologue_source = out[prologue_page_idx:main_matter_idx]
 
     assert "#front-matter-page[" in prologue_source
     assert "running-section-page" not in prologue_source
+    assert "outlined: false" in prologue_source
+    assert "== Prologue" not in prologue_source
+
+
+def test_print_book_front_matter_headings_are_not_outlined(sample_metadata):
+    out = render(
+        _minimal_book(sample_metadata),
+        options=RenderOptions(print_mode=True),
+    )
+    main_matter_idx = out.index("#main-matter[")
+    front_matter_source = out[:main_matter_idx]
+
+    assert "== Copyright" not in front_matter_source
+    assert "== Prologue" not in front_matter_source
+    assert front_matter_source.count("outlined: false") == 2
 
 
 def test_recto_alignment_helpers_are_print_book_only(sample_metadata):

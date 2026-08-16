@@ -105,6 +105,7 @@ Authors should not configure layout, typography, or page settings unless explici
 When a book is rendered as a print PDF interior, VTR Press applies print-book pagination conventions automatically:
 
 - Front matter, including Prologue, displays no page numbers.
+- Front matter, including Prologue, is omitted from the Contents page.
 - Main-matter numbering begins at Part I, where Part I displays page 1.
 - Every Part opens on a right-hand page.
 - The first Chapter after every Part opens on a right-hand page.

@@ -399,6 +399,11 @@ class _Renderer:
             SectionKind.DEDICATION,
             SectionKind.THIRUKKURAL,
         }
+        heading_outlined = outlined and not (
+            self._print_book
+            and outlined
+            and not self._main_matter_open
+        )
 
         # Insert the Contents page and begin main-matter numbering at
         # the first section that participates in the outline. For a
@@ -454,7 +459,7 @@ class _Renderer:
             self._render_heading(
                 2,
                 section.title,
-                outlined=outlined,
+                outlined=heading_outlined,
             )
             self.lines.append("")
 
