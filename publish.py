@@ -14,6 +14,7 @@ from parser.reader import read
 from parser.structure import parse_structure
 from parser.document_model import parse_document
 from parser.inline import parse_inline, parse_inline_document
+from renderer.document_epub import render_document as render_document_epub
 from renderer.document_typst import render_document as render_document_typst
 from renderer.epub import render as render_epub
 from renderer.typst import RenderOptions, render as render_typst
@@ -65,6 +66,11 @@ def publish_epub(
         EPUB package bytes.
     """
 
+    metadata, _ = read(path)
+
+    if metadata.type == "technical-document":
+        return render_document_epub(read_document(path))
+
     book = read_book(path)
 
     return render_epub(book, cover_path)
@@ -98,6 +104,15 @@ def publish_all(
     tuple[str, bytes]
         Typst source and EPUB package bytes.
     """
+
+    metadata, _ = read(path)
+
+    if metadata.type == "technical-document":
+        document = read_document(path)
+        return (
+            render_document_typst(document, render_options),
+            render_document_epub(document),
+        )
 
     book = read_book(path)
 
