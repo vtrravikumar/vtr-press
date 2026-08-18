@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import escape
 from io import BytesIO
-import mimetypes
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile, ZipInfo
@@ -25,6 +24,7 @@ from model import (
     Bold,
     Code,
     Heading,
+    Image,
     Inline,
     Italic,
     LineBreak,
@@ -34,8 +34,8 @@ from model import (
     Text,
     Verse,
 )
+from renderer.document_assets import DocumentAssets
 from renderer.epub import BOOK_CSS, DEFAULT_LOGO
-
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -54,17 +54,23 @@ class _NavPoint:
     href: str
 
 
-def render_document(document: InterpretedDocument) -> bytes:
+def render_document(
+    document: InterpretedDocument,
+    assets: DocumentAssets | None = None,
+) -> bytes:
     """Render an interpreted technical document into EPUB bytes."""
-
-    renderer = _DocumentRenderer()
+    renderer = _DocumentRenderer(assets)
     return renderer.render(document)
 
 
 class _DocumentRenderer:
     """Native EPUB renderer for the generic Document Model."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        assets: DocumentAssets | None = None,
+    ) -> None:
+        self.document_assets = assets
         self.documents: list[_Document] = []
         self.nav_points: list[_NavPoint] = []
         self.logo_path = DEFAULT_LOGO
@@ -100,14 +106,10 @@ class _DocumentRenderer:
         lines.append(f"<h1>{_text(metadata.title)}</h1>")
 
         if metadata.subtitle:
-            lines.append(
-                f'<p class="subtitle">{_text(metadata.subtitle)}</p>'
-            )
+            lines.append(f'<p class="subtitle">{_text(metadata.subtitle)}</p>')
 
         if metadata.author:
-            lines.append(
-                f'<p class="author">{_text(metadata.author)}</p>'
-            )
+            lines.append(f'<p class="author">{_text(metadata.author)}</p>')
 
         if self.logo_path.exists():
             lines.append(
@@ -116,9 +118,7 @@ class _DocumentRenderer:
             )
 
         if metadata.copyright_year:
-            lines.append(
-                f'<p class="copyright">{_text(metadata.copyright_year)}</p>'
-            )
+            lines.append(f'<p class="copyright">{_text(metadata.copyright_year)}</p>')
 
         lines.append("</section>")
 
@@ -157,18 +157,14 @@ class _DocumentRenderer:
                     body=f"<h2>{_text(heading.title)}</h2>",
                 )
             )
-            self.nav_points.append(
-                _NavPoint(title=heading.title, href=href)
-            )
+            self.nav_points.append(_NavPoint(title=heading.title, href=href))
             return
 
         if not self.documents or not self._section_number:
             return
 
         level = max(2, min(heading.level, 6))
-        self._append_to_current(
-            f"<h{level}>{_text(heading.title)}</h{level}>"
-        )
+        self._append_to_current(f"<h{level}>{_text(heading.title)}</h{level}>")
 
     def _append_block_to_current_section(self, block: Block) -> None:
         self._append_to_current(self._render_block(block))
@@ -209,8 +205,7 @@ class _DocumentRenderer:
 
         for point in self.nav_points:
             lines.append(
-                '  <li><a href="'
-                f'{_attr(point.href)}">{_text(point.title)}</a></li>'
+                f'  <li><a href="{_attr(point.href)}">{_text(point.title)}</a></li>'
             )
 
         lines.extend(["</ol>", "</section>"])
@@ -222,12 +217,20 @@ class _DocumentRenderer:
 
     def _render_block(self, block: Block) -> str:
         if isinstance(block, Paragraph):
-            content = "".join(
-                self._render_inline(node)
-                for node in block.children
-            )
+            content = "".join(self._render_inline(node) for node in block.children)
             return f"<p>{content}</p>"
-
+        if isinstance(block, Image):
+            if self.document_assets is None:
+                raise ValueError("Image rendering requires document assets.")
+            asset = self.document_assets.resolve(block.source)
+            if asset is None:
+                return f'<p class="missing-image">{_text(block.alt_text)}</p>'
+            return (
+                f"<figure>"
+                f'<img src="{_attr(asset.epub_href)}" '
+                f'alt="{_attr(block.alt_text)}"/>'
+                f"</figure>"
+            )
         if isinstance(block, Verse):
             lines = ['<div class="verse">']
             for line in block.lines:
@@ -242,23 +245,24 @@ class _DocumentRenderer:
             return _text(node.text)
 
         if isinstance(node, Bold):
-            return "<strong>" + "".join(
-                self._render_inline(child) for child in node.children
-            ) + "</strong>"
+            return (
+                "<strong>"
+                + "".join(self._render_inline(child) for child in node.children)
+                + "</strong>"
+            )
 
         if isinstance(node, Italic):
-            return "<em>" + "".join(
-                self._render_inline(child) for child in node.children
-            ) + "</em>"
+            return (
+                "<em>"
+                + "".join(self._render_inline(child) for child in node.children)
+                + "</em>"
+            )
 
         if isinstance(node, Code):
             return f"<code>{_text(node.text)}</code>"
 
         if isinstance(node, Link):
-            return (
-                f'<a href="{_attr(node.url)}">'
-                f"{_text(node.text)}</a>"
-            )
+            return f'<a href="{_attr(node.url)}">{_text(node.text)}</a>'
 
         if isinstance(node, LineBreak):
             return "<br/>"
@@ -306,6 +310,13 @@ class _DocumentRenderer:
                     "OEBPS/images/publisher-logo.png",
                     compress_type=ZIP_DEFLATED,
                 )
+            if self.document_assets is not None:
+                for asset in self.document_assets.resolved:
+                    epub.write(
+                        asset.staged_path,
+                        f"OEBPS/{asset.epub_href}",
+                        compress_type=ZIP_DEFLATED,
+                    )
 
             for item in self.documents:
                 self._write(
@@ -349,7 +360,7 @@ class _DocumentRenderer:
     def _nav_xhtml(self, metadata: Metadata) -> str:
         lines = [
             '<?xml version="1.0" encoding="UTF-8"?>',
-            '<!DOCTYPE html>',
+            "<!DOCTYPE html>",
             '<html xmlns="http://www.w3.org/1999/xhtml" '
             'xmlns:epub="http://www.idpf.org/2007/ops" lang="en">',
             "<head>",
@@ -364,8 +375,7 @@ class _DocumentRenderer:
 
         for point in self.nav_points:
             lines.append(
-                f'      <li><a href="{_attr(point.href)}">'
-                f"{_text(point.title)}</a></li>"
+                f'      <li><a href="{_attr(point.href)}">{_text(point.title)}</a></li>'
             )
 
         lines.extend(
@@ -410,9 +420,7 @@ class _DocumentRenderer:
         return "\n".join(lines)
 
     def _content_opf(self, metadata: Metadata) -> str:
-        modified = datetime.now(timezone.utc).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
+        modified = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         uid = _metadata_uid(metadata)
         language = metadata.language or "en"
 
@@ -431,9 +439,7 @@ class _DocumentRenderer:
         ]
 
         if metadata.author:
-            lines.append(
-                f"    <dc:creator>{_text(metadata.author)}</dc:creator>"
-            )
+            lines.append(f"    <dc:creator>{_text(metadata.author)}</dc:creator>")
 
         if metadata.subtitle:
             lines.extend(
@@ -467,6 +473,16 @@ class _DocumentRenderer:
                 'href="images/publisher-logo.png" '
                 'media-type="image/png"/>'
             )
+        if self.document_assets is not None:
+            for index, asset in enumerate(
+                self.document_assets.resolved,
+                start=1,
+            ):
+                lines.append(
+                    f'    <item id="asset-{index}" '
+                    f'href="{_attr(asset.epub_href)}" '
+                    f'media-type="{_attr(asset.media_type)}"/>'
+                )
 
         for item in self.documents:
             lines.append(
@@ -478,9 +494,7 @@ class _DocumentRenderer:
         lines.extend(["  </manifest>", '  <spine toc="ncx">'])
 
         for item in self.documents:
-            lines.append(
-                f'    <itemref idref="{_attr(item.id)}"/>'
-            )
+            lines.append(f'    <itemref idref="{_attr(item.id)}"/>')
 
         lines.extend(["  </spine>", "</package>", ""])
         return "\n".join(lines)

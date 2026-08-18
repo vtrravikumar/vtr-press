@@ -11,28 +11,37 @@ unchanged and continues to consume Book.
 from __future__ import annotations
 
 from interpretation import InterpretedDocument, InterpretedNode, NodeKind
-from model import Heading, Paragraph, Verse, Block, Metadata
+from model import Heading, Metadata
+from renderer.document_assets import DocumentAssets
 from renderer.typst import RenderOptions, _Renderer
 
 
 def render_document(
     document: InterpretedDocument,
     options: RenderOptions | None = None,
+    assets: DocumentAssets | None = None,
 ) -> str:
     """Render an interpreted technical document to Typst source."""
-
-    renderer = _DocumentRenderer(options)
+    renderer = _DocumentRenderer(options, assets)
     return renderer.render_document(document)
 
 
 class _DocumentRenderer(_Renderer):
     """Native Typst renderer for the generic Document Model."""
 
-    def __init__(self, options: RenderOptions | None = None) -> None:
+    def __init__(
+        self,
+        options: RenderOptions | None = None,
+        assets: DocumentAssets | None = None,
+    ) -> None:
         # Technical documents have no cover. The inherited renderer helpers
         # use this value only if the legacy cover path is invoked, which this
         # renderer never does.
-        super().__init__(cover_path="", options=options)
+        super().__init__(
+            cover_path="",
+            options=options,
+            document_assets=assets,
+        )
         self._document_section_open = False
 
     def render_document(self, document: InterpretedDocument) -> str:
@@ -68,26 +77,16 @@ class _DocumentRenderer(_Renderer):
         self.lines.append('#import "../themes/technical/theme.typ": *')
         self.lines.append("")
         self.lines.append("#show: initialize-theme.with(")
-        self.lines.append(
-            f'  book-title: "{self._escape_string(metadata.title)}",'
-        )
-        self.lines.append(
-            f'  book-author: "{self._escape_string(metadata.author)}",'
-        )
+        self.lines.append(f'  book-title: "{self._escape_string(metadata.title)}",')
+        self.lines.append(f'  book-author: "{self._escape_string(metadata.author)}",')
         self.lines.append(")")
         self.lines.append("")
 
     def _render_title_page_from_metadata(self, metadata: Metadata) -> None:
         self.lines.append("#render-title-page(")
-        self.lines.append(
-            f'  title: "{self._escape_string(metadata.title)}",'
-        )
-        self.lines.append(
-            f'  subtitle: "{self._escape_string(metadata.subtitle)}",'
-        )
-        self.lines.append(
-            f'  author: "{self._escape_string(metadata.author)}",'
-        )
+        self.lines.append(f'  title: "{self._escape_string(metadata.title)}",')
+        self.lines.append(f'  subtitle: "{self._escape_string(metadata.subtitle)}",')
+        self.lines.append(f'  author: "{self._escape_string(metadata.author)}",')
         self.lines.append(
             f'  copyright-year: "{self._escape_string(metadata.copyright_year)}",'
         )
@@ -135,9 +134,7 @@ class _DocumentRenderer(_Renderer):
                 self.lines.append("")
 
             self.lines.append(
-                "#running-section-page("
-                f'"{self._escape_string(heading.title)}"'
-                ")["
+                f'#running-section-page("{self._escape_string(heading.title)}")['
             )
             self.lines.append("")
             self._render_heading(

@@ -43,9 +43,7 @@ def test_publish_epub_technical_document_uses_generic_path(tmp_path):
         names = set(archive.namelist())
         nav = archive.read("OEBPS/nav.xhtml").decode("utf-8")
         opf = archive.read("OEBPS/content.opf").decode("utf-8")
-        introduction = archive.read(
-            "OEBPS/section-001.xhtml"
-        ).decode("utf-8")
+        introduction = archive.read("OEBPS/section-001.xhtml").decode("utf-8")
 
     assert "OEBPS/contents.xhtml" in names
     assert "Introduction" in nav
@@ -64,6 +62,47 @@ def test_publish_all_technical_document_uses_generic_epub(tmp_path):
         opf = archive.read("OEBPS/content.opf").decode("utf-8")
         assert "cover-image" not in opf
         assert "OEBPS/contents.xhtml" in archive.namelist()
+
+
+def test_publish_epub_technical_document_packages_images(tmp_path):
+    manuscript = tmp_path / "docs" / "technical.md"
+    manuscript.parent.mkdir(parents=True)
+
+    asset = tmp_path / "assets" / "architecture.png"
+    asset.parent.mkdir(parents=True)
+    asset.write_bytes(b"PNG DATA")
+
+    manuscript.write_text(
+        """---
+title: Image Technical Document
+subtitle: Architecture
+author: VTR Ravi Kumar
+type: technical-document
+---
+
+# Image Technical Document
+
+## Architecture
+
+![Architecture diagram](../assets/architecture.png)
+
+Architecture details.
+""",
+        encoding="utf-8",
+    )
+
+    epub = publish_epub(manuscript)
+
+    with ZipFile(BytesIO(epub)) as archive:
+        names = set(archive.namelist())
+        image_data = archive.read("OEBPS/images/architecture.png")
+        section = archive.read("OEBPS/section-001.xhtml").decode("utf-8")
+        opf = archive.read("OEBPS/content.opf").decode("utf-8")
+
+    assert "OEBPS/images/architecture.png" in names
+    assert image_data == b"PNG DATA"
+    assert '<img src="images/architecture.png" alt="Architecture diagram"/>' in section
+    assert 'href="images/architecture.png" media-type="image/png"' in opf
 
 
 def test_book_epub_path_remains_legacy(tmp_path):

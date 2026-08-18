@@ -10,11 +10,12 @@ errors.
 
 from __future__ import annotations
 
+import mimetypes
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import mimetypes
-import shutil
+from typing import Self
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,27 +32,40 @@ class ResolvedAsset:
 class DocumentAssets:
     """Resolve and stage assets referenced by one technical document."""
 
-    def __init__(self, manuscript_path: str | Path) -> None:
+    def __init__(
+        self,
+        manuscript_path: str | Path,
+        staging_root: str | Path | None = None,
+    ) -> None:
         self.manuscript_path = Path(manuscript_path).resolve()
         self.source_root = self.manuscript_path.parent
-        self._temporary_directory = TemporaryDirectory(
-            prefix="vtr-press-document-"
-        )
-        self.staging_root = Path(self._temporary_directory.name)
+
+        self._temporary_directory: TemporaryDirectory[str] | None = None
+
+        if staging_root is None:
+            self._temporary_directory = TemporaryDirectory(prefix="vtr-press-document-")
+            self.staging_root = Path(self._temporary_directory.name)
+        else:
+            self.staging_root = Path(staging_root).resolve()
+            self.staging_root.mkdir(parents=True, exist_ok=True)
+
         self.assets_root = self.staging_root / "assets"
         self.assets_root.mkdir(parents=True, exist_ok=True)
+
         self.missing: list[str] = []
         self._resolved: dict[str, ResolvedAsset] = {}
 
-    def __enter__(self) -> "DocumentAssets":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type, exc, traceback) -> None:
         self.close()
 
     def close(self) -> None:
-        """Remove the job-specific staging directory."""
-        self._temporary_directory.cleanup()
+        """Remove temporary staging when this resolver owns it."""
+        if self._temporary_directory is not None:
+            self._temporary_directory.cleanup()
+            self._temporary_directory = None
 
     def resolve(self, source: str) -> ResolvedAsset | None:
         """Resolve and stage one manuscript-relative asset.
@@ -85,8 +99,7 @@ class DocumentAssets:
             shutil.copy2(resolved_path, staged_path)
 
         media_type = (
-            mimetypes.guess_type(resolved_path.name)[0]
-            or "application/octet-stream"
+            mimetypes.guess_type(resolved_path.name)[0] or "application/octet-stream"
         )
 
         asset = ResolvedAsset(

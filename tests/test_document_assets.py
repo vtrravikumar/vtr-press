@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from renderer.document_assets import DocumentAssets
 
@@ -66,3 +65,25 @@ def test_repeated_reference_is_resolved_once(tmp_path):
         assert first is second
         assert len(assets.resolved) == 1
         assert assets.missing == []
+
+
+def test_caller_owned_staging_directory_is_preserved(tmp_path):
+    manuscript = tmp_path / "docs" / "engineering" / "EngineeringDesign.md"
+    manuscript.parent.mkdir(parents=True)
+
+    asset = tmp_path / "assets" / "architecture.png"
+    asset.parent.mkdir(parents=True)
+    asset.write_bytes(b"PNG DATA")
+
+    staging = tmp_path / "generated" / "assets"
+
+    with DocumentAssets(manuscript, staging_root=staging) as assets:
+        resolved = assets.resolve("../../assets/architecture.png")
+
+        assert resolved is not None
+        assert resolved.staged_path.exists()
+        staged_path = resolved.staged_path
+
+    assert staging.exists()
+    assert staged_path.exists()
+    assert staged_path.read_bytes() == b"PNG DATA"
