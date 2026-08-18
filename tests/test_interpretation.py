@@ -148,6 +148,7 @@ def test_technical_document_sections_and_subsections_are_assigned_correctly():
     doc = Document(
         metadata=Metadata(title="T", type="technical-document"),
         blocks=[
+            Heading(level=1, title="Solution Architecture"),
             Heading(level=2, title="Introduction"),
             Heading(level=3, title="Purpose"),
             Heading(level=3, title="Scope"),
@@ -159,11 +160,15 @@ def test_technical_document_sections_and_subsections_are_assigned_correctly():
     kinds = [n.kind for n in interpreted.nodes]
 
     assert kinds == [
+        NodeKind.OTHER,
         NodeKind.SECTION,
         NodeKind.SUBSECTION,
         NodeKind.SUBSECTION,
         NodeKind.SECTION,
     ]
+
+    assert interpreted.nodes[0].outlined is False
+    assert all(node.outlined for node in interpreted.nodes[1:])
 
 
 def test_technical_document_sections_are_all_outlined():

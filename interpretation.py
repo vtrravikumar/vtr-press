@@ -240,9 +240,17 @@ def interpret_technical_document(document: Document) -> InterpretedDocument:
             )
             continue
 
+        if block.level == 1:
+            nodes.append(
+                InterpretedNode(
+                    block=block, kind=NodeKind.OTHER, outlined=False
+                )
+            )
+            continue
+
         nodes.append(
             InterpretedNode(
-                block=block, kind=NodeKind.SUBSECTION, outlined=False
+                block=block, kind=NodeKind.SUBSECTION, outlined=True
             )
         )
 
