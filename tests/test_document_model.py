@@ -15,7 +15,18 @@ no renderer wiring).
 
 from __future__ import annotations
 
-from model import Block, Document, Heading, Metadata, Paragraph, Text, Verse
+from model import (
+    Block,
+    Document,
+    Heading,
+    Image,
+    ListBlock,
+    ListItem,
+    Metadata,
+    Paragraph,
+    Text,
+    Verse,
+)
 
 
 def test_heading_is_a_block():
@@ -38,6 +49,30 @@ def test_heading_carries_only_level_and_title():
     assert heading.title == "Purpose"
     assert not hasattr(heading, "kind")
     assert not hasattr(heading, "outlined")
+
+
+def test_generic_list_and_image_blocks_are_blocks():
+    assert isinstance(ListBlock(), Block)
+    assert isinstance(Image(), Block)
+
+
+def test_list_item_and_list_block_preserve_structure():
+    item = ListItem(children=[Text("Item")])
+    block = ListBlock(ordered=True, items=[item])
+
+    assert block.ordered is True
+    assert block.items == [item]
+    assert block.items[0].children[0].text == "Item"
+
+
+def test_image_preserves_source_and_alt_text():
+    image = Image(
+        source="../../assets/images/diagram.png",
+        alt_text="Architecture diagram",
+    )
+
+    assert image.source == "../../assets/images/diagram.png"
+    assert image.alt_text == "Architecture diagram"
 
 
 def test_document_can_represent_a_mix_of_generic_blocks():

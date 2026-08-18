@@ -271,6 +271,29 @@ class Heading(Block):
 
 
 @dataclass(slots=True)
+class ListItem:
+    """A single item within a generic Markdown list."""
+
+    children: list[Inline] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class ListBlock(Block):
+    """An ordered or unordered Markdown list."""
+
+    ordered: bool = False
+    items: list[ListItem] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class Image(Block):
+    """A block-level Markdown image reference."""
+
+    source: str = ""
+    alt_text: str = ""
+
+
+@dataclass(slots=True)
 class Document:
     """
     The generic, flat Document Model root. An ordered list of blocks

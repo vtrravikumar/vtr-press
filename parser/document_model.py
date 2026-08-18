@@ -22,7 +22,17 @@ from __future__ import annotations
 import re
 
 from exceptions import StructureError
-from model import Document, Heading, Metadata, Paragraph, Text, Verse
+from model import (
+    Document,
+    Heading,
+    Image,
+    ListBlock,
+    ListItem,
+    Metadata,
+    Paragraph,
+    Text,
+    Verse,
+)
 
 
 # Any Markdown ATX heading, level 1-6 (standard CommonMark depth) --
@@ -30,6 +40,9 @@ from model import Document, Heading, Metadata, Paragraph, Text, Verse
 # "#### " checks are, since this parser assigns no meaning to depth
 # and has no reason to reject a heading level it doesn't recognize.
 _HEADING_PATTERN = re.compile(r"^(#{1,6}) (.*)$")
+_UNORDERED_LIST_PATTERN = re.compile(r"^\s*[-*+] (.+)$")
+_ORDERED_LIST_PATTERN = re.compile(r"^\s*(\d+)\. (.+)$")
+_IMAGE_PATTERN = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)$")
 
 
 def parse_document(metadata: Metadata, body: str) -> Document:
@@ -74,6 +87,8 @@ def parse_document(metadata: Metadata, body: str) -> Document:
 
     paragraph: list[str] = []
     verse: list[str] = []
+    list_items: list[ListItem] = []
+    list_ordered = False
     in_verse = False
 
     # ----------------------------------------------------------
@@ -102,6 +117,17 @@ def parse_document(metadata: Metadata, body: str) -> Document:
 
         document.blocks.append(Verse(lines=verse.copy()))
         verse.clear()
+
+    def flush_list() -> None:
+        nonlocal list_items
+
+        if not list_items:
+            return
+
+        document.blocks.append(
+            ListBlock(ordered=list_ordered, items=list_items.copy())
+        )
+        list_items.clear()
 
     # ----------------------------------------------------------
     # Parse document
@@ -137,6 +163,7 @@ def parse_document(metadata: Metadata, body: str) -> Document:
 
         if not line:
             flush_paragraph()
+            flush_list()
             continue
 
         # ----------------------------------------------------------
@@ -147,6 +174,7 @@ def parse_document(metadata: Metadata, body: str) -> Document:
 
         if match:
             flush_paragraph()
+            flush_list()
             flush_verse()
 
             level = len(match.group(1))
@@ -154,6 +182,54 @@ def parse_document(metadata: Metadata, body: str) -> Document:
 
             document.blocks.append(Heading(level=level, title=title))
             continue
+
+        # ----------------------------------------------------------
+        # Image
+        # ----------------------------------------------------------
+
+        image_match = _IMAGE_PATTERN.match(line)
+
+        if image_match:
+            flush_paragraph()
+            flush_list()
+            flush_verse()
+
+            document.blocks.append(
+                Image(
+                    alt_text=image_match.group(1),
+                    source=image_match.group(2),
+                )
+            )
+            continue
+
+        # ----------------------------------------------------------
+        # Markdown list
+        # ----------------------------------------------------------
+
+        unordered_match = _UNORDERED_LIST_PATTERN.match(line)
+        ordered_match = _ORDERED_LIST_PATTERN.match(line)
+
+        if unordered_match or ordered_match:
+            flush_paragraph()
+            flush_verse()
+
+            ordered = ordered_match is not None
+            item_text = (
+                ordered_match.group(2)
+                if ordered_match
+                else unordered_match.group(1)
+            )
+
+            if list_items and ordered != list_ordered:
+                flush_list()
+
+            list_ordered = ordered
+            list_items.append(
+                ListItem(children=[Text(text=item_text)])
+            )
+            continue
+
+        flush_list()
 
         # ----------------------------------------------------------
         # Regular paragraph
@@ -165,6 +241,7 @@ def parse_document(metadata: Metadata, body: str) -> Document:
         raise StructureError("Unterminated :::verse block.")
 
     flush_paragraph()
+    flush_list()
     flush_verse()
 
     return document
