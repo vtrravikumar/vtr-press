@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from model import (
     Book,
+    Document,
     Block,
     Paragraph,
     Part,
@@ -33,6 +34,11 @@ def parse_inline(book: Book) -> None:
             for chapter in item.chapters:
                 for scene in chapter.scenes:
                     _walk_blocks(scene.blocks)
+
+
+def parse_inline_document(document: Document) -> None:
+    """Parse inline Markdown throughout a generic Document."""
+    _walk_blocks(document.blocks)
 
 
 def _walk_blocks(blocks: list[Block]) -> None:

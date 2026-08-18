@@ -8,10 +8,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from model import Book
+from model import Book, Document
+from interpretation import InterpretedDocument, interpret_technical_document
 from parser.reader import read
 from parser.structure import parse_structure
-from parser.inline import parse_inline
+from parser.document_model import parse_document
+from parser.inline import parse_inline, parse_inline_document
+from renderer.document_typst import render_document as render_document_typst
 from renderer.epub import render as render_epub
 from renderer.typst import RenderOptions, render as render_typst
 
@@ -30,6 +33,11 @@ def publish(path: str | Path) -> str:
     str
         Typst source.
     """
+
+    metadata, _ = read(path)
+
+    if metadata.type == "technical-document":
+        return render_document_typst(read_document(path))
 
     book = read_book(path)
 
@@ -100,6 +108,25 @@ def publish_all(
         render_typst(book, typst_cover_path, render_options),
         render_epub(book, cover_path),
     )
+
+
+
+def read_document(path: str | Path) -> InterpretedDocument:
+    """
+    Read a technical-document manuscript through the generic Document Model.
+    """
+
+    metadata, body = read(path)
+
+    if metadata.type != "technical-document":
+        raise ValueError(
+            "read_document() currently supports only technical-document"
+        )
+
+    document: Document = parse_document(metadata, body)
+    parse_inline_document(document)
+
+    return interpret_technical_document(document)
 
 
 def read_book(path: str | Path) -> Book:
