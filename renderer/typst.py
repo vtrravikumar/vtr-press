@@ -4,27 +4,30 @@ Render a Book AST into Typst source.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 
 from model import (
+    Block,
+    Bold,
     Book,
-    Part,
     Chapter,
+    Code,
+    Image,
+    Inline,
+    Italic,
+    Link,
+    ListBlock,
+    Paragraph,
+    Part,
     Scene,
     Section,
-    Paragraph,
-    Subheading,
-    Verse,
-    Text,
-    Bold,
-    Italic,
-    Code,
-    Link,
-    Block,
-    Inline,
     SectionKind,
+    Subheading,
+    Text,
+    Verse,
 )
+from renderer.document_assets import DocumentAssets
 
 DEFAULT_THEME_IMPORT = "../themes/classic/theme.typ"
 
@@ -67,18 +70,18 @@ class _Renderer:
         self,
         cover_path: str,
         options: RenderOptions | None = None,
+        document_assets: DocumentAssets | None = None,
     ) -> None:
         self.lines: list[str] = []
         self.cover_path = cover_path
         self.options = options or RenderOptions()
-
+        self.document_assets = document_assets
         # Tracks whether we've already rendered the first printable page.
         self._first_page = True
         # Tracks whether the table of contents has been inserted.
         self._contents_inserted = False
         self._main_matter_open = False
         self._print_book = False
-
 
     # ------------------------------------------------------------------
     # Typst Escaping
@@ -97,11 +100,7 @@ class _Renderer:
     def _escape_string(self, text: str) -> str:
         """Escape Typst string literals."""
 
-        return (
-            self._plain(text)
-            .replace("\\", "\\\\")
-            .replace('"', '\\"')
-        )
+        return self._plain(text).replace("\\", "\\\\").replace('"', '\\"')
 
     def _plain(self, value: object) -> str:
         """Return a safe string for Typst output."""
@@ -126,10 +125,7 @@ class _Renderer:
     # ------------------------------------------------------------------
 
     def render(self, book: Book) -> str:
-        self._print_book = (
-            self.options.print_mode
-            and book.metadata.type == "book"
-        )
+        self._print_book = self.options.print_mode and book.metadata.type == "book"
         self._render_preamble(book)
         # Cover is a print-and-book-only concept for now: print mode
         # produces a print-on-demand interior with no embedded cover,
@@ -170,12 +166,8 @@ class _Renderer:
         self.lines.append(f'#import "{theme_import}": *')
         self.lines.append("")
         self.lines.append("#show: initialize-theme.with(")
-        self.lines.append(
-            f'  book-title: "{self._escape_string(md.title)}",'
-        )
-        self.lines.append(
-            f'  book-author: "{self._escape_string(md.author)}",'
-        )
+        self.lines.append(f'  book-title: "{self._escape_string(md.title)}",')
+        self.lines.append(f'  book-author: "{self._escape_string(md.author)}",')
         self.lines.append(")")
         self.lines.append("")
 
@@ -186,9 +178,7 @@ class _Renderer:
     def _render_cover(self) -> None:
         """Render a full-page digital cover."""
 
-        self.lines.append(
-            f'#render-cover("{self._escape_string(self.cover_path)}")'
-        )
+        self.lines.append(f'#render-cover("{self._escape_string(self.cover_path)}")')
         self.lines.append("")
         self.lines.append("#pagebreak()")
         self.lines.append("")
@@ -203,15 +193,9 @@ class _Renderer:
         md = book.metadata
 
         self.lines.append("#render-title-page(")
-        self.lines.append(
-            f'  title: "{self._escape_string(md.title)}",'
-        )
-        self.lines.append(
-            f'  subtitle: "{self._escape_string(md.subtitle)}",'
-        )
-        self.lines.append(
-            f'  author: "{self._escape_string(md.author)}",'
-        )
+        self.lines.append(f'  title: "{self._escape_string(md.title)}",')
+        self.lines.append(f'  subtitle: "{self._escape_string(md.subtitle)}",')
+        self.lines.append(f'  author: "{self._escape_string(md.author)}",')
         self.lines.append(
             f'  copyright-year: "{self._escape_string(md.copyright_year)}",'
         )
@@ -235,6 +219,7 @@ class _Renderer:
 
         self.lines.append("#pagebreak()")
         self.lines.append("")
+
     # ------------------------------------------------------------------
     # Contents
     # ------------------------------------------------------------------
@@ -256,7 +241,6 @@ class _Renderer:
         self._page_break()
         self.lines.append("#render-contents()")
         self.lines.append("")
-
 
     # ------------------------------------------------------------------
     # Page Numbering
@@ -288,17 +272,13 @@ class _Renderer:
         """Render a Typst heading."""
 
         if outlined:
-            self.lines.append(
-                f'{"=" * level} {self._escape_text(title)}'
-            )
+            self.lines.append(f"{'=' * level} {self._escape_text(title)}")
             return
 
         self.lines.append("#heading(")
         self.lines.append(f"  level: {level},")
         self.lines.append("  outlined: false,")
-        self.lines.append(
-            f")[{self._escape_text(title)}]"
-        )
+        self.lines.append(f")[{self._escape_text(title)}]")
 
     # ------------------------------------------------------------------
     # Part
@@ -368,15 +348,11 @@ class _Renderer:
         """Render a scene within a chapter."""
 
         if scene.title:
-
-            self.lines.append(
-                f'#render-scene-title[{self._escape_text(scene.title)}]'
-            )
+            self.lines.append(f"#render-scene-title[{self._escape_text(scene.title)}]")
             self.lines.append("")
 
         for block in scene.blocks:
             self._render_block(block)
-
 
     # ------------------------------------------------------------------
     # Section
@@ -385,10 +361,7 @@ class _Renderer:
     def _skip_section(self, section: Section) -> bool:
         """Return whether a whole section is excluded for the active mode."""
 
-        return (
-            self.options.print_mode
-            and section.kind == SectionKind.BACK_COVER
-        )
+        return self.options.print_mode and section.kind == SectionKind.BACK_COVER
 
     def _render_section(self, section: Section) -> None:
 
@@ -400,9 +373,7 @@ class _Renderer:
             SectionKind.THIRUKKURAL,
         }
         heading_outlined = outlined and not (
-            self._print_book
-            and outlined
-            and not self._main_matter_open
+            self._print_book and outlined and not self._main_matter_open
         )
 
         # Insert the Contents page and begin main-matter numbering at
@@ -449,9 +420,7 @@ class _Renderer:
 
         elif outlined:
             self.lines.append(
-                "#running-section-page("
-                f'"{self._escape_string(section.title)}"'
-                ")["
+                f'#running-section-page("{self._escape_string(section.title)}")['
             )
             self.lines.append("")
 
@@ -474,18 +443,14 @@ class _Renderer:
             self.lines.append("")
 
         for block in section.blocks:
-            if (
-                section.kind == SectionKind.COPYRIGHT
-                and self._is_empty_isbn_paragraph(block)
+            if section.kind == SectionKind.COPYRIGHT and self._is_empty_isbn_paragraph(
+                block
             ):
                 continue
 
             self._render_block(block)
 
-        if (
-            section.kind == SectionKind.COPYRIGHT
-            and not self.options.print_mode
-        ):
+        if section.kind == SectionKind.COPYRIGHT and not self.options.print_mode:
             self.lines.append("#render-publisher-imprint()")
             self.lines.append("")
 
@@ -493,12 +458,16 @@ class _Renderer:
             self.lines.append("]")
             self.lines.append("")
 
-        if section.kind in {
-            SectionKind.COPYRIGHT,
-            SectionKind.DEDICATION,
-            SectionKind.THIRUKKURAL,
-            SectionKind.BACK_COVER,
-        } or outlined:
+        if (
+            section.kind
+            in {
+                SectionKind.COPYRIGHT,
+                SectionKind.DEDICATION,
+                SectionKind.THIRUKKURAL,
+                SectionKind.BACK_COVER,
+            }
+            or outlined
+        ):
             self.lines.append("]")
             self.lines.append("")
 
@@ -516,7 +485,12 @@ class _Renderer:
         if isinstance(block, Verse):
             self._render_verse(block)
             return
-
+        if isinstance(block, ListBlock):
+            self._render_list(block)
+            return
+        if isinstance(block, Image):
+            self._render_image(block)
+            return
         if isinstance(block, Subheading):
             self._render_heading(block.level, block.title)
             self.lines.append("")
@@ -528,12 +502,44 @@ class _Renderer:
     # Paragraph
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # List
+    # ------------------------------------------------------------------
+
+    def _render_list(self, block: ListBlock) -> None:
+        """Render a generic ordered or unordered list using native Typst."""
+        marker = "+" if block.ordered else "-"
+
+        for item in block.items:
+            rendered = "".join(self._render_inline(child) for child in item.children)
+            self.lines.append(f"{marker} {rendered}")
+
+        self.lines.append("")
+
+    # ------------------------------------------------------------------
+    # Image
+    # ------------------------------------------------------------------
+
+    def _render_image(self, block: Image) -> None:
+        """Render a Markdown image reference using staged assets."""
+        if self.document_assets is None:
+            raise ValueError("Image rendering requires document assets.")
+
+        asset = self.document_assets.resolve(block.source)
+
+        if asset is None:
+            self.lines.append(
+                f'#text("[Missing image: {self._escape_string(block.alt_text)}]")'
+            )
+            self.lines.append("")
+            return
+
+        self.lines.append(f'#image("{self._escape_string(str(asset.staged_path))}")')
+        self.lines.append("")
+
     def _render_paragraph(self, paragraph: Paragraph) -> str:
 
-        return "".join(
-            self._render_inline(node)
-            for node in paragraph.children
-        )
+        return "".join(self._render_inline(node) for node in paragraph.children)
 
     def _is_empty_isbn_paragraph(self, block: Block) -> bool:
         """Return whether a paragraph is only an empty ISBN placeholder."""
@@ -551,10 +557,7 @@ class _Renderer:
             return node.text
 
         if isinstance(node, (Bold, Italic)):
-            return "".join(
-                self._inline_plain_text(child)
-                for child in node.children
-            )
+            return "".join(self._inline_plain_text(child) for child in node.children)
 
         if isinstance(node, Code):
             return node.text
@@ -574,10 +577,7 @@ class _Renderer:
         self.lines.append("#block[")
 
         for i, line in enumerate(verse.lines):
-
-            self.lines.append(
-                self._escape_text(line)
-            )
+            self.lines.append(self._escape_text(line))
 
             if i < len(verse.lines) - 1:
                 self.lines.append("#linebreak()")
@@ -595,16 +595,18 @@ class _Renderer:
             return self._escape_text(node.text)
 
         if isinstance(node, Bold):
-            return "*" + "".join(
-                self._render_inline(child)
-                for child in node.children
-            ) + "*"
+            return (
+                "*"
+                + "".join(self._render_inline(child) for child in node.children)
+                + "*"
+            )
 
         if isinstance(node, Italic):
-            return "_" + "".join(
-                self._render_inline(child)
-                for child in node.children
-            ) + "_"
+            return (
+                "_"
+                + "".join(self._render_inline(child) for child in node.children)
+                + "_"
+            )
 
         if isinstance(node, Code):
             return f"`{self._escape_text(node.text)}`"
@@ -612,7 +614,7 @@ class _Renderer:
         if isinstance(node, Link):
             return (
                 f'link("{self._escape_string(node.url)}")'
-                f'[{self._escape_text(node.text)}]'
+                f"[{self._escape_text(node.text)}]"
             )
 
         raise TypeError(f"Unsupported inline: {type(node).__name__}")

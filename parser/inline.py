@@ -9,7 +9,10 @@ from __future__ import annotations
 
 from model import (
     Book,
+    Document,
     Block,
+    ListBlock,
+    ListItem,
     Paragraph,
     Part,
     Section,
@@ -35,24 +38,39 @@ def parse_inline(book: Book) -> None:
                     _walk_blocks(scene.blocks)
 
 
+def parse_inline_document(document: Document) -> None:
+    """Parse inline Markdown throughout a generic Document."""
+    _walk_blocks(document.blocks)
+
+
 def _walk_blocks(blocks: list[Block]) -> None:
     """Parse inline Markdown in all paragraph blocks."""
 
     for block in blocks:
 
+        if isinstance(block, ListBlock):
+            for item in block.items:
+                _walk_inlines(item)
+            continue
+
         if not isinstance(block, Paragraph):
             continue
 
-        new_children = []
+        _walk_inlines(block)
 
-        for child in block.children:
 
-            if isinstance(child, Text):
-                new_children.extend(_expand(child.text))
-            else:
-                new_children.append(child)
+def _walk_inlines(block: Paragraph | ListItem) -> None:
+    """Parse inline Markdown in a paragraph or list item."""
 
-        block.children = new_children
+    new_children = []
+
+    for child in block.children:
+        if isinstance(child, Text):
+            new_children.extend(_expand(child.text))
+        else:
+            new_children.append(child)
+
+    block.children = new_children
 
 
 def _expand(text: str):

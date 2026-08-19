@@ -12,8 +12,11 @@ from model import (
     Book,
     Chapter,
     Code,
+    Document,
     Italic,
     Link,
+    ListBlock,
+    ListItem,
     Metadata,
     Paragraph,
     Part,
@@ -22,7 +25,7 @@ from model import (
     SectionKind,
     Text,
 )
-from parser.inline import _expand, parse_inline
+from parser.inline import _expand, parse_inline, parse_inline_document
 
 
 # ============================================================================
@@ -172,6 +175,24 @@ def test_parse_inline_expands_chapter_scene_paragraphs():
 
     children = book.sections[0].chapters[0].scenes[0].blocks[0].children
     assert any(isinstance(c, Italic) for c in children)
+
+
+def test_parse_inline_expands_list_item_text():
+    document = Document(
+        metadata=Metadata(type="technical-document"),
+        blocks=[
+            ListBlock(
+                items=[
+                    ListItem(children=[Text("Some **bold** text.")]),
+                ]
+            )
+        ],
+    )
+
+    parse_inline_document(document)
+
+    children = document.blocks[0].items[0].children
+    assert any(isinstance(c, Bold) for c in children)
 
 
 def test_parse_inline_is_idempotent():

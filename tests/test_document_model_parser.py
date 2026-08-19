@@ -20,7 +20,14 @@ from __future__ import annotations
 import pytest
 
 from exceptions import StructureError
-from model import Heading, Metadata, Paragraph, Verse
+from model import (
+    Heading,
+    Image,
+    ListBlock,
+    Metadata,
+    Paragraph,
+    Verse,
+)
 from parser.document_model import parse_document
 from interpretation import NodeKind, interpret_book, interpret_technical_document
 
@@ -115,6 +122,68 @@ def test_leading_and_trailing_blank_lines_produce_no_blocks():
     doc = _parse("\n\n\nOnly paragraph.\n\n\n")
 
     assert len(doc.blocks) == 1
+
+
+# ============================================================================
+# Lists and images
+# ============================================================================
+
+def test_unordered_list_is_one_list_block():
+    doc = _parse("- First\n- Second\n- Third\n")
+
+    assert len(doc.blocks) == 1
+    block = doc.blocks[0]
+    assert isinstance(block, ListBlock)
+    assert block.ordered is False
+    assert [item.children[0].text for item in block.items] == [
+        "First", "Second", "Third",
+    ]
+
+
+def test_ordered_list_is_one_list_block():
+    doc = _parse("1. First\n2. Second\n3. Third\n")
+
+    assert len(doc.blocks) == 1
+    block = doc.blocks[0]
+    assert isinstance(block, ListBlock)
+    assert block.ordered is True
+    assert [item.children[0].text for item in block.items] == [
+        "First", "Second", "Third",
+    ]
+
+
+def test_change_of_list_kind_starts_a_new_list_block():
+    doc = _parse("- First\n- Second\n1. Third\n2. Fourth\n")
+
+    assert len(doc.blocks) == 2
+    assert isinstance(doc.blocks[0], ListBlock)
+    assert isinstance(doc.blocks[1], ListBlock)
+    assert doc.blocks[0].ordered is False
+    assert doc.blocks[1].ordered is True
+
+
+def test_list_interleaves_with_other_blocks_in_document_order():
+    doc = _parse(
+        "Before.\n\n"
+        "- First\n- Second\n\n"
+        "After.\n"
+    )
+
+    assert [type(block).__name__ for block in doc.blocks] == [
+        "Paragraph", "ListBlock", "Paragraph",
+    ]
+
+
+def test_image_is_parsed_as_a_block():
+    doc = _parse(
+        "![Architecture diagram](../../assets/images/diagram.png)\n"
+    )
+
+    assert len(doc.blocks) == 1
+    image = doc.blocks[0]
+    assert isinstance(image, Image)
+    assert image.alt_text == "Architecture diagram"
+    assert image.source == "../../assets/images/diagram.png"
 
 
 # ============================================================================

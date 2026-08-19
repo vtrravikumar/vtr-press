@@ -10,11 +10,11 @@ from io import BytesIO
 
 import pytest
 
+from model import Book, Paragraph, Section, SectionKind, Text
 from publish import publish, publish_all, publish_epub, read_book
+from renderer.epub import render as render_epub
 from renderer.typst import RenderOptions
 from renderer.typst import render as render_typst
-from renderer.epub import render as render_epub
-from model import Book, Metadata, Paragraph, Section, SectionKind, Text
 
 
 def test_publish_produces_typst_source(valid_manuscript_path):
@@ -63,6 +63,7 @@ def test_read_book_builds_full_ast(valid_manuscript_path):
 # Shipped example manuscript
 # ============================================================================
 
+
 def test_shipped_example_manuscript_parses(repo_root):
     """
     examples/sample-manuscript.md is meant to be a working demonstration
@@ -83,6 +84,7 @@ def test_shipped_example_manuscript_parses(repo_root):
 # ============================================================================
 # Cross-renderer: BACK_COVER section (print-only marketing matter)
 # ============================================================================
+
 
 def test_back_cover_appears_in_typst_but_not_in_epub(sample_metadata):
     """
@@ -109,10 +111,76 @@ def test_back_cover_appears_in_typst_but_not_in_epub(sample_metadata):
 
     epub_bytes = render_epub(book)
     zf = zipfile.ZipFile(BytesIO(epub_bytes))
-    epub_text = b"".join(
-        zf.read(n) for n in zf.namelist() if n.endswith(".xhtml")
-    )
+    epub_text = b"".join(zf.read(n) for n in zf.namelist() if n.endswith(".xhtml"))
 
     assert b"Back Cover" not in epub_text
     assert b"A gripping tale of loss and hope." not in epub_text
     assert b"Thank you for reading." in epub_text
+
+
+def test_publish_technical_document_resolves_typst_images(tmp_path):
+    manuscript = tmp_path / "docs" / "technical.md"
+    manuscript.parent.mkdir(parents=True)
+
+    asset = tmp_path / "assets" / "architecture.png"
+    asset.parent.mkdir(parents=True)
+    asset.write_bytes(b"PNG DATA")
+
+    manuscript.write_text(
+        """---
+title: Image Technical Document
+subtitle: Architecture
+author: VTR Ravi Kumar
+type: technical-document
+---
+
+# Image Technical Document
+
+## Architecture
+
+![Architecture diagram](../assets/architecture.png)
+
+Architecture details.
+""",
+        encoding="utf-8",
+    )
+
+    typst_source = publish(manuscript)
+
+    assert "architecture.png" in typst_source
+    assert "Missing image" not in typst_source
+
+
+def test_publish_all_technical_document_resolves_images(tmp_path):
+    manuscript = tmp_path / "docs" / "technical.md"
+    manuscript.parent.mkdir(parents=True)
+
+    asset = tmp_path / "assets" / "architecture.png"
+    asset.parent.mkdir(parents=True)
+    asset.write_bytes(b"PNG DATA")
+
+    manuscript.write_text(
+        """---
+title: Image Technical Document
+subtitle: Architecture
+author: VTR Ravi Kumar
+type: technical-document
+---
+
+# Image Technical Document
+
+## Architecture
+
+![Architecture diagram](../assets/architecture.png)
+
+Architecture details.
+""",
+        encoding="utf-8",
+    )
+
+    typst_source, epub_bytes = publish_all(manuscript)
+
+    assert "architecture.png" in typst_source
+
+    with zipfile.ZipFile(BytesIO(epub_bytes)) as archive:
+        assert "OEBPS/images/architecture.png" in archive.namelist()
