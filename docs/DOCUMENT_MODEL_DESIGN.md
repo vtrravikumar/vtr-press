@@ -1,3 +1,11 @@
+> **Historical design note — D0 completed.**
+>
+> This document records the D0 design-validation state before production
+> implementation. The decisions described as open below were subsequently
+> resolved during D1/D2, and the generic Document Model was wired into the
+> technical-document publishing pipeline during D3. D4 subsequently
+> validated the implementation against real technical documents.
+>
 # Document Model Design — Phase D, Task D0
 
 ## Status: Design validation only. No production code changes.

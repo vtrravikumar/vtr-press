@@ -1,3 +1,10 @@
+> **Historical handover — superseded by v0.9.1.**
+>
+> This document records the pre-implementation D3 state. D3 was subsequently
+> completed and released as part of v0.9.1. The analysis below is retained as
+> engineering history and should not be read as the current implementation
+> status.
+>
 # VTR Press — D3 Engineering Handover
 
 **Prepared from repository state at commit `0e1d2fe`** ("Bug: Prologue

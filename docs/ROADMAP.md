@@ -16,8 +16,18 @@ Current capabilities include:
 - PDF publishing
 - EPUB publishing
 - Book publishing workflow
+- Technical-document publishing
+- Generic Document Model
+- Native technical-document Typst and EPUB rendering
+- Technical-document asset resolution and persistent generated asset staging
+- Ordered and unordered lists
+- Deeper heading hierarchy
+- Code blocks and JSON
+- External image assets in PDF and EPUB
 
-The platform is now evolving to support multiple publication types while preserving a stable manuscript specification.
+The v0.9.1 release completes the D3/D4 generic technical-document
+publishing pipeline. The next isolated implementation task is native
+Markdown table rendering for technical documents.
 
 ---
 

@@ -1,3 +1,10 @@
+> **Current status: Phase D through D4 is complete.**
+>
+> D3 and D4 shipped as part of v0.9.1. The current follow-up is native
+> Markdown table support for technical documents. Historical task and
+> release-planning entries below are retained as engineering history and
+> should not be interpreted as outstanding work.
+>
 # VTR Press Engineering Plan
 
 ## Purpose

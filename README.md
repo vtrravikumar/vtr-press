@@ -1,6 +1,6 @@
 # VTR Press
 
-VTR Press is an open-source publishing engine created by V.T.R. Ravi Kumar for producing professionally typeset books from structured Markdown manuscripts.
+VTR Press is an open-source publishing engine created by V.T.R. Ravi Kumar for producing professionally typeset books and technical documents from structured Markdown manuscripts.
 
 It separates content from presentation through a shared document model, allowing the same manuscript to be rendered into multiple publication formats without modification.
 
@@ -8,8 +8,14 @@ It separates content from presentation through a shared document model, allowing
 
 - PDF generation using Typst
 - EPUB 3 generation
-- Shared document model (AST)
+- Generic document model
 - Support for Parts, Chapters and optional Scenes
+- Technical-document publishing
+- Technical-document asset resolution and persistent generated asset staging
+- Ordered and unordered lists
+- Deeper heading hierarchies
+- Code blocks and JSON
+- External image assets in PDF and EPUB
 - Front matter (Copyright, Dedication, Preface, Prologue, etc.)
 - Verse blocks
 - Inline formatting (bold, italic, code, links)
@@ -17,19 +23,24 @@ It separates content from presentation through a shared document model, allowing
 
 ## Project Status
 
-Current release: **v0.5.0**
+Current release: **v0.9.1**
 
 Stable:
 
 - PDF
 - EPUB
+- `book` documents
+- `technical-document` documents
 
-Planned:
+The v0.9.1 release completes the D3/D4 generic technical-document
+publishing pipeline. The full regression suite contains **207 passing
+tests**.
 
-- HTML renderer
-- Print-ready PDF
-- Themes
-- Accessibility improvements
+Known limitation:
+
+- Markdown tables are currently not rendered as native tables in the
+  technical-document PDF/Typst output. This is the next isolated
+  capability being developed.
 
 ## Quick Start
 
@@ -150,7 +161,6 @@ The manuscript should never change simply because a new output format is added.
 
 VTR Press keeps those concerns separate through a shared document model and independent renderers.
 
-Current Release: **v0.6.0**
 
 ## License
 

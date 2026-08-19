@@ -87,6 +87,11 @@ The same manuscript may be rendered into multiple publication formats.
 
 ---
 
+Tables are part of the manuscript structure supported by the publishing
+model. Native table rendering in the technical-document Typst/PDF path
+is currently a known limitation and is tracked as the next isolated
+implementation task.
+
 # Publishing Conventions
 
 Publishing conventions are determined automatically from the document type.

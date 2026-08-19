@@ -225,9 +225,18 @@ Potential requirements:
 
 ## Syntax-Highlighted Code Blocks
 
-**Status: Future**
+**Status: Partially implemented**
 
-Support code blocks as a first-class document construct.
+Basic fenced code blocks are now supported by the generic technical-document
+pipeline, including JSON/code content validation in D4.
+
+Remaining future work:
+
+- Language identification
+- Syntax highlighting
+- More sophisticated Typst rendering
+- More sophisticated EPUB rendering
+
 
 This is particularly relevant to technical-document manuscripts and VTR
 Press's own technical documentation.

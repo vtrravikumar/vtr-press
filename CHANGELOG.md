@@ -1,5 +1,103 @@
-# HomeLab Engineering
+# VTR Press
 ## Changelog
+
+All significant VTR Press engineering and release changes are recorded here.
+
+The format loosely follows Keep a Changelog.
+
+---
+
+## v0.9.1
+
+Completed the D3/D4 generic technical-document publishing pipeline.
+
+### Added
+
+- Generic Document Model support for technical documents
+- Technical-document dispatch
+- Native Typst technical-document rendering
+- Native EPUB technical-document rendering
+- Technical-document asset resolution
+- Persistent generated asset staging
+- External image assets in PDF and EPUB
+- Ordered and unordered lists
+- Deeper heading hierarchy
+- Code blocks and JSON
+- Validation using multiple technical documents
+- PDF and EPUB publication artifacts
+- ISBN publication artifacts
+
+### Validation
+
+- `RideTogether EngineeringDesign.md`
+- `APIEngineeringReference.md`
+- Full regression suite: **207 passed**
+
+### Known limitation
+
+- Markdown tables currently do not render as native tables in the
+  technical-document PDF/Typst output.
+
+## v0.9.0
+
+Completed the technical-document rendering capability used as the
+foundation for the generic D3/D4 pipeline, including technical
+subheadings and renderer support.
+
+---
+
+## Historical manuscript development notes
+
+# VTR Press
+## Changelog
+
+All significant VTR Press engineering and release changes are recorded here.
+
+The format loosely follows Keep a Changelog.
+
+---
+
+## v0.9.1
+
+Completed the D3/D4 generic technical-document publishing pipeline.
+
+### Added
+
+- Generic Document Model support for technical documents
+- Technical-document dispatch
+- Native Typst technical-document rendering
+- Native EPUB technical-document rendering
+- Technical-document asset resolution
+- Persistent generated asset staging
+- External image assets in PDF and EPUB
+- Ordered and unordered lists
+- Deeper heading hierarchy
+- Code blocks and JSON
+- Validation using multiple technical documents
+- PDF and EPUB publication artifacts
+- ISBN publication artifacts
+
+### Validation
+
+- `RideTogether EngineeringDesign.md`
+- `APIEngineeringReference.md`
+- Full regression suite: **207 passed**
+
+### Known limitation
+
+- Markdown tables currently do not render as native tables in the
+  technical-document PDF/Typst output.
+
+## v0.9.0
+
+Completed the technical-document rendering capability used as the
+foundation for the generic D3/D4 pipeline, including technical
+subheadings and renderer support.
+
+---
+
+## Historical manuscript development notes
+
 
 All significant manuscript changes are recorded here.
 
