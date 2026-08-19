@@ -19,6 +19,7 @@ from uuid import NAMESPACE_URL, uuid5
 from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile, ZipInfo
 
 from interpretation import InterpretedDocument, InterpretedNode, NodeKind
+
 from model import (
     Block,
     Bold,
@@ -31,6 +32,7 @@ from model import (
     Link,
     Metadata,
     Paragraph,
+    ListBlock,
     Text,
     Verse,
 )
@@ -219,6 +221,18 @@ class _DocumentRenderer:
         if isinstance(block, Paragraph):
             content = "".join(self._render_inline(node) for node in block.children)
             return f"<p>{content}</p>"
+        if isinstance(block, ListBlock):
+            tag = "ol" if block.ordered else "ul"
+            lines = [f"<{tag}>"]
+            for item in block.items:
+                content = "".join(
+                    self._render_inline(node)
+                    for node in item.children
+                )
+                lines.append(f"<li>{content}</li>")
+            lines.append(f"</{tag}>")
+            return "\n".join(lines)
+
         if isinstance(block, Image):
             if self.document_assets is None:
                 raise ValueError("Image rendering requires document assets.")

@@ -125,3 +125,41 @@ A book document.
     with ZipFile(BytesIO(epub)) as archive:
         assert "OEBPS/cover.xhtml" in archive.namelist()
         assert "OEBPS/title.xhtml" in archive.namelist()
+def test_publish_epub_technical_document_renders_lists(tmp_path):
+    manuscript = tmp_path / "technical.md"
+
+    manuscript.write_text(
+        """---
+title: List Technical Document
+subtitle: Lists
+author: VTR Ravi Kumar
+type: technical-document
+---
+
+# List Technical Document
+
+## Lists
+
+- First
+- **Important**
+
+1. One
+2. Two
+""",
+        encoding="utf-8",
+    )
+
+    epub = publish_epub(manuscript)
+
+    with ZipFile(BytesIO(epub)) as archive:
+        section = archive.read(
+            "OEBPS/section-001.xhtml"
+        ).decode("utf-8")
+
+    assert "<ul>" in section
+    assert "<li>First</li>" in section
+    assert "<li><strong>Important</strong></li>" in section
+
+    assert "<ol>" in section
+    assert "<li>One</li>" in section
+    assert "<li>Two</li>" in section

@@ -10,8 +10,10 @@ unchanged and continues to consume Book.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from interpretation import InterpretedDocument, InterpretedNode, NodeKind
-from model import Heading, Metadata
+from model import Heading, Image, Metadata
 from renderer.document_assets import DocumentAssets
 from renderer.typst import RenderOptions, _Renderer
 
@@ -43,6 +45,33 @@ class _DocumentRenderer(_Renderer):
             document_assets=assets,
         )
         self._document_section_open = False
+
+    def _render_image(self, block: Image) -> None:
+        """Render a technical-document image from staged assets."""
+        if self.document_assets is None:
+            raise ValueError("Image rendering requires document assets.")
+
+        asset = self.document_assets.resolve(block.source)
+
+        if asset is None:
+            self.lines.append(
+                f'#text("[Missing image: {self._escape_string(block.alt_text)}]")'
+            )
+            self.lines.append("")
+            return
+
+        typst_asset_path = (
+            Path("assets")
+            / "documents"
+            / self.document_assets.staging_root.name
+            / "images"
+            / asset.staged_path.name
+        )
+
+        self.lines.append(
+            f'#image("{self._escape_string(str(typst_asset_path))}")'
+        )
+        self.lines.append("")
 
     def render_document(self, document: InterpretedDocument) -> str:
         if document.metadata.type != "technical-document":
@@ -77,18 +106,29 @@ class _DocumentRenderer(_Renderer):
         self.lines.append('#import "../themes/technical/theme.typ": *')
         self.lines.append("")
         self.lines.append("#show: initialize-theme.with(")
-        self.lines.append(f'  book-title: "{self._escape_string(metadata.title)}",')
-        self.lines.append(f'  book-author: "{self._escape_string(metadata.author)}",')
+        self.lines.append(
+            f'  book-title: "{self._escape_string(metadata.title)}",'
+        )
+        self.lines.append(
+            f'  book-author: "{self._escape_string(metadata.author)}",'
+        )
         self.lines.append(")")
         self.lines.append("")
 
     def _render_title_page_from_metadata(self, metadata: Metadata) -> None:
         self.lines.append("#render-title-page(")
-        self.lines.append(f'  title: "{self._escape_string(metadata.title)}",')
-        self.lines.append(f'  subtitle: "{self._escape_string(metadata.subtitle)}",')
-        self.lines.append(f'  author: "{self._escape_string(metadata.author)}",')
         self.lines.append(
-            f'  copyright-year: "{self._escape_string(metadata.copyright_year)}",'
+            f'  title: "{self._escape_string(metadata.title)}",'
+        )
+        self.lines.append(
+            f'  subtitle: "{self._escape_string(metadata.subtitle)}",'
+        )
+        self.lines.append(
+            f'  author: "{self._escape_string(metadata.author)}",'
+        )
+        self.lines.append(
+            f'  copyright-year: '
+            f'"{self._escape_string(metadata.copyright_year)}",'
         )
         self.lines.append("  show-publisher-logo: true,")
         self.lines.append(")")

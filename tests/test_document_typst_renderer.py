@@ -184,4 +184,7 @@ def test_native_renderer_renders_image_with_asset_resolver(tmp_path):
 
         assert resolved.source == "../assets/architecture.png"
         assert resolved.staged_path.exists()
-        assert f'#image("{resolved.staged_path}")' in output
+        assert (
+            '#image("assets/documents/EngineeringDesign/images/architecture.png")'
+            in output
+        )

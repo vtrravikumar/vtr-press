@@ -54,10 +54,17 @@ def fake_pipeline(monkeypatch, tmp_path):
         )
 
     def fake_publish_all(
-        manuscript_path, cover_path, typst_cover_path, render_options=None
+        manuscript_path,
+        cover_path,
+        typst_cover_path,
+        render_options=None,
+        assets_root=None,
+        assets=None,
     ):
         captured["cover_path"] = cover_path
         captured["typst_cover_path"] = typst_cover_path
+        captured["assets_root"] = assets_root
+        captured["assets"] = assets
         return "TYPST SOURCE", b"EPUB BYTES"
 
     def fake_typst_compile(*args, **kwargs):

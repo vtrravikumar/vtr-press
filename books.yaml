@@ -18,3 +18,8 @@ books:
   ride:
     manuscript: ../../Projects/RideTogether/docs/architecture/SolutionArchitecture.md
     output_name: RideTogetherSAD
+
+  ridedesign:
+    manuscript: ../../Projects/RideTogether/docs/engineering/EngineeringDesign.md
+    output_name: RideTogetherEngineeringDesign
+    assets: ../../Projects/RideTogether/assets

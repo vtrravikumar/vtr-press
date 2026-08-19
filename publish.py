@@ -91,6 +91,8 @@ def publish_all(
     cover_path: str | Path | None = None,
     typst_cover_path: str | None = None,
     render_options: RenderOptions | None = None,
+    assets_root: str | Path | None = None,
+    assets: DocumentAssets | None = None,
 ) -> tuple[str, bytes]:
     """
     Compile a Markdown manuscript into Typst and EPUB.
@@ -109,6 +111,13 @@ def publish_all(
     render_options:
         Options for Typst rendering. EPUB rendering is unaffected.
 
+    assets_root:
+        Root directory containing technical-document assets.
+
+    assets:
+        Existing DocumentAssets resolver supplied by the caller.
+        When provided, its lifetime remains under the caller's control.
+
     Returns
     -------
     tuple[str, bytes]
@@ -119,7 +128,8 @@ def publish_all(
 
     if metadata.type == "technical-document":
         document = read_document(path)
-        with DocumentAssets(path) as assets:
+
+        if assets is not None:
             return (
                 render_document_typst(
                     document,
@@ -129,6 +139,22 @@ def publish_all(
                 render_document_epub(
                     document,
                     assets=assets,
+                ),
+            )
+
+        with DocumentAssets(
+            path,
+            assets_root=assets_root,
+        ) as document_assets:
+            return (
+                render_document_typst(
+                    document,
+                    render_options,
+                    assets=document_assets,
+                ),
+                render_document_epub(
+                    document,
+                    assets=document_assets,
                 ),
             )
 
@@ -151,7 +177,9 @@ def read_document(path: str | Path) -> InterpretedDocument:
     metadata, body = read(path)
 
     if metadata.type != "technical-document":
-        raise ValueError("read_document() currently supports only technical-document")
+        raise ValueError(
+            "read_document() currently supports only technical-document"
+        )
 
     document: Document = parse_document(metadata, body)
     parse_inline_document(document)
@@ -207,9 +235,6 @@ def publish_epub_book(
     ----------
     book:
         Parsed document AST.
-
-    cover_path:
-        Path to the cover image.
 
     Returns
     -------

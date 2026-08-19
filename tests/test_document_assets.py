@@ -1,4 +1,3 @@
-
 from renderer.document_assets import DocumentAssets
 
 
@@ -10,7 +9,12 @@ def test_resolve_stages_existing_relative_asset(tmp_path):
     asset.parent.mkdir(parents=True)
     asset.write_bytes(b"PNG DATA")
 
-    with DocumentAssets(manuscript) as assets:
+    staging = tmp_path / "generated" / "assets" / "TestDocument"
+
+    with DocumentAssets(
+        manuscript,
+        staging_root=staging,
+    ) as assets:
         resolved = assets.resolve("../../assets/images/architecture.png")
 
         assert resolved is not None
@@ -26,7 +30,12 @@ def test_missing_asset_does_not_raise(tmp_path):
     manuscript = tmp_path / "docs" / "engineering" / "EngineeringDesign.md"
     manuscript.parent.mkdir(parents=True)
 
-    with DocumentAssets(manuscript) as assets:
+    staging = tmp_path / "generated" / "assets" / "TestDocument"
+
+    with DocumentAssets(
+        manuscript,
+        staging_root=staging,
+    ) as assets:
         resolved = assets.resolve("../../assets/images/missing.png")
 
         assert resolved is None
@@ -41,7 +50,12 @@ def test_absolute_asset_path_is_rejected(tmp_path):
     asset = tmp_path / "outside.png"
     asset.write_bytes(b"outside")
 
-    with DocumentAssets(manuscript) as assets:
+    staging = tmp_path / "generated" / "assets" / "TestDocument"
+
+    with DocumentAssets(
+        manuscript,
+        staging_root=staging,
+    ) as assets:
         resolved = assets.resolve(str(asset))
 
         assert resolved is None
@@ -57,8 +71,12 @@ def test_repeated_reference_is_resolved_once(tmp_path):
     asset.write_bytes(b"PNG DATA")
 
     source = "../../assets/architecture.png"
+    staging = tmp_path / "generated" / "assets" / "TestDocument"
 
-    with DocumentAssets(manuscript) as assets:
+    with DocumentAssets(
+        manuscript,
+        staging_root=staging,
+    ) as assets:
         first = assets.resolve(source)
         second = assets.resolve(source)
 
@@ -67,7 +85,7 @@ def test_repeated_reference_is_resolved_once(tmp_path):
         assert assets.missing == []
 
 
-def test_caller_owned_staging_directory_is_preserved(tmp_path):
+def test_staging_directory_is_preserved(tmp_path):
     manuscript = tmp_path / "docs" / "engineering" / "EngineeringDesign.md"
     manuscript.parent.mkdir(parents=True)
 
@@ -75,9 +93,12 @@ def test_caller_owned_staging_directory_is_preserved(tmp_path):
     asset.parent.mkdir(parents=True)
     asset.write_bytes(b"PNG DATA")
 
-    staging = tmp_path / "generated" / "assets"
+    staging = tmp_path / "generated" / "assets" / "TestDocument"
 
-    with DocumentAssets(manuscript, staging_root=staging) as assets:
+    with DocumentAssets(
+        manuscript,
+        staging_root=staging,
+    ) as assets:
         resolved = assets.resolve("../../assets/architecture.png")
 
         assert resolved is not None

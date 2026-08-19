@@ -11,6 +11,7 @@ python run.py memoir print
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from datetime import datetime, timezone
 import hashlib
 import shutil
@@ -20,10 +21,11 @@ from pathlib import Path
 
 import yaml
 
-from publish import publish_all
-from renderer.typst import RenderOptions
-from parser.reader import read
 from exceptions import FrontMatterError
+from parser.reader import read
+from publish import publish_all
+from renderer.document_assets import DocumentAssets
+from renderer.typst import RenderOptions
 
 
 ROOT = Path(__file__).parent
@@ -41,7 +43,6 @@ def load_books() -> dict:
 
 
 def main() -> None:
-
     if len(sys.argv) not in {2, 3}:
         print("Usage:")
         print("    python run.py <book>")
@@ -85,10 +86,9 @@ def main() -> None:
     output_name = config["output_name"]
 
     # A cover is required for type: book; optional for every other
-    # type (see VP-006/B2, which already makes cover *rendering*
-    # book-only -- this makes the cover *requirement* consistent with
-    # that). The manuscript's own declared type decides this, not
-    # whether books.yaml happens to have a "cover" entry.
+    # type (see VP-006/B2, which already makes cover rendering
+    # book-only). The manuscript's own declared type decides this,
+    # not whether books.yaml happens to have a "cover" entry.
     try:
         metadata, _ = read(manuscript)
     except FrontMatterError as exc:
@@ -96,6 +96,7 @@ def main() -> None:
         sys.exit(1)
 
     cover_config = config.get("cover")
+    assets_config = config.get("assets")
 
     if metadata.type == "book" and not cover_config:
         print(
@@ -105,6 +106,12 @@ def main() -> None:
         sys.exit(1)
 
     cover = (ROOT / cover_config).resolve() if cover_config else None
+
+    assets_root = (
+        (ROOT / assets_config).resolve()
+        if assets_config
+        else manuscript.parent / "assets"
+    )
 
     #
     # Stage book assets
@@ -131,61 +138,87 @@ def main() -> None:
         )
 
     #
-    # Generate publication formats
+    # Technical-document assets must remain staged until Typst
+    # compilation has completed.
     #
 
-    typst_source, epub_source = publish_all(
-        manuscript,
-        cover,
-        typst_cover_path,
-        render_options=render_options,
+    asset_context = (
+        DocumentAssets(
+            manuscript,
+            assets_root=assets_root,
+            staging_root=(
+                GENERATED_DIR
+                / "assets"
+                / "documents"
+                / output_name
+            ),
+        )
+        if metadata.type == "technical-document"
+        else nullcontext(None)
     )
 
-    typ_file = GENERATED_DIR / f"{output_name}.typ"
-    pdf_filename = (
-        f"{output_name}-interior.pdf"
-        if print_mode
-        else f"{output_name}.pdf"
-    )
-    pdf_file = OUTPUT_DIR / pdf_filename
-    epub_file = OUTPUT_DIR / f"{output_name}.epub"
+    with asset_context as assets:
 
-    typ_file.write_text(
-        typst_source,
-        encoding="utf-8",
-    )
+        #
+        # Generate publication formats
+        #
 
-    epub_file.write_bytes(epub_source)
+        typst_source, epub_source = publish_all(
+            manuscript,
+            cover,
+            typst_cover_path,
+            render_options=render_options,
+            assets_root=assets_root,
+            assets=assets,
+        )
 
-    #
-    # Compile PDF
-    #
+        typ_file = GENERATED_DIR / f"{output_name}.typ"
 
-    print()
-    print("Compiling Typst...")
-    print()
+        pdf_filename = (
+            f"{output_name}-interior.pdf"
+            if print_mode
+            else f"{output_name}.pdf"
+        )
 
-    compile_command = [
-        "typst",
-        "compile",
-        "--root",
-        str(ROOT),
-    ]
+        pdf_file = OUTPUT_DIR / pdf_filename
+        epub_file = OUTPUT_DIR / f"{output_name}.epub"
 
-    if print_mode:
-        compile_command.extend(["--input", "print-mode=true"])
+        typ_file.write_text(
+            typst_source,
+            encoding="utf-8",
+        )
 
-    compile_command.extend(
-        [
-            str(typ_file),
-            str(pdf_file),
+        epub_file.write_bytes(epub_source)
+
+        #
+        # Compile PDF
+        #
+
+        print()
+        print("Compiling Typst...")
+        print()
+
+        compile_command = [
+            "typst",
+            "compile",
+            "--root",
+            str(ROOT),
         ]
-    )
 
-    subprocess.run(
-        compile_command,
-        check=True,
-    )
+        if print_mode:
+            compile_command.extend(["--input", "print-mode=true"])
+
+        compile_command.extend(
+            [
+                str(typ_file),
+                str(pdf_file),
+            ]
+        )
+
+        subprocess.run(
+            compile_command,
+            check=True,
+        )
 
     #
     # Publish artifacts to ISBN workspace
@@ -201,8 +234,12 @@ def main() -> None:
         )
 
     manifest_file = isbn_dir / "publication-manifest.md"
+
     manifest_file.write_text(
-        publication_manifest(output_name, (pdf_file, epub_file)),
+        publication_manifest(
+            output_name,
+            (pdf_file, epub_file),
+        ),
         encoding="utf-8",
     )
 
@@ -219,7 +256,10 @@ def main() -> None:
     print("Done.")
 
 
-def publication_manifest(output_name: str, artifacts: tuple[Path, ...]) -> str:
+def publication_manifest(
+    output_name: str,
+    artifacts: tuple[Path, ...],
+) -> str:
     """Return a manifest for the latest generated publication artifacts."""
 
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

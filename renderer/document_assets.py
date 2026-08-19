@@ -1,8 +1,8 @@
-"""Asset resolution and job-scoped staging for technical documents.
+"""Asset resolution and persistent staging for technical documents.
 
 This module is renderer-neutral. It resolves asset references from a
-technical-document manuscript relative to the manuscript location and
-stages existing assets into an isolated temporary publication directory.
+technical-document manuscript relative to the configured asset root and
+stages existing assets into a persistent generated publication directory.
 
 Missing assets are recorded rather than treated as fatal publication
 errors.
@@ -14,7 +14,6 @@ import mimetypes
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Self
 
 
@@ -35,21 +34,29 @@ class DocumentAssets:
     def __init__(
         self,
         manuscript_path: str | Path,
+        assets_root: str | Path | None = None,
         staging_root: str | Path | None = None,
     ) -> None:
         self.manuscript_path = Path(manuscript_path).resolve()
-        self.source_root = self.manuscript_path.parent
-
-        self._temporary_directory: TemporaryDirectory[str] | None = None
+        self.source_root = (
+            Path(assets_root).resolve()
+            if assets_root is not None
+            else self.manuscript_path.parent
+        )
 
         if staging_root is None:
-            self._temporary_directory = TemporaryDirectory(prefix="vtr-press-document-")
-            self.staging_root = Path(self._temporary_directory.name)
-        else:
-            self.staging_root = Path(staging_root).resolve()
-            self.staging_root.mkdir(parents=True, exist_ok=True)
+            staging_root = (
+                self.manuscript_path.parent
+                / "generated"
+                / "assets"
+                / "documents"
+                / self.manuscript_path.stem
+            )
 
-        self.assets_root = self.staging_root / "assets"
+        self.staging_root = Path(staging_root).resolve()
+        self.staging_root.mkdir(parents=True, exist_ok=True)
+
+        self.assets_root = self.staging_root / "images"
         self.assets_root.mkdir(parents=True, exist_ok=True)
 
         self.missing: list[str] = []
@@ -62,17 +69,15 @@ class DocumentAssets:
         self.close()
 
     def close(self) -> None:
-        """Remove temporary staging when this resolver owns it."""
-        if self._temporary_directory is not None:
-            self._temporary_directory.cleanup()
-            self._temporary_directory = None
+        """Retain generated staging for the current publication workspace."""
+        return
 
     def resolve(self, source: str) -> ResolvedAsset | None:
         """Resolve and stage one manuscript-relative asset.
 
         Absolute filesystem paths are rejected deliberately. Technical
         document assets are expected to be referenced relative to the
-        manuscript source project.
+        configured asset root.
         """
         if source in self._resolved:
             return self._resolved[source]
@@ -95,11 +100,13 @@ class DocumentAssets:
         staged_name = resolved_path.name
         staged_path = self.assets_root / staged_name
 
-        if not staged_path.exists():
-            shutil.copy2(resolved_path, staged_path)
+        # Persistent staging is regenerated on every publication pass so
+        # that the generated publication always reflects the current source.
+        shutil.copy2(resolved_path, staged_path)
 
         media_type = (
-            mimetypes.guess_type(resolved_path.name)[0] or "application/octet-stream"
+            mimetypes.guess_type(resolved_path.name)[0]
+            or "application/octet-stream"
         )
 
         asset = ResolvedAsset(
