@@ -40,7 +40,8 @@ def fake_pipeline(monkeypatch, tmp_path):
     def configure(doc_type: str, with_cover: bool):
         manuscript = make_manuscript(doc_type)
         config = {
-            "manuscript": str(manuscript),
+            "bookpath": str(tmp_path),
+            "manuscript": manuscript.name,
             "output_name": "TestBook",
         }
 

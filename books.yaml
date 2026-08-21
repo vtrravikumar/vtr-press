@@ -1,25 +1,25 @@
 books:
-
   engineering:
-    manuscript: ../HomeLab-Engineering/manuscript.md
+    bookpath: ../HomeLab-Engineering
     cover: ../HomeLab-Engineering/assets/book_cover.png
     output_name: HomeLab-Engineering
 
   memoir:
-    manuscript: ../Project-memoir/manuscript.md
+    bookpath: ../Project-memoir
     cover: ../Project-memoir/assets/book_cover.png
     output_name: Project-Memoir
 
   genz:
-    manuscript: ../GenZ/manuscript.md
+    bookpath: ../GenZ
     cover: ../GenZ/assets/genzcover.png
     output_name: GenZ
 
   ride:
-    manuscript: ../../Projects/RideTogether/docs/architecture/SolutionArchitecture.md
+    bookpath: ../../Projects/RideTogether
+    manuscript: docs/architecture/SolutionArchitecture.md
     output_name: RideTogetherSAD
 
   ridedesign:
-    manuscript: ../../Projects/RideTogether/docs/engineering/EngineeringDesign.md
+    bookpath: ../../Projects/RideTogether
+    manuscript: docs/engineering/EngineeringDesign.md
     output_name: RideTogetherEngineeringDesign
-    assets: ../../Projects/RideTogether/assets

@@ -82,7 +82,9 @@ def main() -> None:
 
     config = books[book_name]
 
-    manuscript = (ROOT / config["manuscript"]).resolve()
+    bookpath = (ROOT / config["bookpath"]).resolve()
+    manuscript_config = config.get("manuscript", "manuscript.md")
+    manuscript = (bookpath / manuscript_config).resolve()
     output_name = config["output_name"]
 
     # A cover is required for type: book; optional for every other
@@ -96,7 +98,6 @@ def main() -> None:
         sys.exit(1)
 
     cover_config = config.get("cover")
-    assets_config = config.get("assets")
 
     if metadata.type == "book" and not cover_config:
         print(
@@ -107,11 +108,17 @@ def main() -> None:
 
     cover = (ROOT / cover_config).resolve() if cover_config else None
 
-    assets_root = (
-        (ROOT / assets_config).resolve()
-        if assets_config
-        else manuscript.parent / "assets"
-    )
+    # Book assets are rooted at the book directory.
+    #
+    # Therefore a manuscript image reference such as:
+    #
+    #     assets/images/example.png
+    #
+    # resolves to:
+    #
+    #     <bookpath>/assets/images/example.png
+    #
+    assets_root = bookpath
 
     #
     # Stage book assets
