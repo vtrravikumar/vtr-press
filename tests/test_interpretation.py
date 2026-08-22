@@ -12,7 +12,17 @@ rendering, or the existing publishing pipeline.
 
 from __future__ import annotations
 
-from model import Document, Heading, Metadata, Paragraph, Text
+from model import (
+    Document,
+    Heading,
+    Metadata,
+    Paragraph,
+    Table,
+    TableAlignment,
+    TableCell,
+    TableRow,
+    Text,
+)
 from interpretation import (
     InterpretedDocument,
     InterpretedNode,
@@ -205,6 +215,27 @@ def test_technical_document_first_outlined_node_is_the_first_section():
 
     assert first is not None
     assert first.block.title == "Document Philosophy"
+
+
+def test_technical_document_preserves_table_as_content_node():
+    table = Table(
+        alignments=[TableAlignment.LEFT],
+        header=TableRow(cells=[TableCell(children=[Text("Name")])]),
+        rows=[TableRow(cells=[TableCell(children=[Text("Ravi")])])],
+    )
+    doc = Document(
+        metadata=Metadata(title="T", type="technical-document"),
+        blocks=[
+            Heading(level=2, title="Introduction"),
+            table,
+        ],
+    )
+
+    interpreted = interpret_technical_document(doc)
+
+    assert interpreted.nodes[1].block is table
+    assert interpreted.nodes[1].kind is None
+    assert interpreted.nodes[1].outlined is False
 
 
 def test_appendix_is_an_ordinary_section_no_special_kind_needed():

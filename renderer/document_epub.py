@@ -33,6 +33,9 @@ from model import (
     Metadata,
     Paragraph,
     ListBlock,
+    Table,
+    TableAlignment,
+    TableCell,
     Text,
     Verse,
 )
@@ -233,6 +236,9 @@ class _DocumentRenderer:
             lines.append(f"</{tag}>")
             return "\n".join(lines)
 
+        if isinstance(block, Table):
+            return self._render_table(block)
+
         if isinstance(block, Image):
             if self.document_assets is None:
                 raise ValueError("Image rendering requires document assets.")
@@ -253,6 +259,37 @@ class _DocumentRenderer:
             return "\n".join(lines)
 
         raise TypeError(f"Unsupported block: {type(block).__name__}")
+
+    def _render_table(self, table: Table) -> str:
+        lines = ["<table>", "<thead>", "<tr>"]
+
+        for index, cell in enumerate(table.header.cells):
+            alignment = table.alignments[index]
+            lines.append(
+                f'<th style="text-align: {self._render_table_alignment(alignment)}">'
+                f"{self._render_table_cell(cell)}</th>"
+            )
+
+        lines.extend(["</tr>", "</thead>", "<tbody>"])
+
+        for row in table.rows:
+            lines.append("<tr>")
+            for index, cell in enumerate(row.cells):
+                alignment = table.alignments[index]
+                lines.append(
+                    f'<td style="text-align: {self._render_table_alignment(alignment)}">'
+                    f"{self._render_table_cell(cell)}</td>"
+                )
+            lines.append("</tr>")
+
+        lines.extend(["</tbody>", "</table>"])
+        return "\n".join(lines)
+
+    def _render_table_alignment(self, alignment: TableAlignment) -> str:
+        return alignment.value
+
+    def _render_table_cell(self, cell: TableCell) -> str:
+        return "".join(self._render_inline(node) for node in cell.children)
 
     def _render_inline(self, node: Inline) -> str:
         if isinstance(node, Text):

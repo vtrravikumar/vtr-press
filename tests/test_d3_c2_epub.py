@@ -64,6 +64,44 @@ def test_publish_all_technical_document_uses_generic_epub(tmp_path):
         assert "OEBPS/contents.xhtml" in archive.namelist()
 
 
+def test_publish_all_technical_document_renders_tables_in_typst_and_epub(tmp_path):
+    path = tmp_path / "technical-table.md"
+    path.write_text(
+        """---
+title: Test Technical Document
+subtitle: Architecture
+author: VTR Ravi Kumar
+type: technical-document
+---
+
+# Test Technical Document
+
+## Revision History
+
+| Version | Status | Amount |
+|:--------|:------:|-------:|
+| 0.1     | **Draft** | 100 |
+| 1.0     | Done      | 250 |
+""",
+        encoding="utf-8",
+    )
+
+    typst, epub = publish_all(path)
+
+    assert "#table(" in typst
+    assert "  align: (left, center, right)," in typst
+
+    with ZipFile(BytesIO(epub)) as archive:
+        section = archive.read("OEBPS/section-001.xhtml").decode("utf-8")
+
+    assert "<table>" in section
+    assert '<th style="text-align: left">Version</th>' in section
+    assert '<th style="text-align: center">Status</th>' in section
+    assert '<th style="text-align: right">Amount</th>' in section
+    assert '<td style="text-align: center"><strong>Draft</strong></td>' in section
+    assert '<td style="text-align: right">250</td>' in section
+
+
 def test_publish_epub_technical_document_packages_images(tmp_path):
     manuscript = tmp_path / "docs" / "technical.md"
     manuscript.parent.mkdir(parents=True)

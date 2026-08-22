@@ -16,6 +16,8 @@ from model import (
     Paragraph,
     Part,
     Section,
+    Table,
+    TableCell,
     Text,
     Bold,
     Italic,
@@ -53,13 +55,21 @@ def _walk_blocks(blocks: list[Block]) -> None:
                 _walk_inlines(item)
             continue
 
+        if isinstance(block, Table):
+            for cell in block.header.cells:
+                _walk_inlines(cell)
+            for row in block.rows:
+                for cell in row.cells:
+                    _walk_inlines(cell)
+            continue
+
         if not isinstance(block, Paragraph):
             continue
 
         _walk_inlines(block)
 
 
-def _walk_inlines(block: Paragraph | ListItem) -> None:
+def _walk_inlines(block: Paragraph | ListItem | TableCell) -> None:
     """Parse inline Markdown in a paragraph or list item."""
 
     new_children = []

@@ -24,6 +24,10 @@ from model import (
     ListItem,
     Metadata,
     Paragraph,
+    Table,
+    TableAlignment,
+    TableCell,
+    TableRow,
     Text,
     Verse,
 )
@@ -54,6 +58,7 @@ def test_heading_carries_only_level_and_title():
 def test_generic_list_and_image_blocks_are_blocks():
     assert isinstance(ListBlock(), Block)
     assert isinstance(Image(), Block)
+    assert isinstance(Table(), Block)
 
 
 def test_list_item_and_list_block_preserve_structure():
@@ -73,6 +78,40 @@ def test_image_preserves_source_and_alt_text():
 
     assert image.source == "../../assets/images/diagram.png"
     assert image.alt_text == "Architecture diagram"
+
+
+def test_table_preserves_column_alignment_and_rows():
+    table = Table(
+        alignments=[
+            TableAlignment.LEFT,
+            TableAlignment.CENTER,
+            TableAlignment.RIGHT,
+        ],
+        header=TableRow(
+            cells=[
+                TableCell(children=[Text("Name")]),
+                TableCell(children=[Text("Status")]),
+                TableCell(children=[Text("Amount")]),
+            ]
+        ),
+        rows=[
+            TableRow(
+                cells=[
+                    TableCell(children=[Text("Ravi")]),
+                    TableCell(children=[Text("Done")]),
+                    TableCell(children=[Text("100")]),
+                ]
+            )
+        ],
+    )
+
+    assert table.alignments == [
+        TableAlignment.LEFT,
+        TableAlignment.CENTER,
+        TableAlignment.RIGHT,
+    ]
+    assert table.header.cells[0].children[0].text == "Name"
+    assert table.rows[0].cells[2].children[0].text == "100"
 
 
 def test_document_can_represent_a_mix_of_generic_blocks():

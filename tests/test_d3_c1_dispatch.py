@@ -61,6 +61,37 @@ def test_publish_routes_technical_document_to_generic_typst(tmp_path):
     assert "#render-contents()" in output
 
 
+def test_publish_routes_markdown_table_to_native_typst_table(tmp_path):
+    path = tmp_path / "technical-table.md"
+    path.write_text(
+        """---
+title: Test Technical Document
+subtitle: Architecture
+author: VTR Ravi Kumar
+type: technical-document
+---
+
+# Test Technical Document
+
+## Revision History
+
+| Version | Status | Amount |
+|:--------|:------:|-------:|
+| 0.1     | Draft  | 100    |
+| 1.0     | Done   | 250    |
+""",
+        encoding="utf-8",
+    )
+
+    output = publish(path)
+
+    assert "#table(" in output
+    assert "  align: (left, center, right)," in output
+    assert "    [Version]," in output
+    assert "  [Draft]," in output
+    assert "  [250]," in output
+
+
 def test_book_dispatch_remains_legacy(tmp_path):
     path = tmp_path / "book.md"
     path.write_text(

@@ -14,6 +14,10 @@ from model import (
     ListItem,
     Metadata,
     Paragraph,
+    Table,
+    TableAlignment,
+    TableCell,
+    TableRow,
     Text,
 )
 from renderer.document_assets import DocumentAssets
@@ -122,6 +126,57 @@ def test_native_renderer_preserves_inline_formatting_in_list_item():
     output = render_document(document)
 
     assert "- *Important*" in output
+
+
+def test_native_renderer_renders_table_with_column_alignment():
+    document = _technical_document()
+    table = Table(
+        alignments=[
+            TableAlignment.LEFT,
+            TableAlignment.CENTER,
+            TableAlignment.RIGHT,
+        ],
+        header=TableRow(
+            cells=[
+                TableCell(children=[Text("Name")]),
+                TableCell(children=[Text("Status")]),
+                TableCell(children=[Text("Amount")]),
+            ]
+        ),
+        rows=[
+            TableRow(
+                cells=[
+                    TableCell(children=[Text("Ravi")]),
+                    TableCell(children=[Bold(children=[Text("Done")])]),
+                    TableCell(children=[Text("100")]),
+                ]
+            ),
+            TableRow(
+                cells=[
+                    TableCell(children=[Text("VTR")]),
+                    TableCell(children=[Text("")]),
+                    TableCell(children=[Text("250")]),
+                ]
+            ),
+        ],
+    )
+
+    document.nodes.append(InterpretedNode(block=table))
+
+    output = render_document(document)
+
+    assert "#table(" in output
+    assert "  columns: 3," in output
+    assert "  align: (left, center, right)," in output
+    assert "  table.header(" in output
+    assert "    [Name]," in output
+    assert "    [Status]," in output
+    assert "    [Amount]," in output
+    assert "  [Ravi]," in output
+    assert "  [*Done*]," in output
+    assert "  [100]," in output
+    assert "  []," in output
+    assert "  [250]," in output
 
 
 def test_native_renderer_uses_technical_theme_and_no_cover():

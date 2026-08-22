@@ -30,6 +30,10 @@ from model import (
     ListItem,
     Metadata,
     Paragraph,
+    Table,
+    TableAlignment,
+    TableCell,
+    TableRow,
     Text,
     Verse,
 )
@@ -43,6 +47,7 @@ _HEADING_PATTERN = re.compile(r"^(#{1,6}) (.*)$")
 _UNORDERED_LIST_PATTERN = re.compile(r"^\s*[-*+] (.+)$")
 _ORDERED_LIST_PATTERN = re.compile(r"^\s*(\d+)\. (.+)$")
 _IMAGE_PATTERN = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)$")
+_TABLE_DELIMITER_CELL_PATTERN = re.compile(r"^:?-{3,}:?$")
 
 
 def parse_document(metadata: Metadata, body: str) -> Document:
@@ -129,11 +134,108 @@ def parse_document(metadata: Metadata, body: str) -> Document:
         )
         list_items.clear()
 
+    def split_table_row(line: str) -> list[str]:
+        stripped = line.strip()
+
+        if stripped.startswith("|"):
+            stripped = stripped[1:]
+
+        if stripped.endswith("|"):
+            stripped = stripped[:-1]
+
+        return [cell.strip() for cell in stripped.split("|")]
+
+    def parse_table_alignments(line: str) -> list[TableAlignment] | None:
+        cells = split_table_row(line)
+
+        if not cells:
+            return None
+
+        alignments: list[TableAlignment] = []
+
+        for cell in cells:
+            compact = cell.replace(" ", "")
+
+            if not _TABLE_DELIMITER_CELL_PATTERN.match(compact):
+                return None
+
+            if compact.startswith(":") and compact.endswith(":"):
+                alignments.append(TableAlignment.CENTER)
+            elif compact.endswith(":"):
+                alignments.append(TableAlignment.RIGHT)
+            else:
+                alignments.append(TableAlignment.LEFT)
+
+        return alignments
+
+    def is_table_start(lines: list[str], index: int) -> bool:
+        if index + 1 >= len(lines):
+            return False
+
+        header_cells = split_table_row(lines[index].rstrip())
+        alignments = parse_table_alignments(lines[index + 1].rstrip())
+
+        return (
+            alignments is not None
+            and "|" in lines[index]
+            and "|" in lines[index + 1]
+            and len(header_cells) == len(alignments)
+            and len(header_cells) > 0
+        )
+
+    def row_from_cells(cells: list[str], column_count: int) -> TableRow:
+        normalized = cells[:column_count]
+        normalized.extend([""] * (column_count - len(normalized)))
+
+        return TableRow(
+            cells=[
+                TableCell(children=[Text(text=cell)])
+                for cell in normalized
+            ]
+        )
+
+    def parse_table(lines: list[str], index: int) -> int:
+        header_cells = split_table_row(lines[index].rstrip())
+        alignments = parse_table_alignments(lines[index + 1].rstrip())
+
+        if alignments is None:
+            return index
+
+        column_count = len(alignments)
+        table = Table(
+            alignments=alignments,
+            header=row_from_cells(header_cells, column_count),
+        )
+
+        index += 2
+
+        while index < len(lines):
+            candidate = lines[index].rstrip()
+
+            if not candidate or "|" not in candidate:
+                break
+
+            cells = split_table_row(candidate)
+
+            if len(cells) > column_count:
+                break
+
+            table.rows.append(row_from_cells(cells, column_count))
+            index += 1
+
+        document.blocks.append(table)
+        return index
+
     # ----------------------------------------------------------
     # Parse document
     # ----------------------------------------------------------
 
-    for raw_line in body.splitlines():
+    lines = body.splitlines()
+    index = 0
+
+    while index < len(lines):
+
+        raw_line = lines[index]
 
         line = raw_line.rstrip()
 
@@ -145,16 +247,19 @@ def parse_document(metadata: Metadata, body: str) -> Document:
             flush_paragraph()
             in_verse = True
             verse.clear()
+            index += 1
             continue
 
         if line == ":::" and in_verse:
             flush_verse()
             verse.clear()
             in_verse = False
+            index += 1
             continue
 
         if in_verse:
             verse.append(line)
+            index += 1
             continue
 
         # ----------------------------------------------------------
@@ -164,6 +269,18 @@ def parse_document(metadata: Metadata, body: str) -> Document:
         if not line:
             flush_paragraph()
             flush_list()
+            index += 1
+            continue
+
+        # ----------------------------------------------------------
+        # Markdown table
+        # ----------------------------------------------------------
+
+        if is_table_start(lines, index):
+            flush_paragraph()
+            flush_list()
+            flush_verse()
+            index = parse_table(lines, index)
             continue
 
         # ----------------------------------------------------------
@@ -181,6 +298,7 @@ def parse_document(metadata: Metadata, body: str) -> Document:
             title = match.group(2).strip()
 
             document.blocks.append(Heading(level=level, title=title))
+            index += 1
             continue
 
         # ----------------------------------------------------------
@@ -200,6 +318,7 @@ def parse_document(metadata: Metadata, body: str) -> Document:
                     source=image_match.group(2),
                 )
             )
+            index += 1
             continue
 
         # ----------------------------------------------------------
@@ -227,6 +346,7 @@ def parse_document(metadata: Metadata, body: str) -> Document:
             list_items.append(
                 ListItem(children=[Text(text=item_text)])
             )
+            index += 1
             continue
 
         flush_list()
@@ -236,6 +356,7 @@ def parse_document(metadata: Metadata, body: str) -> Document:
         # ----------------------------------------------------------
 
         paragraph.append(line)
+        index += 1
 
     if in_verse:
         raise StructureError("Unterminated :::verse block.")

@@ -26,6 +26,8 @@ from model import (
     ListBlock,
     Metadata,
     Paragraph,
+    Table,
+    TableAlignment,
     Verse,
 )
 from parser.document_model import parse_document
@@ -184,6 +186,82 @@ def test_image_is_parsed_as_a_block():
     assert isinstance(image, Image)
     assert image.alt_text == "Architecture diagram"
     assert image.source == "../../assets/images/diagram.png"
+
+
+# ============================================================================
+# Tables
+# ============================================================================
+
+def test_markdown_table_is_parsed_with_header_and_body_rows():
+    doc = _parse(
+        "| Name | Status | Amount |\n"
+        "|------|--------|-------:|\n"
+        "| Ravi | Done   | 100    |\n"
+        "| VTR  | Open   | 250    |\n"
+    )
+
+    assert len(doc.blocks) == 1
+    table = doc.blocks[0]
+    assert isinstance(table, Table)
+    assert [cell.children[0].text for cell in table.header.cells] == [
+        "Name", "Status", "Amount",
+    ]
+    assert [
+        [cell.children[0].text for cell in row.cells]
+        for row in table.rows
+    ] == [["Ravi", "Done", "100"], ["VTR", "Open", "250"]]
+
+
+def test_markdown_table_alignment_markers_are_parsed_per_column():
+    doc = _parse(
+        "| Left | Center | Right | Default |\n"
+        "|:-----|:------:|------:|---------|\n"
+        "| A    | B      | C     | D       |\n"
+    )
+
+    table = doc.blocks[0]
+    assert isinstance(table, Table)
+    assert table.alignments == [
+        TableAlignment.LEFT,
+        TableAlignment.CENTER,
+        TableAlignment.RIGHT,
+        TableAlignment.LEFT,
+    ]
+
+
+def test_markdown_table_trims_whitespace_and_preserves_empty_cells():
+    doc = _parse(
+        "| Name | Notes | Amount |\n"
+        "| ---- | ----- | -----: |\n"
+        "| Ravi |       | 100    |\n"
+    )
+
+    table = doc.blocks[0]
+    assert isinstance(table, Table)
+    assert [cell.children[0].text for cell in table.rows[0].cells] == [
+        "Ravi", "", "100",
+    ]
+
+
+def test_markdown_table_interleaves_with_other_blocks():
+    doc = _parse(
+        "Before.\n\n"
+        "| Name | Status |\n"
+        "|------|--------|\n"
+        "| Ravi | Done   |\n\n"
+        "After.\n"
+    )
+
+    assert [type(block).__name__ for block in doc.blocks] == [
+        "Paragraph", "Table", "Paragraph",
+    ]
+
+
+def test_setext_style_text_is_not_parsed_as_table_without_pipes():
+    doc = _parse("Heading\n-------\n")
+
+    assert len(doc.blocks) == 1
+    assert isinstance(doc.blocks[0], Paragraph)
 
 
 # ============================================================================
