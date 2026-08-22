@@ -285,6 +285,37 @@ class ListBlock(Block):
     items: list[ListItem] = field(default_factory=list)
 
 
+class TableAlignment(Enum):
+    """Supported per-column horizontal alignment for generic tables."""
+
+    LEFT = "left"
+    CENTER = "center"
+    RIGHT = "right"
+
+
+@dataclass(slots=True)
+class TableCell:
+    """A single generic table cell."""
+
+    children: list[Inline] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class TableRow:
+    """A single generic table row."""
+
+    cells: list[TableCell] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class Table(Block):
+    """A generic table with column alignment, header, and body rows."""
+
+    alignments: list[TableAlignment] = field(default_factory=list)
+    header: TableRow = field(default_factory=TableRow)
+    rows: list[TableRow] = field(default_factory=list)
+
+
 @dataclass(slots=True)
 class Image(Block):
     """A block-level Markdown image reference."""

@@ -13,7 +13,15 @@ from __future__ import annotations
 from pathlib import Path
 
 from interpretation import InterpretedDocument, InterpretedNode, NodeKind
-from model import Heading, Image, Metadata
+from model import (
+    Block,
+    Heading,
+    Image,
+    Metadata,
+    Table,
+    TableAlignment,
+    TableCell,
+)
 from renderer.document_assets import DocumentAssets
 from renderer.typst import RenderOptions, _Renderer
 
@@ -72,6 +80,47 @@ class _DocumentRenderer(_Renderer):
             f'#image("{self._escape_string(str(typst_asset_path))}")'
         )
         self.lines.append("")
+
+    def _render_block(self, block: Block) -> None:
+        if isinstance(block, Table):
+            self._render_table(block)
+            return
+
+        super()._render_block(block)
+
+    def _render_table(self, table: Table) -> None:
+        """Render a generic table using native Typst table syntax."""
+        column_count = len(table.alignments)
+
+        self.lines.append("#table(")
+        self.lines.append(f"  columns: {column_count},")
+        self.lines.append(
+            "  align: ("
+            + ", ".join(
+                self._render_table_alignment(alignment)
+                for alignment in table.alignments
+            )
+            + "),"
+        )
+        self.lines.append("  table.header(")
+
+        for cell in table.header.cells:
+            self.lines.append(f"    [{self._render_table_cell(cell)}],")
+
+        self.lines.append("  ),")
+
+        for row in table.rows:
+            for cell in row.cells:
+                self.lines.append(f"  [{self._render_table_cell(cell)}],")
+
+        self.lines.append(")")
+        self.lines.append("")
+
+    def _render_table_alignment(self, alignment: TableAlignment) -> str:
+        return alignment.value
+
+    def _render_table_cell(self, cell: TableCell) -> str:
+        return "".join(self._render_inline(child) for child in cell.children)
 
     def render_document(self, document: InterpretedDocument) -> str:
         if document.metadata.type != "technical-document":
