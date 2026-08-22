@@ -23,3 +23,12 @@ books:
     bookpath: ../../Projects/RideTogether
     manuscript: docs/engineering/EngineeringDesign.md
     output_name: RideTogetherEngineeringDesign
+
+  rideapi:
+    bookpath: ../../Projects/RideTogether
+    manuscript: docs/engineering/APIEngineeringReference.md
+    output_name: RideTogetherAPI
+
+  health:
+    bookpath: ../Health-in-your-hands
+    output_name: Health-In-Your-Hands
