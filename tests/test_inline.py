@@ -23,6 +23,10 @@ from model import (
     Scene,
     Section,
     SectionKind,
+    Table,
+    TableAlignment,
+    TableCell,
+    TableRow,
     Text,
 )
 from parser.inline import _expand, parse_inline, parse_inline_document
@@ -192,6 +196,32 @@ def test_parse_inline_expands_list_item_text():
     parse_inline_document(document)
 
     children = document.blocks[0].items[0].children
+    assert any(isinstance(c, Bold) for c in children)
+
+
+def test_parse_inline_expands_table_cell_text():
+    document = Document(
+        metadata=Metadata(type="technical-document"),
+        blocks=[
+            Table(
+                alignments=[TableAlignment.LEFT],
+                header=TableRow(
+                    cells=[TableCell(children=[Text("Status")])]
+                ),
+                rows=[
+                    TableRow(
+                        cells=[
+                            TableCell(children=[Text("Some **bold** text.")])
+                        ]
+                    )
+                ],
+            )
+        ],
+    )
+
+    parse_inline_document(document)
+
+    children = document.blocks[0].rows[0].cells[0].children
     assert any(isinstance(c, Bold) for c in children)
 
 
