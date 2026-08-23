@@ -37,9 +37,18 @@ OUTPUT_DIR = ROOT / "output"
 
 def load_books() -> dict:
     """Load the books configuration."""
+    if not BOOKS_FILE.exists():
+        print(f"Configuration file not found: {BOOKS_FILE}")
+        sys.exit(1)
 
     with BOOKS_FILE.open("r", encoding="utf-8") as fp:
-        return yaml.safe_load(fp)["books"]
+        data = yaml.safe_load(fp)
+
+    if not isinstance(data, dict) or "books" not in data:
+        print(f"Invalid or missing 'books' key in {BOOKS_FILE}")
+        sys.exit(1)
+
+    return data["books"]
 
 
 def main() -> None:
@@ -87,6 +96,10 @@ def main() -> None:
     manuscript = (bookpath / manuscript_config).resolve()
     output_name = config["output_name"]
 
+    if not manuscript.exists():
+        print(f"Manuscript not found: {manuscript}")
+        sys.exit(1)
+
     # A cover is required for type: book; optional for every other
     # type (see VP-006/B2, which already makes cover rendering
     # book-only). The manuscript's own declared type decides this,
@@ -107,6 +120,10 @@ def main() -> None:
         sys.exit(1)
 
     cover = (ROOT / cover_config).resolve() if cover_config else None
+
+    if cover_config and (cover is None or not cover.exists()):
+        print(f'Cover file specified in books.yaml not found: {cover}')
+        sys.exit(1)
 
     # Book assets are rooted at the book directory.
     #
@@ -222,10 +239,26 @@ def main() -> None:
             ]
         )
 
-        subprocess.run(
-            compile_command,
-            check=True,
-        )
+        try:
+            result = subprocess.run(
+                compile_command,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            print("Typst executable not found. Please install Typst and ensure it is on your PATH.")
+            sys.exit(1)
+
+        if result.returncode != 0:
+            print("Typst compilation failed.")
+            if result.stdout:
+                print("Stdout:")
+                print(result.stdout)
+            if result.stderr:
+                print("Stderr:")
+                print(result.stderr)
+            sys.exit(result.returncode)
 
     #
     # Publish artifacts to ISBN workspace
@@ -283,15 +316,22 @@ def publication_manifest(
     ]
 
     for artifact in artifacts:
-        lines.extend(
-            [
-                f"### {artifact.name}",
-                "",
-                f"- Size: {artifact.stat().st_size} bytes",
-                f"- SHA256: {_sha256(artifact)}",
-                "",
-            ]
-        )
+        lines.append(f"### {artifact.name}")
+        lines.append("")
+        if artifact.exists():
+            try:
+                size = artifact.stat().st_size
+            except OSError:
+                size = None
+            sha = _sha256(artifact)
+            if size is not None:
+                lines.append(f"- Size: {size} bytes")
+            else:
+                lines.append(f"- Size: <unable to determine>")
+            lines.append(f"- SHA256: {sha}")
+        else:
+            lines.append("- Missing: file not found")
+        lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
 
