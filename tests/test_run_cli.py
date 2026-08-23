@@ -10,7 +10,7 @@ test_typst_renderer.py and test_epub_renderer.py).
 """
 
 from __future__ import annotations
-
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -72,6 +72,12 @@ def fake_pipeline(monkeypatch, tmp_path):
         pdf_out = Path(args[0][-1])
         pdf_out.parent.mkdir(parents=True, exist_ok=True)
         pdf_out.write_bytes(b"%PDF-FAKE")
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
 
     monkeypatch.setattr(run, "publish_all", fake_publish_all)
     monkeypatch.setattr(run.subprocess, "run", fake_typst_compile)
