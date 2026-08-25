@@ -42,6 +42,16 @@ Known limitation:
   technical-document PDF/Typst output. This is the next isolated
   capability being developed.
 
+## Prerequisites
+
+VTR Press requires **Typst** to generate PDF output.
+
+Typst is an external system dependency and is **not** installed via `requirements.txt` or `requirements-dev.txt`. You must install it separately:
+
+- **Install Typst:** https://typst.app/docs/guide/install/
+- EPUB generation works without Typst.
+- PDF generation requires Typst to be available on your system PATH.
+
 ## Quick Start
 
 ```bash
