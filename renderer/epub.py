@@ -147,6 +147,11 @@ p {
   text-align: left;
 }
 
+pre {
+  white-space: pre;
+  overflow-x: auto;
+}
+
 code {
   font-family: "Courier New", monospace;
   font-size: 0.92em;

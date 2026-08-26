@@ -38,6 +38,7 @@ from model import (
     TableCell,
     Text,
     Verse,
+    CodeBlock,
 )
 from renderer.document_assets import DocumentAssets
 from renderer.epub import BOOK_CSS, DEFAULT_LOGO
@@ -251,6 +252,8 @@ class _DocumentRenderer:
                 f'alt="{_attr(block.alt_text)}"/>'
                 f"</figure>"
             )
+        if isinstance(block, CodeBlock):
+            return self._render_code_block(block)
         if isinstance(block, Verse):
             lines = ['<div class="verse">']
             for line in block.lines:
@@ -259,6 +262,15 @@ class _DocumentRenderer:
             return "\n".join(lines)
 
         raise TypeError(f"Unsupported block: {type(block).__name__}")
+
+    def _render_code_block(self, block: CodeBlock) -> str:
+        """Render a fenced code block as an EPUB preformatted block."""
+        language = _attr(block.language.strip())
+        class_attr = f' class="language-{language}"' if language else ""
+
+        content = _text("\n".join(block.lines))
+
+        return f"<pre{class_attr}><code>{content}</code></pre>"
 
     def _render_table(self, table: Table) -> str:
         lines = ["<table>", "<thead>", "<tr>"]

@@ -29,6 +29,7 @@ from model import (
     Table,
     TableAlignment,
     Verse,
+    CodeBlock,
 )
 from parser.document_model import parse_document
 from interpretation import NodeKind, interpret_book, interpret_technical_document
@@ -262,7 +263,120 @@ def test_setext_style_text_is_not_parsed_as_table_without_pipes():
 
     assert len(doc.blocks) == 1
     assert isinstance(doc.blocks[0], Paragraph)
+# ============================================================================
+# Fenced code blocks
+# ============================================================================
 
+def test_fenced_code_block_is_parsed_as_a_block():
+    body = (
+        "```json\n"
+        '{\"name\": \"Ravi\"}\n'
+        "```\n"
+    )
+
+    doc = _parse(body)
+
+    assert len(doc.blocks) == 1
+    code = doc.blocks[0]
+    assert code.language == "json"
+    assert code.lines == ['{"name": "Ravi"}']
+
+
+def test_fenced_code_block_preserves_multiple_lines_and_blank_lines():
+    body = (
+        "```python\n"
+        "def hello():\n"
+        "    print(\"Hello\")\n"
+        "\n"
+        "hello()\n"
+        "```\n"
+    )
+
+    doc = _parse(body)
+
+    assert len(doc.blocks) == 1
+    code = doc.blocks[0]
+    assert code.language == "python"
+    assert code.lines == [
+        "def hello():",
+        '    print("Hello")',
+        "",
+        "hello()",
+    ]
+
+
+def test_fenced_code_block_without_language_has_empty_language():
+    body = (
+        "```\n"
+        "GET /api/users\n"
+        "Authorization: Bearer <token>\n"
+        "```\n"
+    )
+
+    doc = _parse(body)
+
+    assert len(doc.blocks) == 1
+    code = doc.blocks[0]
+    assert code.language == ""
+    assert code.lines == [
+        "GET /api/users",
+        "Authorization: Bearer <token>",
+    ]
+
+
+def test_fenced_code_block_preserves_markdown_looking_content():
+    body = (
+        "```text\n"
+        "# Not a heading\n"
+        "| Not | A | Table |\n"
+        "- Not a list item\n"
+        "**Not bold**\n"
+        "```\n"
+    )
+
+    doc = _parse(body)
+
+    assert len(doc.blocks) == 1
+    code = doc.blocks[0]
+    assert code.language == "text"
+    assert code.lines == [
+        "# Not a heading",
+        "| Not | A | Table |",
+        "- Not a list item",
+        "**Not bold**",
+    ]
+
+
+def test_fenced_code_block_interleaves_with_other_blocks():
+    body = (
+        "Before.\n\n"
+        "```json\n"
+        '{"ok": true}\n'
+        "```\n\n"
+        "| Name | Status |\n"
+        "|------|--------|\n"
+        "| Ravi | Done   |\n\n"
+        "After.\n"
+    )
+
+    doc = _parse(body)
+
+    assert [type(block).__name__ for block in doc.blocks] == [
+        "Paragraph",
+        "CodeBlock",
+        "Table",
+        "Paragraph",
+    ]
+
+
+def test_unterminated_fenced_code_block_raises():
+    body = (
+        "```json\n"
+        '{"name": "Ravi"}\n'
+    )
+
+    with pytest.raises(StructureError):
+        _parse(body)
 
 # ============================================================================
 # Verse
