@@ -26,6 +26,7 @@ from model import (
     Subheading,
     Text,
     Verse,
+    CodeBlock,
 )
 from renderer.document_assets import DocumentAssets
 
@@ -495,7 +496,9 @@ class _Renderer:
             self._render_heading(block.level, block.title)
             self.lines.append("")
             return
-
+        if isinstance(block, CodeBlock):
+            self._render_code_block(block)
+            return
         raise TypeError(f"Unsupported block: {type(block).__name__}")
 
     # ------------------------------------------------------------------
@@ -583,6 +586,26 @@ class _Renderer:
                 self.lines.append("#linebreak()")
 
         self.lines.append("]")
+        self.lines.append("")
+
+    # ------------------------------------------------------------------
+    # Fenced CodeBlock
+    # ------------------------------------------------------------------
+    def _render_code_block(self, code: CodeBlock) -> None:
+        """Render a fenced code block as a Typst raw block."""
+        language = code.language.strip()
+        content = "\n".join(code.lines)
+
+        if language:
+            self.lines.append(
+                f'#raw(lang: "{self._escape_string(language)}", '
+                f'block: true, "{self._escape_string(content)}")'
+            )
+        else:
+            self.lines.append(
+                f'#raw(block: true, "{self._escape_string(content)}")'
+            )
+
         self.lines.append("")
 
     # ------------------------------------------------------------------

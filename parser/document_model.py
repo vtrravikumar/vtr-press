@@ -36,6 +36,7 @@ from model import (
     TableRow,
     Text,
     Verse,
+    CodeBlock,
 )
 
 
@@ -48,7 +49,7 @@ _UNORDERED_LIST_PATTERN = re.compile(r"^\s*[-*+] (.+)$")
 _ORDERED_LIST_PATTERN = re.compile(r"^\s*(\d+)\. (.+)$")
 _IMAGE_PATTERN = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)$")
 _TABLE_DELIMITER_CELL_PATTERN = re.compile(r"^:?-{3,}:?$")
-
+_FENCED_CODE_PATTERN = re.compile(r"^```(?:([^\s`]+))?$")
 
 def parse_document(metadata: Metadata, body: str) -> Document:
     """
@@ -92,9 +93,12 @@ def parse_document(metadata: Metadata, body: str) -> Document:
 
     paragraph: list[str] = []
     verse: list[str] = []
+    code: list[str] = []
     list_items: list[ListItem] = []
     list_ordered = False
     in_verse = False
+    in_code = False
+    code_language = ""
 
     # ----------------------------------------------------------
     # Helpers
@@ -263,6 +267,40 @@ def parse_document(metadata: Metadata, body: str) -> Document:
             continue
 
         # ----------------------------------------------------------
+        # Fenced code block
+        # ----------------------------------------------------------
+        fence_match = _FENCED_CODE_PATTERN.match(line)
+
+        if fence_match:
+            if in_code:
+                document.blocks.append(
+                    CodeBlock(
+                        lines=code.copy(),
+                        language=code_language,
+                    )
+                )
+                code.clear()
+                code_language = ""
+                in_code = False
+                index += 1
+                continue
+
+            flush_paragraph()
+            flush_list()
+            flush_verse()
+
+            code_language = fence_match.group(1) or ""
+            code.clear()
+            in_code = True
+            index += 1
+            continue
+
+        if in_code:
+            code.append(line)
+            index += 1
+            continue
+
+        # ----------------------------------------------------------
         # Blank line
         # ----------------------------------------------------------
 
@@ -360,7 +398,8 @@ def parse_document(metadata: Metadata, body: str) -> Document:
 
     if in_verse:
         raise StructureError("Unterminated :::verse block.")
-
+    if in_code:
+        raise StructureError("Unterminated fenced code block")
     flush_paragraph()
     flush_list()
     flush_verse()

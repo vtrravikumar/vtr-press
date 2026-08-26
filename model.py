@@ -117,6 +117,12 @@ class Verse(Block):
 
     lines: list[str] = field(default_factory=list)
 
+@dataclass(slots=True)
+class CodeBlock(Block):
+    """A fenced Markdown code block that preserves source lines exactly."""
+
+    lines: list[str] = field(default_factory=list)
+    language: str = ""
 
 @dataclass(slots=True)
 class Subheading(Block):
