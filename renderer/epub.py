@@ -3,25 +3,27 @@ Render a Book AST into an EPUB 3 package.
 """
 
 from __future__ import annotations
-
+from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import escape
 from io import BytesIO
 import mimetypes
-from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile, ZipInfo
-
+from renderer.document_assets import DocumentAssets
+from renderer.epub_common import (
+    DEFAULT_LOGO,
+    EPUB_CSS,
+    EpubCommonMixin,
+)
 from model import (
     Book,
     Part,
     Chapter,
     Scene,
     Section,
-    Paragraph,
     Subheading,
-    Verse,
     Text,
     Bold,
     Italic,
@@ -32,165 +34,6 @@ from model import (
     Inline,
     SectionKind,
 )
-
-
-ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_LOGO = ROOT / "assets" / "publisher" / "logo.png"
-
-
-BOOK_CSS = """
-html {
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  color: #161616;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1em;
-  line-height: 1.45;
-  margin: 0;
-  padding: 1.4em;
-}
-
-.cover {
-  margin: 0;
-  padding: 0;
-  text-align: center;
-}
-
-.cover img {
-  height: auto;
-  max-height: 100%;
-  max-width: 100%;
-  width: auto;
-}
-
-.title-page {
-  margin-top: 18%;
-  text-align: center;
-}
-
-.title-page p {
-  text-align: center;
-}
-
-.title-page h1 {
-  font-size: 2em;
-  line-height: 1.15;
-  margin: 0 0 0.45em;
-}
-
-.subtitle {
-  font-size: 1.2em;
-  margin: 0 0 3em;
-}
-
-.author {
-  font-size: 1.15em;
-  margin: 0 0 6em;
-}
-
-.copyright {
-  font-size: 0.9em;
-  margin-top: 1em;
-}
-
-.publisher-logo {
-  display: block;
-  height: auto;
-  margin: 4em auto 0.8em;
-  max-width: 24mm;
-  width: 24mm;
-}
-
-h1,
-h2,
-h3 {
-  font-weight: bold;
-  line-height: 1.2;
-  margin: 0 0 1.2em;
-}
-
-h1 {
-  font-size: 1.8em;
-  margin-top: 35%;
-  text-align: center;
-}
-
-h2 {
-  font-size: 1.55em;
-  margin-top: 1.2em;
-}
-
-h3.scene {
-  font-size: 1.05em;
-  margin: 1.6em 0 0.8em;
-}
-
-.contents h1 {
-  margin-top: 0;
-  text-align: left;
-}
-
-p {
-  margin: 0 0 1em;
-  text-align: justify;
-}
-
-.verse {
-  margin: 1em 0 1.2em 1.5em;
-}
-
-.verse p {
-  margin: 0;
-  text-align: left;
-}
-
-pre {
-  white-space: pre;
-  overflow-x: auto;
-}
-
-code {
-  font-family: "Courier New", monospace;
-  font-size: 0.92em;
-}
-
-a {
-  color: inherit;
-}
-
-nav ol {
-  list-style-type: none;
-  margin: 0;
-  padding-left: 0;
-}
-
-nav ol ol {
-  margin-top: 0.35em;
-  padding-left: 1.4em;
-}
-
-nav li {
-  margin: 0.35em 0;
-}
-
-.contents ol {
-  list-style-type: none;
-  margin: 0;
-  padding-left: 0;
-}
-
-.contents ol ol {
-  margin-top: 0.35em;
-  padding-left: 1.4em;
-}
-
-.contents li {
-  margin: 0.35em 0;
-}
-""".strip()
 
 
 @dataclass(slots=True)
@@ -215,12 +58,10 @@ class _NavPoint:
 def render(
     book: Book,
     cover_path: str | Path | None = None,
+    document_assets: DocumentAssets | None = None,
 ) -> bytes:
-    """Render a Book AST into EPUB bytes."""
-
-    renderer = _Renderer(cover_path)
+    renderer = _Renderer(cover_path, document_assets)
     return renderer.render(book)
-
 
 def write(
     book: Book,
@@ -234,21 +75,19 @@ def write(
     path.write_bytes(render(book, cover_path))
 
 
-class _Renderer:
+class _Renderer(EpubCommonMixin):
     """EPUB renderer."""
 
-    def __init__(self, cover_path: str | Path | None = None) -> None:
-        # cover_path=None means this document has no cover (e.g. a
-        # technical-document, per the C2 decision that a cover is
-        # required only for type: book) -- it must NOT fall back to
-        # any shared default image. Previously this fell back to
-        # DEFAULT_COVER, a single static asset shared by every book,
-        # which meant an EPUB built for a book with no explicit cover
-        # silently reused whatever image happened to be sitting at
-        # that path from an earlier, unrelated publication run.
+    def __init__(
+        self,
+        cover_path: str | Path | None = None,
+        document_assets: DocumentAssets | None = None,
+    ) -> None:
+        # cover_path=None means this document has no cover...
         self.cover_path: Path | None = (
             Path(cover_path) if cover_path is not None else None
         )
+        self.document_assets = document_assets
         self.logo_path = DEFAULT_LOGO
         self.documents: list[_Document] = []
         self.nav_points: list[_NavPoint] = []
@@ -257,7 +96,6 @@ class _Renderer:
         self._part_number = 0
         self._chapter_number = 0
         self._contents_index: int | None = None
-
     # ------------------------------------------------------------------
     # Public
     # ------------------------------------------------------------------
@@ -578,90 +416,14 @@ class _Renderer:
     # ------------------------------------------------------------------
 
     def _render_block(self, block: Block) -> str:
-        """Render a block element."""
-
-        if isinstance(block, Paragraph):
-            return self._render_paragraph(block)
-
-        if isinstance(block, Verse):
-            return self._render_verse(block)
+        """Render a book-specific block or delegate to common rendering."""
 
         if isinstance(block, Subheading):
             level = block.level if block.level in (3, 4, 5, 6) else 3
             return f"<h{level}>{_text(block.title)}</h{level}>"
 
-        raise TypeError(f"Unsupported block: {type(block).__name__}")
-
-    # ------------------------------------------------------------------
-    # Paragraph
-    # ------------------------------------------------------------------
-
-    def _render_paragraph(self, paragraph: Paragraph) -> str:
-        """Render a paragraph."""
-
-        content = "".join(
-            self._render_inline(node)
-            for node in paragraph.children
-        )
-        return f"<p>{content}</p>"
-
-    def _is_empty_isbn_paragraph(self, block: Block) -> bool:
-        """Return whether a paragraph is only an empty ISBN placeholder."""
-
-        if not isinstance(block, Paragraph):
-            return False
-
-        text = "".join(_inline_plain_text(node) for node in block.children)
-        return text.strip().casefold() in {"isbn", "isbn:"}
-
-    # ------------------------------------------------------------------
-    # Verse
-    # ------------------------------------------------------------------
-
-    def _render_verse(self, verse: Verse) -> str:
-        """Render a verse preserving line breaks."""
-
-        lines = ['<div class="verse">']
-
-        for line in verse.lines:
-            lines.append(f"<p>{_text(line)}</p>")
-
-        lines.append("</div>")
-        return "\n".join(lines)
-
-    # ------------------------------------------------------------------
-    # Inline
-    # ------------------------------------------------------------------
-
-    def _render_inline(self, node: Inline) -> str:
-        """Render an inline element."""
-
-        if isinstance(node, Text):
-            return _text(node.text)
-
-        if isinstance(node, Bold):
-            return "<strong>" + "".join(
-                self._render_inline(child)
-                for child in node.children
-            ) + "</strong>"
-
-        if isinstance(node, Italic):
-            return "<em>" + "".join(
-                self._render_inline(child)
-                for child in node.children
-            ) + "</em>"
-
-        if isinstance(node, Code):
-            return f"<code>{_text(node.text)}</code>"
-
-        if isinstance(node, Link):
-            return f'<a href="{_attr(node.url)}">{_text(node.text)}</a>'
-
-        if isinstance(node, LineBreak):
-            return "<br/>"
-
-        raise TypeError(f"Unsupported inline: {type(node).__name__}")
-
+        return super()._render_block(block)
+ 
     # ------------------------------------------------------------------
     # Package
     # ------------------------------------------------------------------
@@ -679,7 +441,7 @@ class _Renderer:
             epub.writestr(info, "application/epub+zip")
 
             self._write(epub, "META-INF/container.xml", self._container_xml())
-            self._write(epub, "OEBPS/book.css", BOOK_CSS)
+            self._write(epub, "OEBPS/book.css", EPUB_CSS)
             self._write(epub, "OEBPS/nav.xhtml", self._nav_xhtml(book))
             self._write(epub, "OEBPS/toc.ncx", self._toc_ncx(book))
             self._write(epub, "OEBPS/content.opf", self._content_opf(book))
@@ -697,6 +459,14 @@ class _Renderer:
                     f"OEBPS/images/{logo_name}",
                     compress_type=ZIP_DEFLATED,
                 )
+
+            if self.document_assets is not None:
+                for asset in self.document_assets.resolved:
+                    epub.write(
+                        asset.staged_path,
+                        f"OEBPS/{asset.epub_href}",
+                        compress_type=ZIP_DEFLATED,
+                    )
 
             for document in self.documents:
                 self._write(
@@ -936,6 +706,15 @@ class _Renderer:
                 f'    <item id="publisher-logo" href="images/{_attr(logo_name)}" '
                 f'media-type="{_attr(_media_type(logo_name))}"/>'
             )
+
+       # Document images
+        if self.document_assets is not None:
+            for index, asset in enumerate(self.document_assets.resolved):
+                lines.append(
+                    f'    <item id="document-image-{index}" '
+                    f'href="{_attr(asset.epub_href)}" '
+                    f'media-type="{_attr(asset.media_type)}"/>'
+                )
 
         for document in self.documents:
             lines.append(

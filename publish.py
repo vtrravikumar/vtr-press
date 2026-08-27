@@ -164,8 +164,17 @@ def publish_all(
         typst_cover_path = "/assets/books/current/cover.png"
 
     return (
-        render_typst(book, typst_cover_path, render_options),
-        render_epub(book, cover_path),
+        render_typst(
+            book,
+            typst_cover_path,
+            render_options,
+            document_assets=assets,
+        ),
+        render_epub(
+            book,
+            cover_path,
+            document_assets=assets,
+        ),
     )
 
 

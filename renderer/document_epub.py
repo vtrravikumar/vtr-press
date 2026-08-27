@@ -19,29 +19,24 @@ from uuid import NAMESPACE_URL, uuid5
 from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile, ZipInfo
 
 from interpretation import InterpretedDocument, InterpretedNode, NodeKind
-
+from renderer.epub_common import (
+    DEFAULT_LOGO,
+    EPUB_CSS,
+    EpubCommonMixin,
+)
 from model import (
     Block,
-    Bold,
-    Code,
     Heading,
     Image,
-    Inline,
-    Italic,
-    LineBreak,
-    Link,
     Metadata,
     Paragraph,
     ListBlock,
     Table,
-    TableAlignment,
-    TableCell,
-    Text,
     Verse,
     CodeBlock,
 )
 from renderer.document_assets import DocumentAssets
-from renderer.epub import BOOK_CSS, DEFAULT_LOGO
+
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -69,7 +64,7 @@ def render_document(
     return renderer.render(document)
 
 
-class _DocumentRenderer:
+class _DocumentRenderer(EpubCommonMixin):
     """Native EPUB renderer for the generic Document Model."""
 
     def __init__(
@@ -223,114 +218,24 @@ class _DocumentRenderer:
 
     def _render_block(self, block: Block) -> str:
         if isinstance(block, Paragraph):
-            content = "".join(self._render_inline(node) for node in block.children)
-            return f"<p>{content}</p>"
+            return self._render_paragraph(block)
+
         if isinstance(block, ListBlock):
-            tag = "ol" if block.ordered else "ul"
-            lines = [f"<{tag}>"]
-            for item in block.items:
-                content = "".join(
-                    self._render_inline(node)
-                    for node in item.children
-                )
-                lines.append(f"<li>{content}</li>")
-            lines.append(f"</{tag}>")
-            return "\n".join(lines)
+            return self._render_list(block)
 
         if isinstance(block, Table):
             return self._render_table(block)
 
         if isinstance(block, Image):
-            if self.document_assets is None:
-                raise ValueError("Image rendering requires document assets.")
-            asset = self.document_assets.resolve(block.source)
-            if asset is None:
-                return f'<p class="missing-image">{_text(block.alt_text)}</p>'
-            return (
-                f"<figure>"
-                f'<img src="{_attr(asset.epub_href)}" '
-                f'alt="{_attr(block.alt_text)}"/>'
-                f"</figure>"
-            )
+            return self._render_image(block)
+
         if isinstance(block, CodeBlock):
             return self._render_code_block(block)
+
         if isinstance(block, Verse):
-            lines = ['<div class="verse">']
-            for line in block.lines:
-                lines.append(f"<p>{_text(line)}</p>")
-            lines.append("</div>")
-            return "\n".join(lines)
+            return self._render_verse(block)
 
         raise TypeError(f"Unsupported block: {type(block).__name__}")
-
-    def _render_code_block(self, block: CodeBlock) -> str:
-        """Render a fenced code block as an EPUB preformatted block."""
-        language = _attr(block.language.strip())
-        class_attr = f' class="language-{language}"' if language else ""
-
-        content = _text("\n".join(block.lines))
-
-        return f"<pre{class_attr}><code>{content}</code></pre>"
-
-    def _render_table(self, table: Table) -> str:
-        lines = ["<table>", "<thead>", "<tr>"]
-
-        for index, cell in enumerate(table.header.cells):
-            alignment = table.alignments[index]
-            lines.append(
-                f'<th style="text-align: {self._render_table_alignment(alignment)}">'
-                f"{self._render_table_cell(cell)}</th>"
-            )
-
-        lines.extend(["</tr>", "</thead>", "<tbody>"])
-
-        for row in table.rows:
-            lines.append("<tr>")
-            for index, cell in enumerate(row.cells):
-                alignment = table.alignments[index]
-                lines.append(
-                    f'<td style="text-align: {self._render_table_alignment(alignment)}">'
-                    f"{self._render_table_cell(cell)}</td>"
-                )
-            lines.append("</tr>")
-
-        lines.extend(["</tbody>", "</table>"])
-        return "\n".join(lines)
-
-    def _render_table_alignment(self, alignment: TableAlignment) -> str:
-        return alignment.value
-
-    def _render_table_cell(self, cell: TableCell) -> str:
-        return "".join(self._render_inline(node) for node in cell.children)
-
-    def _render_inline(self, node: Inline) -> str:
-        if isinstance(node, Text):
-            return _text(node.text)
-
-        if isinstance(node, Bold):
-            return (
-                "<strong>"
-                + "".join(self._render_inline(child) for child in node.children)
-                + "</strong>"
-            )
-
-        if isinstance(node, Italic):
-            return (
-                "<em>"
-                + "".join(self._render_inline(child) for child in node.children)
-                + "</em>"
-            )
-
-        if isinstance(node, Code):
-            return f"<code>{_text(node.text)}</code>"
-
-        if isinstance(node, Link):
-            return f'<a href="{_attr(node.url)}">{_text(node.text)}</a>'
-
-        if isinstance(node, LineBreak):
-            return "<br/>"
-
-        raise TypeError(f"Unsupported inline: {type(node).__name__}")
 
     # ------------------------------------------------------------------
     # EPUB package
@@ -350,7 +255,7 @@ class _DocumentRenderer:
                 "META-INF/container.xml",
                 self._container_xml(),
             )
-            self._write(epub, "OEBPS/book.css", BOOK_CSS)
+            self._write(epub, "OEBPS/book.css", EPUB_CSS)
             self._write(
                 epub,
                 "OEBPS/nav.xhtml",

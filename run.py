@@ -166,21 +166,18 @@ def main() -> None:
     # compilation has completed.
     #
 
-    asset_context = (
-        DocumentAssets(
-            manuscript,
-            assets_root=assets_root,
-            staging_root=(
-                GENERATED_DIR
-                / "assets"
-                / "documents"
-                / output_name
-            ),
-        )
-        if metadata.type == "technical-document"
-        else nullcontext(None)
+    asset_staging_root = (
+        GENERATED_DIR
+        / "assets"
+        / ("books" if metadata.type == "book" else "documents")
+        / output_name
     )
 
+    asset_context = DocumentAssets(
+        manuscript,
+        assets_root=assets_root,
+        staging_root=asset_staging_root,
+    )
     with asset_context as assets:
 
         #

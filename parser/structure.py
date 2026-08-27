@@ -11,6 +11,8 @@ parser.inline.
 
 from __future__ import annotations
 
+import re
+
 from exceptions import StructureError
 from model import (
     Book,
@@ -24,6 +26,12 @@ from model import (
     Subheading,
     Text,
     Verse,
+    Image,
+)
+
+
+_IMAGE_PATTERN = re.compile(
+    r"^!\[([^\]]*)\]\(([^)]+)\)$"
 )
 
 
@@ -37,7 +45,7 @@ SECTION_MAP = {
     "acknowledgements": SectionKind.ACKNOWLEDGEMENTS,
     "epilogue": SectionKind.EPILOGUE,
     "about the author": SectionKind.ABOUT_AUTHOR,
-    "back cover": SectionKind.BACK_COVER, 
+    "back cover": SectionKind.BACK_COVER,
 }
 
 
@@ -155,11 +163,9 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
 
         line = raw_line.rstrip()
 
-
-
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
         # Verse block
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
 
         if line == ":::verse":
 
@@ -180,17 +186,18 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
             verse.append(line)
             continue
 
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
         # Blank line
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
 
         if not line:
+
             flush_paragraph()
             continue
 
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
         # Book title
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
 
         if line.startswith("# "):
 
@@ -200,9 +207,9 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
             # Title comes from YAML front matter.
             continue
 
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
         # Part / Section
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
 
         if line.startswith("## "):
 
@@ -238,9 +245,9 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
 
             continue
 
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
         # Chapter (inside a Part) / Subheading (inside a Section)
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
 
         if line.startswith("### "):
 
@@ -275,9 +282,9 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
 
             continue
 
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
         # Scene (inside a Chapter) / Subheading (inside a Section)
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
 
         if line.startswith("#### "):
 
@@ -307,14 +314,50 @@ def parse_structure(metadata: Metadata, body: str) -> Book:
 
             continue
 
+        # ------------------------------------------------------
+        # Image
+        # ------------------------------------------------------
 
-        # ----------------------------------------------------------
+        image_match = _IMAGE_PATTERN.match(line)
+
+        if image_match:
+
+            flush_paragraph()
+            flush_verse()
+
+            if current_chapter is not None:
+
+                _ensure_scene().blocks.append(
+                    Image(
+                        alt_text=image_match.group(1),
+                        source=image_match.group(2),
+                    )
+                )
+
+            elif current_section is not None:
+
+                current_section.blocks.append(
+                    Image(
+                        alt_text=image_match.group(1),
+                        source=image_match.group(2),
+                    )
+                )
+
+            else:
+                raise StructureError(
+                    f"Image found outside a Section or Chapter: {line}"
+                )
+
+            continue
+
+        # ------------------------------------------------------
         # Regular paragraph
-        # ----------------------------------------------------------
+        # ------------------------------------------------------
 
         paragraph.append(line)
 
     if in_verse:
+
         raise StructureError(
             "Unterminated :::verse block."
         )

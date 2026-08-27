@@ -46,17 +46,20 @@ class RenderOptions:
 
     print_mode: bool = False
 
-
 def render(
     book: Book,
     cover_path: str = "/assets/books/current/cover.png",
     options: RenderOptions | None = None,
+    document_assets: DocumentAssets | None = None,
 ) -> str:
     """Render a Book AST into Typst."""
 
-    renderer = TypstBookRenderer(cover_path, options)
+    renderer = TypstBookRenderer(
+        cover_path,
+        options,
+        document_assets,
+    )
     return renderer.render(book)
-
 
 class TypstBookRenderer(TypstCommonMixin):
     """Typst renderer."""
