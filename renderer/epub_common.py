@@ -219,12 +219,26 @@ class EpubCommonMixin:
     # ------------------------------------------------------------------
 
     def _render_paragraph(self, paragraph: Paragraph) -> str:
-        """Render a paragraph."""
+        """Render a paragraph, preserving numbered reference-list lines."""
 
         content = "".join(
             self._render_inline(node)
             for node in paragraph.children
         )
+
+        lines = content.split("\n")
+
+        if (
+            len(lines) > 1
+            and all(
+                not line.strip()
+                or line.lstrip().split(".", 1)[0].isdigit()
+                and line.lstrip().split(".", 1)[1].startswith(" ")
+                for line in lines
+            )
+        ):
+            content = "<br/>".join(lines)
+
         return f"<p>{content}</p>"
 
     # ------------------------------------------------------------------
