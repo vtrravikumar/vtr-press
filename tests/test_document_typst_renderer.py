@@ -21,7 +21,7 @@ from model import (
     Text,
 )
 from renderer.document_assets import DocumentAssets
-from renderer.document_typst import render_document
+from renderer.typst_technical import render_document
 
 
 def _technical_document() -> InterpretedDocument:

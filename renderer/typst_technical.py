@@ -1,4 +1,4 @@
-"""Render the generic Document Model to Typst.
+"""Render Technical Document → Typst
 
 This renderer is the native Typst consumer for the Phase D generic
 Document Model. It consumes an InterpretedDocument directly; it never
@@ -16,14 +16,13 @@ from interpretation import InterpretedDocument, InterpretedNode, NodeKind
 from model import (
     Block,
     Heading,
-    Image,
     Metadata,
     Table,
     TableAlignment,
     TableCell,
 )
 from renderer.document_assets import DocumentAssets
-from renderer.typst import RenderOptions, _Renderer
+from renderer.typst_book import RenderOptions, TypstBookRenderer
 
 
 def render_document(
@@ -32,11 +31,11 @@ def render_document(
     assets: DocumentAssets | None = None,
 ) -> str:
     """Render an interpreted technical document to Typst source."""
-    renderer = _DocumentRenderer(options, assets)
+    renderer = TypstTechnicalRenderer(options, assets)
     return renderer.render_document(document)
 
 
-class _DocumentRenderer(_Renderer):
+class TypstTechnicalRenderer(TypstBookRenderer):
     """Native Typst renderer for the generic Document Model."""
 
     def __init__(
@@ -54,32 +53,6 @@ class _DocumentRenderer(_Renderer):
         )
         self._document_section_open = False
 
-    def _render_image(self, block: Image) -> None:
-        """Render a technical-document image from staged assets."""
-        if self.document_assets is None:
-            raise ValueError("Image rendering requires document assets.")
-
-        asset = self.document_assets.resolve(block.source)
-
-        if asset is None:
-            self.lines.append(
-                f'#text("[Missing image: {self._escape_string(block.alt_text)}]")'
-            )
-            self.lines.append("")
-            return
-
-        typst_asset_path = (
-            Path("assets")
-            / "documents"
-            / self.document_assets.staging_root.name
-            / "images"
-            / asset.staged_path.name
-        )
-
-        self.lines.append(
-            f'#image("{self._escape_string(str(typst_asset_path))}")'
-        )
-        self.lines.append("")
 
     def _render_block(self, block: Block) -> None:
         if isinstance(block, Table):

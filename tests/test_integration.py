@@ -13,8 +13,8 @@ import pytest
 from model import Book, Paragraph, Section, SectionKind, Text
 from publish import publish, publish_all, publish_epub, read_book
 from renderer.epub import render as render_epub
-from renderer.typst import RenderOptions
-from renderer.typst import render as render_typst
+from renderer.typst_book import RenderOptions
+from renderer.typst_book import render as render_typst
 
 
 def test_publish_produces_typst_source(valid_manuscript_path):

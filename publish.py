@@ -16,10 +16,10 @@ from parser.reader import read
 from parser.structure import parse_structure
 from renderer.document_assets import DocumentAssets
 from renderer.document_epub import render_document as render_document_epub
-from renderer.document_typst import render_document as render_document_typst
+from renderer.typst_technical import render_document as render_document_typst
 from renderer.epub import render as render_epub
-from renderer.typst import RenderOptions
-from renderer.typst import render as render_typst
+from renderer.typst_book import RenderOptions
+from renderer.typst_book import render as render_typst
 
 
 def publish(path: str | Path) -> str:

@@ -9,14 +9,9 @@ from dataclasses import dataclass
 
 from model import (
     Block,
-    Bold,
     Book,
     Chapter,
-    Code,
     Image,
-    Inline,
-    Italic,
-    Link,
     ListBlock,
     Paragraph,
     Part,
@@ -24,12 +19,11 @@ from model import (
     Section,
     SectionKind,
     Subheading,
-    Text,
     Verse,
     CodeBlock,
 )
 from renderer.document_assets import DocumentAssets
-
+from renderer.typst_common import TypstCommonMixin
 DEFAULT_THEME_IMPORT = "../themes/classic/theme.typ"
 
 # Type -> theme import path. An unrecognized (or omitted) type falls
@@ -60,11 +54,11 @@ def render(
 ) -> str:
     """Render a Book AST into Typst."""
 
-    renderer = _Renderer(cover_path, options)
+    renderer = TypstBookRenderer(cover_path, options)
     return renderer.render(book)
 
 
-class _Renderer:
+class TypstBookRenderer(TypstCommonMixin):
     """Typst renderer."""
 
     def __init__(
@@ -500,144 +494,3 @@ class _Renderer:
             self._render_code_block(block)
             return
         raise TypeError(f"Unsupported block: {type(block).__name__}")
-
-    # ------------------------------------------------------------------
-    # Paragraph
-    # ------------------------------------------------------------------
-
-    # ------------------------------------------------------------------
-    # List
-    # ------------------------------------------------------------------
-
-    def _render_list(self, block: ListBlock) -> None:
-        """Render a generic ordered or unordered list using native Typst."""
-        marker = "+" if block.ordered else "-"
-
-        for item in block.items:
-            rendered = "".join(self._render_inline(child) for child in item.children)
-            self.lines.append(f"{marker} {rendered}")
-
-        self.lines.append("")
-
-    # ------------------------------------------------------------------
-    # Image
-    # ------------------------------------------------------------------
-
-    def _render_image(self, block: Image) -> None:
-        """Render a Markdown image reference using staged assets."""
-        if self.document_assets is None:
-            raise ValueError("Image rendering requires document assets.")
-
-        asset = self.document_assets.resolve(block.source)
-
-        if asset is None:
-            self.lines.append(
-                f'#text("[Missing image: {self._escape_string(block.alt_text)}]")'
-            )
-            self.lines.append("")
-            return
-
-        self.lines.append(f'#image("{self._escape_string(str(asset.staged_path))}")')
-        self.lines.append("")
-
-    def _render_paragraph(self, paragraph: Paragraph) -> str:
-
-        return "".join(self._render_inline(node) for node in paragraph.children)
-
-    def _is_empty_isbn_paragraph(self, block: Block) -> bool:
-        """Return whether a paragraph is only an empty ISBN placeholder."""
-
-        if not isinstance(block, Paragraph):
-            return False
-
-        text = "".join(self._inline_plain_text(node) for node in block.children)
-        return text.strip().casefold() in {"isbn", "isbn:"}
-
-    def _inline_plain_text(self, node: Inline) -> str:
-        """Return plain text for renderer-level publication checks."""
-
-        if isinstance(node, Text):
-            return node.text
-
-        if isinstance(node, (Bold, Italic)):
-            return "".join(self._inline_plain_text(child) for child in node.children)
-
-        if isinstance(node, Code):
-            return node.text
-
-        if isinstance(node, Link):
-            return node.text
-
-        return ""
-
-    # ------------------------------------------------------------------
-    # Verse
-    # ------------------------------------------------------------------
-
-    def _render_verse(self, verse: Verse) -> None:
-        """Render a verse preserving line breaks."""
-
-        self.lines.append("#block[")
-
-        for i, line in enumerate(verse.lines):
-            self.lines.append(self._escape_text(line))
-
-            if i < len(verse.lines) - 1:
-                self.lines.append("#linebreak()")
-
-        self.lines.append("]")
-        self.lines.append("")
-
-    # ------------------------------------------------------------------
-    # Fenced CodeBlock
-    # ------------------------------------------------------------------
-    def _render_code_block(self, code: CodeBlock) -> None:
-        """Render a fenced code block as a Typst raw block."""
-        language = code.language.strip()
-        content = "\n".join(code.lines)
-
-        if language:
-            self.lines.append(
-                f'#raw(lang: "{self._escape_string(language)}", '
-                f'block: true, "{self._escape_string(content)}")'
-            )
-        else:
-            self.lines.append(
-                f'#raw(block: true, "{self._escape_string(content)}")'
-            )
-
-        self.lines.append("")
-
-    # ------------------------------------------------------------------
-    # Inline
-    # ------------------------------------------------------------------
-
-    def _render_inline(self, node: Inline) -> str:
-
-        if isinstance(node, Text):
-            return self._escape_text(node.text)
-
-        if isinstance(node, Bold):
-            return (
-                "*"
-                + "".join(self._render_inline(child) for child in node.children)
-                + "*"
-            )
-
-        if isinstance(node, Italic):
-            return (
-                "_"
-                + "".join(self._render_inline(child) for child in node.children)
-                + "_"
-            )
-
-        if isinstance(node, Code):
-            return f"`{self._escape_text(node.text)}`"
-
-        if isinstance(node, Link):
-            return (
-                f'link("{self._escape_string(node.url)}")'
-                f"[{self._escape_text(node.text)}]"
-            )
-
-        raise TypeError(f"Unsupported inline: {type(node).__name__}")

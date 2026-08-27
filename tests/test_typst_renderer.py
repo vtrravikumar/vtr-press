@@ -27,12 +27,16 @@ from model import (
     Subheading,
     Text,
 )
-from renderer.typst import RenderOptions, THEME_IMPORT_BY_TYPE, _Renderer, render
+from renderer.typst_book import (
+    RenderOptions,
+    THEME_IMPORT_BY_TYPE,
+    TypstBookRenderer,
+    render,
+)
 
 
-def _renderer() -> _Renderer:
-    return _Renderer(cover_path="/assets/books/current/cover.png")
-
+def _renderer() -> TypstBookRenderer:
+    return TypstBookRenderer(cover_path="/assets/books/current/cover.png")
 
 # ============================================================================
 # Escaping

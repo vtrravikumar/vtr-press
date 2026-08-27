@@ -31,4 +31,5 @@ books:
 
   health:
     bookpath: ../Health-in-your-hands
+    cover: ../Health-in-your-hands/assets/book_cover.png
     output_name: Health-In-Your-Hands

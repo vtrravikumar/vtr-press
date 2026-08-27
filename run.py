@@ -25,7 +25,7 @@ from exceptions import FrontMatterError
 from parser.reader import read
 from publish import publish_all
 from renderer.document_assets import DocumentAssets
-from renderer.typst import RenderOptions
+from renderer.typst_book import RenderOptions
 
 
 ROOT = Path(__file__).parent
