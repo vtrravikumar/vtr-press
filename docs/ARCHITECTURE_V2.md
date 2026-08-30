@@ -45,19 +45,20 @@ Interpretation Layer
         |                   |
         v                   v
 Common Typst          Common EPUB
-Renderer              Renderer
+        |                   |
+   +----+----+         +----+----+
+   |         |         |         |
+   v         v         v         v
+Book     Technical   Book     Technical
+Typst     Typst      EPUB       EPUB
+   |         |         |         |
+   +----+----+         +----+----+
         |                   |
         v                   v
-      Typst              XHTML
-        |                   |
-        v                   v
-       PDF              EPUB Writer
-                            |
-                            v
-                          EPUB
+       PDF                 EPUB
 ```
 
-The important architectural boundary is the document representation between parsing/interpretation and rendering.
+The key architectural boundary is the separation of document meaning from publication presentation. Within each output format, common rendering primitives are shared while document-type-specific publication behaviour remains in the concrete Book and Technical renderers.
 
 ---
 
@@ -117,6 +118,8 @@ The model is deliberately independent of the final output format.
 
 A new block type should be introduced as a semantic document capability rather than independently implemented in every renderer.
 
+Book-specific structural concepts remain where they are required by the existing book publishing model. They are implementation structures, not the architectural contract exposed to manuscript authors.
+
 ---
 
 # 6. Interpretation
@@ -150,9 +153,9 @@ The renderer should receive already-understood document information rather than 
 
 V2.0 supports both books and technical documents within the same publishing architecture.
 
-The two document classes may have different structural conventions, but they share the generic publishing model.
+The two document types may have different structural conventions, but they share the generic publishing model and the common output-format infrastructure.
 
-For example:
+For example, book-specific implementation may still expose concepts such as:
 
 ```text
 Book
@@ -160,7 +163,11 @@ Book
     Chapter
       Scene
         Paragraph
+```
 
+while a technical document may naturally contain:
+
+```text
 Technical Document
   Heading
   Paragraph
@@ -169,7 +176,7 @@ Technical Document
   Table
 ```
 
-These differences belong to interpretation and document conventions, not to the output format.
+These differences belong to document semantics and publication conventions, not to separate output stacks.
 
 Legacy book-specific classes such as `Part`, `Chapter`, and `Scene` may still exist in the implementation.
 
@@ -179,26 +186,27 @@ Their continued existence is not considered an architectural failure. They are i
 
 # 8. Common Rendering Infrastructure
 
-V2.0 introduced a deliberate separation between common rendering behaviour and document-specific presentation.
+V2.0 introduced a deliberate separation between common format-level rendering behaviour and document-specific publication presentation.
 
-Important modules include:
-
-- `renderer/typst_common.py`
-- `renderer/epub_common.py`
-
-These provide reusable rendering behaviour for document elements.
-
-The purpose is to prevent the same semantic capability from being implemented independently in multiple renderer paths.
-
-For example:
+The current renderer structure is:
 
 ```text
-Image
+Typst
   |
-  +-- common Typst rendering
+  +-- typst_common.py
+  +-- typst_book.py
+  `-- typst_technical.py
+
+EPUB
   |
-  `-- common EPUB rendering
+  +-- epub_common.py
+  +-- epub_book.py
+  `-- epub_technical.py
 ```
+
+The common modules provide reusable rendering primitives for document elements. The concrete Book and Technical renderers provide document-type-specific publication behaviour.
+
+The purpose is to prevent the same generic capability from being implemented independently in multiple renderer paths while keeping document-specific rules out of the common layer.
 
 ---
 
@@ -210,19 +218,26 @@ The Typst path converts the document representation into Typst source.
 Document
    |
    v
-Typst Renderer
+Common Typst
    |
-   v
-.typ
-   |
-   v
-Typst compiler
-   |
-   v
-PDF
+   +-------------------+
+   |                   |
+   v                   v
+Book Typst       Technical Typst
+   |                   |
+   +---------+---------+
+             |
+             v
+        Typst source
+             |
+             v
+       Typst compiler
+             |
+             v
+            PDF
 ```
 
-Themes determine visual presentation.
+Themes determine visual presentation. Book and Technical renderers determine publication-specific structure and behaviour.
 
 ---
 
@@ -234,16 +249,24 @@ The EPUB path converts the document representation into XHTML documents and pack
 Document
    |
    v
-EPUB Renderer
+Common EPUB
    |
-   v
-XHTML + navigation + OPF
-   |
-   v
-EPUB Writer
-   |
-   v
-EPUB
+   +-------------------+
+   |                   |
+   v                   v
+Book EPUB        Technical EPUB
+   |                   |
+   +---------+---------+
+             |
+             v
+      XHTML + navigation
+        + metadata/assets
+             |
+             v
+         EPUB Writer
+             |
+             v
+            EPUB
 ```
 
 The EPUB renderer and writer are separate concerns.
@@ -339,13 +362,14 @@ Document type is interpreted at the publishing boundary.
 metadata.type
       |
       v
-document interpretation
+document interpretation / dispatch
       |
-      v
-publication pipeline
-      |
-      +-- Typst
-      `-- EPUB
+      +-------------------+
+      |                   |
+      v                   v
+    Typst                EPUB
+      |                   |
+  Book / Technical    Book / Technical
 ```
 
 Document-type decisions belong at the interpretation/dispatch boundary rather than being scattered throughout individual renderers.
@@ -374,13 +398,13 @@ The same source document supplies both outputs.
 
 The architecture is protected by automated regression tests.
 
-At the v2.0 release milestone:
+At the v2.0 release milestone, the migration documentation recorded:
 
 ```text
 224 tests passed
 ```
 
-Validation has included:
+Validation included:
 
 - book manuscripts;
 - technical documents;
@@ -404,7 +428,7 @@ Real manuscripts were used during the migration rather than relying only on synt
 
 Before the migration, the publishing engine was primarily shaped around the book model.
 
-V2.0 establishes the generic document architecture as the production direction.
+V2.0 establishes the generic document architecture and shared renderer infrastructure as the production direction.
 
 The major changes are:
 
@@ -455,7 +479,7 @@ Neither should become responsible for understanding raw manuscript structure.
 
 ### Rule 4 — Reuse common rendering behaviour
 
-If a document element behaves consistently across book and technical documents, implement the shared behaviour once.
+If a document element behaves consistently across book and technical documents, implement the shared behaviour once in the appropriate common format layer.
 
 ### Rule 5 — Assets go through `DocumentAssets`
 
@@ -496,7 +520,10 @@ Document Model
 Interpretation
    |
    v
-Presentation
+Format Common Layer
+   |
+   v
+Document-Type Renderer
    |
    v
 Output
@@ -510,7 +537,7 @@ If a proposed feature crosses these boundaries, the architecture should be revie
 
 The v2.0 architecture can be reduced to one sentence:
 
-> **VTR Press is a document interpretation and publishing engine that transforms one human-readable manuscript into multiple publication formats through a shared document model and common rendering infrastructure.**
+> **VTR Press is a document interpretation and publishing engine that transforms one human-readable manuscript into multiple publication formats through a shared document model and common format-level rendering infrastructure.**
 
 The manuscript is the source of truth.
 
@@ -520,7 +547,9 @@ The document model represents structure.
 
 The interpretation layer understands meaning and document conventions.
 
-The renderer determines presentation.
+Common format layers provide reusable rendering primitives.
+
+Document-type renderers provide publication-specific presentation.
 
 The publication writer creates the final artifact.
 
