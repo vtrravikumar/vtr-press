@@ -1,158 +1,197 @@
-## Phase D — Generic document model migration
+# VTR Press Migration Plan
 
-**Goal**: new document types stop requiring parser changes. Structure
-comes from a shared model; interpretation (per type) and
-presentation (per theme) differ.
+## Status
 
-**Status**: Complete through D5 — v2.0
+**COMPLETE — v2.0**
 
-Phase D established the generic document architecture and brought it
-into production use.
+This document records the migration that established the generic document publishing architecture in VTR Press.
 
-The original D5 was deliberately optional: after D1–D4 had proven the
-generic model against real content, decide whether the book publishing
-path should also participate in the generic architecture.
-
-That decision has now been made.
-
-**Decision: proceed with the unified architecture.**
-
-The v2.0 implementation establishes the intended architectural
-direction: a manuscript is interpreted into a document representation
-that can be consumed by the common publishing infrastructure and
-rendered into multiple output formats.
-
-The migration does not require the immediate deletion of every
-book-specific internal dataclass. `Part`, `Chapter`, and `Scene` may
-remain as compatibility or interpretation structures where they are
-still useful. Their continued existence does not change the
-architectural contract.
-
-The important boundary is that document semantics are no longer
-defined by a renderer-specific or output-specific implementation.
+The migration is complete. Future work should be tracked as product or architectural evolution rather than as continuation of this migration.
 
 ---
 
-| Task | Status | Outcome | Depends on |
-|---|---|---|---|
-| D0 | **Shipped** | Validated the generic document architecture against both book and technical-document structural requirements and established the parser → document model → interpretation → renderer separation. | Phase C |
-| D1 | **Shipped** | Introduced the generic `Document` / block-stream model and interpretation layer. | D0 |
-| D2 | **Shipped** | Added the generic Markdown document parser supporting headings, paragraphs, verse and extensible block types. | D1 |
-| D3 | **Shipped** | Wired technical documents into the generic document pipeline and added native Typst and EPUB rendering, including document asset handling. | D2 |
-| D4 | **Shipped** | Validated the generic pipeline against real technical manuscripts, including RideTogether EngineeringDesign and APIEngineeringReference, with PDF and EPUB output. | D3 |
-| D5 | **Shipped — v2.0** | Unified the publishing architecture around the generic document approach. The common Typst and EPUB rendering infrastructure now provides the shared publishing boundary for manuscripts and output formats. Book-specific structural classes may remain internally where useful; they are no longer the architectural boundary of the publishing system. | D4 |
+# 1. Migration Objective
+
+The objective was to evolve VTR Press from a primarily book-oriented publishing engine into a generic document publishing engine capable of supporting multiple document types and publication formats.
+
+The target separation was:
+
+```text
+Manuscript
+    │
+    ▼
+Parser
+    │
+    ▼
+Generic Document Model
+    │
+    ▼
+Interpretation
+    │
+    ▼
+Format-specific common rendering
+    │
+    ▼
+Document-type rendering
+    │
+    ▼
+Output
+```
+
+The migration was successful when document semantics no longer depended on a renderer-specific or output-specific implementation.
 
 ---
 
-## D5 — Final migration decision
+# 2. Migration Phases
 
-D5 was originally defined as an explicit decision point rather than
-an automatic commitment to rewrite the book pipeline.
+| Phase | Status | Outcome |
+|---|---|---|
+| A — Unblock RideTogether | **Complete** | Established the foundation required for technical-document publishing. |
+| B — Renderer gaps | **Complete** | Closed the renderer capabilities required by the target technical documents. |
+| C — Automatic theme selection | **Complete** | Established document-type-driven publishing conventions. |
+| D0 — Design validation | **Complete** | Validated the generic architecture against Book and Technical Document requirements. |
+| D1 — Generic Document Model | **Complete** | Introduced the generic `Document` / block-stream model and interpretation layer. |
+| D2 — Generic Markdown parser | **Complete** | Added generic Markdown parsing for the supported document structures. |
+| D3 — Technical-document migration | **Complete** | Wired Technical Documents into the generic pipeline with Typst and EPUB output and asset handling. |
+| D4 — Real-world validation | **Complete** | Validated the generic pipeline against representative technical manuscripts and generated PDF/EPUB output. |
+| D5 — Architectural adoption | **Complete — v2.0** | Established the generic document architecture and shared rendering infrastructure as the production direction. |
 
-After D1–D4 were implemented and validated against real documents,
-the evidence supported continuing with the generic architecture.
+---
 
-### Decision
+# 3. D5 — Final Migration Decision
 
-**The generic document architecture is now the production direction
-for VTR Press.**
+D5 was deliberately a decision point rather than an automatic requirement to rewrite every existing Book implementation.
 
-The architectural objective of D5 is therefore considered achieved
-in v2.0.
+After D1–D4 were implemented and validated against real documents, the evidence supported adopting the generic architecture as the production direction.
 
-The objective is not "remove every historical Book dataclass."
+The migration therefore does **not** require immediate deletion of every historical Book dataclass.
 
-The objective is:
+Structures such as `Part`, `Chapter`, and `Scene` may remain where they continue to provide useful compatibility or interpretation behaviour.
+
+Their continued existence does not change the architectural contract.
+
+The important result is that:
 
 - one manuscript remains the source of truth;
 - document structure is represented independently of output format;
 - document semantics are interpreted independently of presentation;
-- Typst and EPUB share common rendering concepts;
-- the same publishing system can produce multiple output formats;
-- adding document capabilities should not require duplicating
-  renderer-specific structural logic.
-
-The remaining book-specific structures are implementation details and
-may be retired incrementally when there is a demonstrated benefit.
+- Typst and EPUB have shared common rendering infrastructure;
+- Book and Technical rendering remain document-type-specific where appropriate;
+- the same publishing system produces multiple output formats;
+- new document capabilities do not require duplicating structural logic across independent publishing pipelines.
 
 ---
 
-## v2.0 Migration Outcome
+# 4. Final Renderer Architecture
 
-Phase D has changed VTR Press from a primarily book-oriented
-publishing engine into a generic document publishing engine.
+The migration resulted in a shared renderer architecture for each output format.
 
-The resulting conceptual pipeline is:
+```text
+Typst
+├── Common
+├── Book
+└── Technical
 
-    Manuscript
-        │
-        ▼
-    Markdown Parser
-        │
-        ▼
-    Generic Document Model
-        │
-        ▼
-    Interpretation
-        │
-        ▼
-    Common Publishing Infrastructure
-        │
-        ├──────────────► Typst ─────► PDF
-        │
-        └──────────────► EPUB ──────► EPUB
+EPUB
+├── Common
+├── Book
+└── Technical
+```
 
-The manuscript therefore remains independent of the final publication
-format.
+In the implementation this corresponds to the common renderer modules and their Book/Technical specializations.
 
-This is the architectural milestone represented by **v2.0**.
+The common layer owns reusable format-level rendering primitives.
+
+The document-type renderers own publication conventions specific to Books or Technical Documents.
+
+This is an important part of the v2.0 migration outcome and should not be interpreted as two independent publishing stacks.
 
 ---
 
-## Migration Status at v2.0
+# 5. Migration Outcome
 
-| Phase | Status |
-|---|---|
-| A — Unblock RideTogether | **Complete** |
-| B — Renderer gaps | **Complete** |
-| C — Automatic theme selection | **Complete** |
-| D0 — Design validation | **Complete** |
-| D1 — Generic Document Model | **Complete** |
-| D2 — Generic Markdown parser | **Complete** |
-| D3 — Technical-document migration | **Complete** |
-| D4 — Real-world validation | **Complete** |
-| D5 — Book unification / architectural adoption | **Complete — v2.0** |
+V2.0 established the following production architecture:
 
-**Migration Plan status: COMPLETE.**
+```text
+                  Manuscript
+                      │
+                      ▼
+                    Parser
+                      │
+                      ▼
+             Generic Document Model
+                      │
+                      ▼
+                Interpretation
+                      │
+             ┌────────┴────────┐
+             ▼                 ▼
+       Common Typst       Common EPUB
+             │                 │
+       ┌─────┴─────┐     ┌─────┴─────┐
+       ▼           ▼     ▼           ▼
+     Book      Technical Book      Technical
+     Typst       Typst    EPUB        EPUB
+       │           │       │           │
+       └─────┬─────┘       └─────┬─────┘
+             ▼                   ▼
+            PDF                 EPUB
+```
 
-Future work should now be tracked as product/architecture evolution
-rather than as continuation of the original migration.
+The manuscript remains independent of the final publication format.
 
 ---
 
-## What remains intentionally incremental
+# 6. What the Migration Does Not Mean
 
-Completion of the migration does not mean the codebase is frozen.
+Migration completion does not mean that every historical implementation detail must be removed.
 
-The following may continue to evolve independently:
+It does not require:
 
-- retirement of remaining legacy book-specific structures;
+- deleting every Book-specific class;
+- rewriting proven Book behaviour solely for architectural purity;
+- replacing working renderer code without a concrete benefit;
+- introducing additional output formats immediately;
+- completing future document capabilities as part of v2.0.
+
+Remaining legacy structures are implementation details and may be retired incrementally when there is a demonstrated benefit.
+
+---
+
+# 7. Post-Migration Work
+
+The following are intentionally post-migration improvements:
+
+- retirement of remaining legacy Book structures where useful;
 - richer Markdown block types;
-- native table rendering improvements;
+- richer table capabilities;
 - EPUB presentation refinements;
 - additional themes;
 - additional document types;
 - additional output formats;
 - stronger schema validation;
-- renderer/theme registries where justified.
+- renderer or theme registries where justified.
 
-These are post-migration improvements, not unfinished migration phases.
+These should be managed through the current engineering plan and roadmap, not added to this completed migration.
 
 ---
 
-## Revision history
+# 8. Historical Record
+
+The migration phases were executed incrementally and validated against real publishing requirements.
+
+D5 was originally left as an explicit decision because the generic architecture did not require an immediate rewrite of the established Book path.
+
+The final v2.0 decision was to adopt the unified architecture while retaining useful Book-specific implementation structures where appropriate.
+
+That decision marks the completion of this migration.
+
+---
+
+## Revision History
 
 | Date | Change |
 |---|---|
-| Initial draft | Phases A–D defined following the parser architecture review and generic-model migration review. |
-| 2026-08-28 | Updated for v2.0. D0–D4 confirmed complete and D5 marked complete based on the achieved unified document publishing architecture. The original D5 wording is retained as historical context; remaining legacy book structures are treated as implementation details rather than a blocker to architectural completion. |
+| Initial draft | Defined Phases A–D following the parser architecture and generic-model migration reviews. |
+| 2026-08-28 | Updated for v2.0. D0–D4 confirmed complete and D5 marked complete following adoption of the unified generic document publishing architecture. |
+| 2026-08-30 | Consolidated the document around the completed migration outcome and clarified the shared Common Typst/EPUB renderer architecture. |
