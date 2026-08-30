@@ -6,7 +6,7 @@ This document defines the manuscript specification supported by VTR Press.
 
 The specification describes the information an author may provide and the publishing conventions that VTR Press applies during rendering.
 
-Implementation details such as parsers, document models, renderers, themes, and output formats are intentionally excluded.
+Implementation details such as parsers, document models, renderers, themes, and output formats are intentionally excluded except where they affect the author-facing manuscript contract.
 
 The manuscript specification is the stable public contract between authors and VTR Press.
 
@@ -18,14 +18,16 @@ VTR Press supports multiple document types.
 
 Currently supported:
 
-- book
-- technical-document
+- `book`
+- `technical-document`
 
 If the document type is omitted, VTR Press assumes:
 
 ```yaml
 type: book
 ```
+
+An unrecognized document type is rejected.
 
 Additional document types may be introduced without changing the manuscript format.
 
@@ -72,25 +74,31 @@ Publishing decisions remain the responsibility of VTR Press.
 
 A manuscript consists of Markdown content following the metadata block.
 
-Typical elements include:
+Supported document elements include:
 
-- headings
+- headings and subheadings
 - paragraphs
-- lists
+- ordered and unordered lists
 - images
 - tables
 - code blocks
 - hyperlinks
-- appendices
+- verse blocks
+- appendices and other document-type-specific structures where supported
 
 The same manuscript may be rendered into multiple publication formats.
 
 ---
 
-Tables are part of the manuscript structure supported by the publishing
-model. Native table rendering in the technical-document Typst/PDF path
-is currently a known limitation and is tracked as the next isolated
-implementation task.
+# Tables
+
+Markdown tables are part of the manuscript structure supported by VTR Press.
+
+Table content is represented in the document model and rendered by the applicable publication renderers.
+
+Authors should use standard Markdown table syntax. Presentation details such as column widths, typography, borders, and page layout remain publishing concerns rather than manuscript concerns.
+
+---
 
 # Publishing Conventions
 
@@ -101,9 +109,11 @@ Examples include:
 | Document Type | Default Behaviour |
 |--------------|-------------------|
 | book | A5 layout, cover page, chapter-oriented structure |
-| technical-document | A4 layout, numbered sections, appendix support |
+| technical-document | A4 layout, numbered sections, technical-document structure |
 
 Authors should not configure layout, typography, or page settings unless explicitly supported by the specification.
+
+---
 
 ## Print Book PDF
 
@@ -117,6 +127,37 @@ When a book is rendered as a print PDF interior, VTR Press applies print-book pa
 - Blank pages inserted for right-hand alignment are genuinely blank and display no page numbers.
 
 These requirements apply only to print PDF book output. EPUB output and non-book document types are unaffected.
+
+---
+
+# Technical Documents
+
+Technical documents use the generic manuscript and document architecture while applying technical-document conventions.
+
+A typical technical document may contain:
+
+- hierarchical headings;
+- subheadings;
+- numbered sections;
+- paragraphs;
+- lists;
+- code blocks;
+- JSON or other code content;
+- images;
+- Markdown tables;
+- appendices.
+
+The technical-document type is intended for structured publications such as solution architecture documents, design specifications, technical guides, and similar material.
+
+---
+
+# Assets
+
+Images and other supported manuscript assets are referenced from the manuscript rather than embedded with renderer-specific instructions.
+
+VTR Press resolves and stages assets as part of publication generation.
+
+Authors should reference assets using the supported Markdown syntax and should not rely on renderer-specific filesystem paths in the manuscript.
 
 ---
 
@@ -136,11 +177,11 @@ When new metadata fields are introduced, sensible defaults should preserve exist
 
 Future document types may include:
 
-- white-paper
-- user-guide
-- design-specification
-- api-reference
-- research-paper
+- `white-paper`
+- `user-guide`
+- `design-specification`
+- `api-reference`
+- `research-paper`
 
 These document types will reuse the same manuscript format while applying different publishing conventions.
 
