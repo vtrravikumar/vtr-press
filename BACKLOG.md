@@ -1,512 +1,394 @@
 # VTR Press Backlog
 
-This document tracks ideas, improvements and future capabilities that are
-intentionally deferred from the current VTR Press migration.
+This is the **post-v2 engineering backlog** for VTR Press.
 
-The current architectural migration is tracked separately in:
+The v2 architectural migration is complete. Architectural history and migration decisions are documented separately in `docs/MIGRATIONPLAN.md`, `docs/ARCHITECTURE.md`, and `docs/ENGINEERING_PLAN.md`.
 
-- `docs/MIGRATIONPLAN.md`
-- `docs/ENGINEERING_PLAN.md`
+This backlog contains only work that remains meaningful against the current implementation. Completed migration work, obsolete proposals, and historical handover items are intentionally excluded.
 
-Phase D work must not be duplicated here.
+## Priority
 
----
-
-# Current / Near-Term
-
-## Test Automation
-
-**Status: Substantially Complete**
-
-The VTR Press test suite currently includes:
-
-- Parser unit tests
-- Renderer tests
-- Regression tests
-- Technical-document tests
-- Book regression coverage
-- End-to-end manuscript validation
-- Fresh-clone verification
-
-The current suite has been repeatedly validated as part of the migration.
-
-**Remaining:**
-
-- GitHub Actions automated test workflow
+- **P0 — Next:** strong candidates for the next engineering cycle
+- **P1 — Important:** valuable capabilities after P0
+- **P2 — Later:** worthwhile, but not currently blocking the product
+- **P3 — Future:** productization or exploratory work
 
 ---
 
-## Markdown Compatibility
+# P0 — Next Engineering Candidates
 
-**Status: Backlog**
+## BL-001 — Simplify Manuscript Discovery and Publishing Input
 
-Improve Markdown compatibility and CommonMark support.
+**Priority:** P0  
+**Status:** Ready for design
 
-Potential improvements:
+### Problem
 
-- Escaped Markdown characters
-- Nested emphasis
-- Additional CommonMark-compatible syntax
-- Other Markdown constructs identified through real manuscript usage
+The current CLI is driven by an explicit `books.yaml` entry and a named publishing target. The same mechanism is used for Books and Technical Documents even though Technical Documents already carry their document type and metadata in manuscript front matter.
 
-New Markdown support should be evaluated against the VTR Press manuscript
-contract rather than added as isolated renderer-specific features.
+The current implementation still requires the manifest to identify each manuscript and its output name. fileciteturn72file0L2-L2
 
----
+### Desired outcome
 
-## Line Break Support
+Support a simpler publishing input model without changing the core publishing pipeline.
 
-**Status: Backlog**
+Potential modes:
 
-Complete and verify support for the `LineBreak` AST node across:
+- publish one manuscript directly;
+- publish a directory of manuscripts;
+- retain `books.yaml` for explicit/legacy workflows;
+- derive appropriate metadata from manuscript front matter where possible.
 
-- Parser
-- Document Model
-- Typst renderer
-- EPUB renderer
+### Constraints
 
-The exact implementation should be verified against the current code before
-work begins, as the current repository state may already contain partial
-support.
+This is an input/discovery improvement, **not another publishing architecture**. The existing parser → Document Model → interpretation → renderer pipeline remains the foundation. The current manifest must remain supported until a replacement is proven.
 
 ---
 
-## Performance
+## BL-002 — Markdown Compatibility Improvements
 
-**Status: Backlog**
+**Priority:** P0  
+**Status:** Backlog
 
-Performance improvements should be driven by measurement rather than
-premature optimization.
+Improve the supported Markdown manuscript contract based on real manuscript usage and CommonMark-compatible behaviour.
 
-Potential work:
+Potential scope:
 
-- Profile parser performance
-- Profile rendering performance
-- Reduce unnecessary string allocations
-- Reduce repeated document traversal
-- Improve PDF/EPUB generation performance where measurable
+- escaped Markdown characters;
+- nested emphasis;
+- additional CommonMark constructs;
+- parser edge cases discovered through real manuscripts.
 
----
-
-# Publishing Capabilities
-
-## Kindle Output
-
-**Status: Future**
-
-Investigate Kindle publishing support, including:
-
-- KPF generation
-- Kindle Previewer compatibility
-- Kindle-specific EPUB requirements
-- Whether VTR Press should generate Kindle-ready EPUB or directly generate
-  KPF
-
-This should be evaluated against the existing PDF/EPUB publishing pipeline
-rather than becoming a separate publishing architecture.
+New syntax should enter the generic Document Model rather than being implemented independently by individual renderers.
 
 ---
 
-## HTML Renderer
+## BL-003 — Cross References
 
-**Status: Future**
+**Priority:** P0  
+**Status:** Backlog
 
-Investigate an HTML renderer for technical documents and other supported
-document types.
-
-Potential future use cases:
-
-- Standalone HTML documentation
-- Web publishing
-- Documentation previews
-
-The renderer should consume the same interpreted Document Model used by the
-other output formats.
-
----
-
-## DOCX Renderer
-
-**Status: Future**
-
-Research feasibility of generating DOCX output.
-
-The investigation should determine:
-
-- Required Document Model capabilities
-- Mapping of headings and structural elements
-- Typography and layout limitations
-- Whether DOCX is a worthwhile supported output format
-
----
-
-## PDF Theme Gallery
-
-**Status: Future**
-
-Expand the built-in theme collection beyond the current themes.
-
-Potential future themes include:
-
-- Paperback
-- Modern
-- Additional technical/documentation themes
-- Other print-oriented themes
-
-Theme selection should continue to be driven by document type/convention
-rather than requiring manual renderer configuration.
-
----
-
-# Document Features
-
-## Footnotes
-
-**Status: Future**
-
-Support footnotes as a first-class manuscript/document feature.
-
----
-
-## Index Generation
-
-**Status: Future**
-
-Investigate automatic index generation for book-length documents.
-
----
-
-## Glossary Generation
-
-**Status: Future**
-
-Investigate glossary support and automatic glossary generation.
-
----
-
-## Bibliography
-
-**Status: Future**
-
-Investigate bibliography and reference-management support.
-
-Potential future considerations:
-
-- Bibliography metadata
-- Citation syntax
-- Reference rendering
-- Output-specific formatting
-
----
-
-## Image Captions
-
-**Status: Future**
-
-Support captions for manuscript images and define consistent rendering
-across PDF, EPUB and future output formats.
-
----
-
-## Cross References
-
-**Status: Future**
-
-Support references between document sections, figures, tables and other
-structural elements.
+Add first-class references between document structures such as sections, figures and tables.
 
 Potential requirements:
 
-- Stable identifiers
-- Internal links
-- Output-specific reference rendering
+- stable identifiers;
+- reference syntax in the manuscript;
+- internal links;
+- output-specific reference rendering;
+- consistent behaviour in PDF and EPUB.
+
+The current model already has generic headings, images, tables and links, making this a natural post-v2 document capability. fileciteturn76file0L2-L2
 
 ---
 
-## Syntax-Highlighted Code Blocks
+## BL-004 — Image Captions
 
-**Status: Partially implemented**
+**Priority:** P0  
+**Status:** Backlog
 
-Basic fenced code blocks are now supported by the generic technical-document
-pipeline, including JSON/code content validation in D4.
+Add captions to block images and define consistent rendering across PDF and EPUB.
 
-Remaining future work:
+The current generic `Image` model contains only `source` and `alt_text`; there is no caption field. fileciteturn76file0L2-L2
 
-- Language identification
-- Syntax highlighting
-- More sophisticated Typst rendering
-- More sophisticated EPUB rendering
-
-
-This is particularly relevant to technical-document manuscripts and VTR
-Press's own technical documentation.
-
-Potential requirements:
-
-- Fenced code blocks
-- Language identification
-- Syntax highlighting
-- Typst rendering
-- EPUB rendering
-- Future HTML rendering
-
-The generic Document Model introduced by Phase D should be evaluated for its
-ability to accommodate this feature without parser-specific coupling.
+The feature should be implemented at the document-model level so both output formats consume the same semantic information.
 
 ---
 
-# Extensibility
+## BL-005 — Language-Aware Syntax Highlighting
 
-## Custom Theme Support
+**Priority:** P0  
+**Status:** Partially implemented
 
-**Status: Future**
+Basic fenced code blocks are already represented by `CodeBlock` with an optional language and are rendered by both common Typst and EPUB infrastructure. fileciteturn74file0L2-L2 fileciteturn75file0L2-L2
 
-Theme architecture and responsibilities are already documented as part of
-the current VTR Press architecture.
+Remaining scope:
 
-Future work may provide a clearer workflow for creating and registering
-custom themes.
+- language-aware syntax highlighting;
+- supported-language policy;
+- consistent PDF/EPUB presentation;
+- graceful fallback for unknown languages.
 
-Potential documentation:
-
-- Theme structure
-- Theme file responsibilities
-- Theme registration
-- Creating a custom theme
-- Theme testing
-
-No additional theme framework should be introduced unless real use cases
-justify it.
+Do not duplicate the basic fenced-code implementation.
 
 ---
 
-## Plugin Architecture
+# P1 — Document and Publishing Capabilities
 
-**Status: Future**
+## BL-006 — Footnotes
 
-Investigate whether VTR Press should support third-party extensions such
-as:
+**Priority:** P1  
+**Status:** Backlog
 
-- Custom renderers
-- Custom themes
-- Additional document conventions
-- Additional output formats
-
-This is intentionally deferred until the core architecture has proven
-stable.
-
-The internal Interpretation layer being introduced in Phase D is NOT a
-plugin architecture. It is a core VTR Press component.
+Support footnotes as a first-class manuscript/document feature with output-specific rendering for PDF and EPUB.
 
 ---
 
-# Productization
+## BL-007 — Bibliography and Citations
 
-## VTR Press 1.0 Release Criteria
+**Priority:** P1  
+**Status:** Backlog
 
-**Status: Future**
+Support references and bibliography for technical and book documents.
 
-Define the criteria required for a stable VTR Press 1.0 release.
+Potential scope:
+
+- reference metadata;
+- citation syntax;
+- bibliography sections;
+- output-specific formatting.
+
+The design should avoid coupling the manuscript to one bibliography engine prematurely.
+
+---
+
+## BL-008 — Glossary
+
+**Priority:** P1  
+**Status:** Backlog
+
+Support glossary entries and, where justified, generated glossary output.
+
+The feature should be useful for technical documents without forcing Books to adopt technical-document conventions.
+
+---
+
+## BL-009 — Index Generation
+
+**Priority:** P1  
+**Status:** Backlog
+
+Investigate automatic index generation, initially for book-length documents.
+
+The implementation should be based on stable semantic anchors rather than renderer-specific text scanning.
+
+---
+
+## BL-010 — Richer Table Support
+
+**Priority:** P1  
+**Status:** Backlog
+
+The generic Document Model already supports tables with headers, rows and column alignment, and the Technical Typst/EPUB renderers consume them. fileciteturn76file0L2-L2 fileciteturn85file0L2-L2
+
+Remaining work should therefore focus on genuine publishing gaps rather than basic table support.
+
+Potential scope:
+
+- richer cell content;
+- multiline cells;
+- spanning cells where practical;
+- improved print pagination;
+- EPUB presentation refinements;
+- regression coverage for real-world tables.
+
+---
+
+# P2 — Output and Presentation
+
+## BL-011 — HTML Output
+
+**Priority:** P2  
+**Status:** Future
+
+Add HTML output using the same interpreted document information used by the existing renderers.
+
+Potential use cases:
+
+- standalone technical documentation;
+- web publishing;
+- local previews.
+
+HTML should be a new output format, not a second document-processing pipeline.
+
+---
+
+## BL-012 — Kindle Publishing Output
+
+**Priority:** P2  
+**Status:** Future
+
+Investigate Kindle publishing support.
+
+Determine whether the appropriate product is:
+
+- Kindle-ready EPUB;
+- KPF generation;
+- or a documented external conversion workflow.
+
+The decision should be based on actual distribution requirements rather than assuming direct KPF generation is necessary.
+
+---
+
+## BL-013 — DOCX Output
+
+**Priority:** P2  
+**Status:** Future
+
+Investigate DOCX as an additional output format.
+
+The investigation should establish the required Document Model capabilities and whether DOCX quality is sufficient to justify official support.
+
+---
+
+## BL-014 — Theme and Custom Theme Workflow
+
+**Priority:** P2  
+**Status:** Future
+
+The current architecture already separates common rendering from Book and Technical rendering, with theme-specific presentation in the renderer/theme layer. fileciteturn74file0L2-L2 fileciteturn85file0L2-L2
+
+Future work should therefore focus on:
+
+- documenting the theme contract;
+- simplifying creation of custom themes;
+- theme validation/testing;
+- adding additional built-in themes where real use cases justify them.
+
+Do not introduce another theme framework without a concrete need.
+
+---
+
+## BL-015 — Performance Measurement and Optimization
+
+**Priority:** P2  
+**Status:** Backlog
+
+Measure before optimizing.
+
+Potential scope:
+
+- parser profiling;
+- rendering profiling;
+- repeated document traversal;
+- unnecessary allocations;
+- PDF/EPUB generation time;
+- regression benchmarks for representative manuscripts.
+
+No performance rewrite should be undertaken without evidence of a meaningful bottleneck.
+
+---
+
+# P3 — Productization and Exploration
+
+## BL-016 — Release Readiness / 1.0 Criteria
+
+**Priority:** P3  
+**Status:** Future
+
+Define release-readiness criteria for a stable public VTR Press release.
+
+The criteria should reflect the current v2 product rather than the obsolete V1 migration terminology.
 
 Potential areas:
 
-- Supported manuscript contract
-- Supported document types
-- Supported output formats
-- Theme stability
-- Error handling
-- Test coverage
-- Documentation
-- Installation and distribution
+- manuscript contract;
+- supported document types;
+- supported output formats;
+- renderer/theme stability;
+- error handling;
+- test coverage;
+- documentation;
+- installation and distribution.
 
 ---
 
-## Documentation Website
+## BL-017 — PyPI Distribution
 
-**Status: Future**
+**Priority:** P3  
+**Status:** Future
 
-Consider publishing VTR Press documentation as a web-based documentation
-site.
-
-The technical-document manuscript format should remain reusable regardless
-of the eventual web publishing mechanism.
+Package VTR Press for installation through PyPI once the CLI, package structure and resource handling are stable.
 
 ---
 
-## PyPI Package
+## BL-018 — Documentation Website
 
-**Status: Future**
+**Priority:** P3  
+**Status:** Future
 
-Investigate packaging VTR Press for installation through PyPI.
-
-Potential requirements:
-
-- Package structure
-- CLI entry point
-- Theme/resource packaging
-- Version management
-- Installation documentation
+Publish the VTR Press documentation as a web-based documentation site when the supported manuscript and CLI contracts are mature enough to document publicly.
 
 ---
 
-## Homebrew Installation
+## BL-019 — Homebrew Installation
 
-**Status: Future**
+**Priority:** P3  
+**Status:** Future
 
-Investigate providing VTR Press through Homebrew once the CLI and package
-structure are stable.
-
----
-
-# V2 / Future Input and Discovery
-
-These items are deliberately parked for a future evolution of VTR Press.
-
-They do NOT imply creating a separate VTR Press V2 product or rewriting the
-core publishing pipeline.
-
-The current `books.yaml` mechanism remains valid for the current migration.
+Investigate Homebrew distribution after the CLI and package structure have stabilized.
 
 ---
 
-## V2-001 — Reduce `books.yaml` Dependency
+## BL-020 — Additional Document Types
 
-**Status: Backlog**
+**Priority:** P3  
+**Status:** Exploratory
 
-### Problem
+Evaluate additional document types only when a real publishing use case exists.
 
-The current `run.py` workflow depends on `books.yaml` containing an explicit
-entry for each manuscript, including its name, filepath, type, cover and
-other publishing details.
-
-This works well for a small number of books, but becomes unnecessary
-administrative overhead as the number of technical documents grows.
-
-Technical documents already contain their own front-matter metadata and
-should not require a separate manifest entry merely to identify the
-manuscript.
-
-### Future Direction
-
-Explore a simpler manuscript-discovery mechanism in which VTR Press can
-discover manuscripts from configured directories and use the manuscript's
-front matter as the authoritative source for document metadata.
-
-The existing `books.yaml` mechanism should remain supported until a
-replacement is designed, implemented and validated.
+New document types should fit the established pattern of document-type interpretation and Book/Technical-style rendering specialization without creating another publishing stack.
 
 ---
 
-## V2-002 — Directory-Level Publishing
+## BL-021 — Plugin Architecture
 
-**Status: Backlog**
+**Priority:** P3  
+**Status:** Deferred
 
-### Problem
+Revisit third-party extension mechanisms only after the core architecture has demonstrated sufficient stability and there is a concrete need for external extensions.
 
-For a directory containing multiple technical-document manuscripts, it is
-unnecessary to maintain an explicit filename/path entry for every document.
+Possible future extension points include:
 
-### Future Direction
+- renderers;
+- themes;
+- document conventions;
+- output formats.
 
-Allow VTR Press to discover and process all valid technical-document
-manuscripts within a designated directory and generate the corresponding
-PDF/EPUB outputs without requiring an individual manifest entry for every
-file.
-
-The exact discovery rules, CLI syntax, output conventions and interaction
-with `books.yaml` are intentionally left open for future design.
+The existing Interpretation layer is **not** a plugin architecture.
 
 ---
 
-## V2-003 — Simplified Publishing Input Model
+# Explicitly Removed / Already Implemented
 
-**Status: Backlog**
+These are intentionally not backlog items anymore.
 
-### Problem
-
-The current publishing workflow couples manuscript discovery with the
-publishing manifest (`books.yaml`).
-
-As VTR Press evolves to support many technical documents, manuscript
-discovery, document metadata and publishing configuration should be
-separated more cleanly.
-
-### Future Direction
-
-Explore a simpler input model that could eventually support publishing:
-
-- A single manuscript directly
-- A directory of manuscripts
-- A collection of manuscripts discovered by convention
-
-while retaining the existing publishing pipeline:
-
-    Manuscript
-        ↓
-    Reader / Parser
-        ↓
-    Interpretation
-        ↓
-    Document Model
-        ↓
-    Renderer
-        ↓
-    PDF / EPUB
-
-This is an evolution of the input/discovery layer, not a reason to create a
-separate VTR Press V2 product or rewrite the publishing pipeline.
+| Historical item | Decision | Reason |
+|---|---|---|
+| GitHub Actions automated tests | **Removed** | CI workflow already exists. |
+| Generic Document Model migration | **Removed** | v2 architecture is established. |
+| D1/D2/D3/D4 migration work | **Removed** | Migration is complete and recorded in `docs/MIGRATIONPLAN.md`. |
+| V2-001 / V2-002 / V2-003 labels | **Replaced** | Their surviving ideas are consolidated into BL-001. |
+| Basic fenced code blocks | **Removed** | Already implemented in the generic technical-document pipeline. |
+| Basic generic tables | **Removed** | Already implemented; remaining work is richer table capability. |
+| Basic technical-document Typst/EPUB publishing | **Removed** | Already part of the current architecture. |
+| LineBreak as a standalone backlog item | **Removed** | The generic model and EPUB renderer already contain `LineBreak`; remaining gaps should be tracked only if a concrete defect is found. fileciteturn75file0L2-L2 |
+| V1 migration wording | **Removed** | Superseded by the completed v2 architecture. |
 
 ---
 
-## V2 Scope Decision
+# Backlog Rules
 
-These items are deliberately parked for future work.
-
-They are NOT part of the current Phase D migration and must not influence
-D1–D4 implementation.
-
-For the current migration:
-
-- `books.yaml` remains the publishing input mechanism.
-- `run.py` continues to use the existing manifest.
-- No automatic manuscript discovery is introduced.
-- No directory-level publishing is introduced.
-- No CLI/input-model redesign is undertaken.
-
-The future objective is to simplify manuscript discovery and publishing
-management without requiring a rewrite of the core VTR Press architecture.
+1. **Do not add migration work here.** The v2 migration is complete.
+2. **Verify implementation before creating an item.** Do not backlog functionality that already exists.
+3. **Prefer one clear item over several historical fragments.** Related discovery/input work is consolidated under BL-001.
+4. **Document-model capabilities belong in the generic model.** Do not add renderer-specific implementations when the feature is semantic.
+5. **Common format behaviour belongs in Common Typst / Common EPUB.** Book and Technical renderers should contain document-type-specific publication behaviour.
+6. **Promote only when ready.** A backlog item becomes active engineering work only after its scope and acceptance criteria are defined.
+7. **Delete obsolete ideas.** The backlog is not an archive of every feature ever discussed.
 
 ---
 
-# Deferred Ideas
+# Current Recommendation
 
-The following ideas are intentionally retained without committing to a
-specific implementation or priority.
+The backlog should now be **held** rather than immediately implemented.
 
-- Advanced typography controls
-- More sophisticated table support
-- Advanced image handling
-- Multiple output profiles
-- Additional publishing workflows
-- Additional document conventions/types
-- Other features identified through real manuscript usage
+When engineering resumes, the first candidates to evaluate are:
 
-New ideas should be evaluated against the current architecture before being
-added to the implementation roadmap.
+1. **BL-001 — Simplify Manuscript Discovery and Publishing Input**
+2. **BL-003 — Cross References**
+3. **BL-004 — Image Captions**
+4. **BL-005 — Language-Aware Syntax Highlighting**
+5. **BL-002 — Markdown Compatibility Improvements**
 
----
-
-# Backlog Governance
-
-The backlog is intentionally separate from the active migration plan.
-
-Items should be:
-
-- Removed when they are implemented or superseded
-- Updated when architectural decisions change their scope
-- Promoted into `MIGRATIONPLAN.md` when they become active migration work
-- Kept as backlog items when they are useful but not currently justified
-- Avoided as speculative architecture unless a real use case requires it
-
-The goal is to keep the backlog small, current and useful rather than
-turning it into a historical list of every idea ever discussed.
+These are the items most directly aligned with the capabilities and gaps exposed by the current v2 architecture.
