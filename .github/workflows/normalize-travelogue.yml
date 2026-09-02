@@ -1,0 +1,119 @@
+name: normalize travelogue
+
+on:
+  push:
+    paths:
+      - manuscript.md
+      - .github/workflows/normalize-travelogue.yml
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    if: "!contains(github.event.head_commit.message, 'Normalize travelogue publishing structure')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Normalize manuscript structure
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("manuscript.md")
+          text = path.read_text(encoding="utf-8")
+
+          # This is a structural/publishing pass only. Do not alter prose.
+          if text.startswith("# Travelogue\n"):
+              text = text[len("# Travelogue\n"):]
+
+          front_matter = '''<!--
+
+Generated from:
+
+manuscript.md
+
+This file is the publishing source.
+
+Only make formatting changes required by the publisher.
+
+Editorial changes belong in the reading draft.
+
+-->
+
+---
+
+# ------------------------------------------------------------------
+# Book Identity
+# ------------------------------------------------------------------
+
+title: Travelogue
+subtitle:
+author: V.T.R. Ravi Kumar
+
+# ------------------------------------------------------------------
+# Publication
+# ------------------------------------------------------------------
+
+edition: Reading Draft
+version: v1.0
+copyright_year: 2026
+
+# ------------------------------------------------------------------
+# Layout
+# ------------------------------------------------------------------
+
+paper: A5
+language: en
+
+---
+
+# Travelogue
+
+## Copyright
+
+First Edition — 2026
+
+Copyright © 2026 V.T.R. Ravi Kumar
+
+All rights reserved.
+
+No part of this publication may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, except for brief quotations used in reviews or scholarly works.
+
+ISBN:
+
+'''
+
+          lines = text.splitlines()
+          out = []
+          for line in lines:
+              if line.startswith("# Part "):
+                  line = "#" + line  # temporary marker for Part handling below
+                  line = "##" + line[1:]
+              elif line.startswith("## "):
+                  title = line[3:]
+                  if title not in {"Prologue", "Tirukkural"}:
+                      line = "### " + title
+              elif line.startswith("### "):
+                  line = "#### " + line[4:]
+              out.append(line)
+
+          body = "\n".join(out).lstrip("\n")
+
+          # Keep the existing front-matter sections at level 2.
+          path.write_text(front_matter + body + "\n", encoding="utf-8")
+          PY
+
+      - name: Commit normalized manuscript
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manuscript.md
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "No changes needed."
+          else
+            git commit -m "Normalize travelogue publishing structure"
+            git push
+          fi
