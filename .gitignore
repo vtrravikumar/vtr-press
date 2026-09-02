@@ -81,3 +81,5 @@ tmp/
 *.swp
 *.swo
 *~
+# generated VTR Press manuscript
+manuscript.md
