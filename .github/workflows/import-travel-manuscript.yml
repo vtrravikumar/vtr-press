@@ -1,0 +1,155 @@
+name: Import travel manuscript
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Import and normalize manuscript
+        env:
+          SOURCE_URL: https://raw.githubusercontent.com/vtrravikumar/vtrrk.in/main/manuscript.md
+        run: |
+          curl -fsSL "$SOURCE_URL" -o /tmp/source-manuscript.md
+          python3 - <<'PY'
+          from pathlib import Path
+
+          src = Path('/tmp/source-manuscript.md').read_text(encoding='utf-8')
+          lines = src.splitlines()
+
+          # Remove the existing top-level title, then capture the existing
+          # Prologue and Tirukkural sections so they can be placed in the
+          # publishing front matter order.
+          if lines and lines[0].strip() == '# Travelogue':
+              lines = lines[1:]
+
+          def section(start_heading, next_level):
+              start = None
+              for i, line in enumerate(lines):
+                  if line.strip() == start_heading:
+                      start = i
+                      break
+              if start is None:
+                  return ''
+              end = len(lines)
+              for i in range(start + 1, len(lines)):
+                  s = lines[i].strip()
+                  if s.startswith('#') and len(s) - len(s.lstrip('#')) <= next_level:
+                      end = i
+                      break
+              return '\n'.join(lines[start + 1:end]).strip()
+
+          prologue = section('## Prologue', 2)
+          tirukkural = section('## Tirukkural', 2)
+
+          # Remove front-matter sections from the body.
+          body = []
+          i = 0
+          while i < len(lines):
+              if lines[i].strip() in ('## Prologue', '## Tirukkural'):
+                  i += 1
+                  while i < len(lines):
+                      s = lines[i].strip()
+                      if s.startswith('#') and len(s) - len(s.lstrip('#')) <= 2:
+                          break
+                      i += 1
+                  continue
+              body.append(lines[i])
+              i += 1
+
+          # Normalize the hierarchy: Parts ##, destinations ###, scenes ####.
+          normalized = []
+          in_part = False
+          for line in body:
+              if line.startswith('# Part '):
+                  normalized.append('##' + line[1:])
+                  in_part = True
+              elif in_part and line.startswith('## '):
+                  normalized.append('###' + line[2:])
+              elif in_part and line.startswith('### '):
+                  normalized.append('####' + line[3:])
+              else:
+                  normalized.append(line)
+
+          front = '''<!--
+
+Generated from:
+
+travelogue source manuscript from vtrrk.in
+
+This file is the publishing source.
+
+Only make formatting changes required by the publisher.
+
+Editorial changes belong in the source manuscript.
+
+-->
+
+---
+
+# ------------------------------------------------------------------
+# Book Identity
+# ------------------------------------------------------------------
+
+title: Travelogue
+subtitle:
+author: V.T.R. Ravi Kumar
+
+# ------------------------------------------------------------------
+# Publication
+# ------------------------------------------------------------------
+
+edition: Reading Draft
+version: v1.0
+copyright_year: 2026
+
+# ------------------------------------------------------------------
+# Layout
+# ------------------------------------------------------------------
+
+paper: A5
+language: en
+
+---
+
+# Travelogue
+
+## Copyright
+
+First Edition — 2026
+
+Copyright © 2026 V.T.R. Ravi Kumar
+
+All rights reserved.
+
+No part of this publication may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, except for brief quotations used in reviews or scholarly works.
+
+ISBN:
+
+## Thirukkural
+
+*[Exact Tirukkural text to be inserted in a later editorial pass.]*
+
+## Prologue
+
+'''
+
+          out = front + prologue + '\n\n' + '\n'.join(normalized).strip() + '\n'
+          Path('manuscript.md').write_text(out, encoding='utf-8')
+          PY
+
+      - name: Commit manuscript
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manuscript.md
+          git diff --cached --quiet && exit 0
+          git commit -m "Add travelogue publishing manuscript"
+          git push
