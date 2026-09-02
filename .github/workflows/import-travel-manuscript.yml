@@ -1,0 +1,143 @@
+name: Import travel manuscript
+
+on:
+  push:
+    paths:
+      - '.github/workflows/import-travel-manuscript.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Import and normalize manuscript
+        env:
+          SOURCE_URL: https://raw.githubusercontent.com/vtrravikumar/vtrrk.in/main/manuscript.md
+        run: |
+          curl -fsSL "$SOURCE_URL" -o /tmp/source-manuscript.md
+          python3 - <<'PY'
+          from pathlib import Path
+
+          src = Path('/tmp/source-manuscript.md').read_text(encoding='utf-8')
+          lines = src.splitlines()
+          if lines and lines[0].strip() == '# Travelogue':
+              lines = lines[1:]
+
+          def extract(heading):
+              for i, line in enumerate(lines):
+                  if line.strip() == heading:
+                      j = i + 1
+                      while j < len(lines):
+                          s = lines[j].strip()
+                          if s.startswith('#') and len(s) - len(s.lstrip('#')) <= 2:
+                              break
+                          j += 1
+                      return '\n'.join(lines[i+1:j]).strip()
+              return ''
+
+          prologue = extract('## Prologue')
+          body = []
+          i = 0
+          while i < len(lines):
+              if lines[i].strip() in ('## Prologue', '## Tirukkural'):
+                  i += 1
+                  while i < len(lines):
+                      s = lines[i].strip()
+                      if s.startswith('#') and len(s) - len(s.lstrip('#')) <= 2:
+                          break
+                      i += 1
+                  continue
+              body.append(lines[i])
+              i += 1
+
+          normalized = []
+          in_part = False
+          for line in body:
+              if line.startswith('# Part '):
+                  normalized.append('##' + line[1:])
+                  in_part = True
+              elif in_part and line.startswith('## '):
+                  normalized.append('###' + line[2:])
+              elif in_part and line.startswith('### '):
+                  normalized.append('####' + line[3:])
+              else:
+                  normalized.append(line)
+
+          front = '''<!--
+
+Generated from:
+
+travelogue source manuscript from vtrrk.in
+
+This file is the publishing source.
+
+Only make formatting changes required by the publisher.
+
+Editorial changes belong in the source manuscript.
+
+-->
+
+---
+
+# ------------------------------------------------------------------
+# Book Identity
+# ------------------------------------------------------------------
+
+title: Travelogue
+subtitle:
+author: V.T.R. Ravi Kumar
+
+# ------------------------------------------------------------------
+# Publication
+# ------------------------------------------------------------------
+
+edition: Reading Draft
+version: v1.0
+copyright_year: 2026
+
+# ------------------------------------------------------------------
+# Layout
+# ------------------------------------------------------------------
+
+paper: A5
+language: en
+
+---
+
+# Travelogue
+
+## Copyright
+
+First Edition — 2026
+
+Copyright © 2026 V.T.R. Ravi Kumar
+
+All rights reserved.
+
+No part of this publication may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, except for brief quotations used in reviews or scholarly works.
+
+ISBN:
+
+## Thirukkural
+
+*[Exact Tirukkural text to be inserted in a later editorial pass.]*
+
+## Prologue
+
+'''
+          Path('manuscript.md').write_text(front + prologue + '\n\n' + '\n'.join(normalized).strip() + '\n', encoding='utf-8')
+          PY
+
+      - name: Commit manuscript
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manuscript.md
+          git diff --cached --quiet && exit 0
+          git commit -m "Add travelogue publishing manuscript"
+          git push
