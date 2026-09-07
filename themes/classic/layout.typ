@@ -4,7 +4,8 @@
 
 #let render-cover(cover-path) = {
   set page(
-    paper: "a5",
+    width: page-width,
+    height: page-height,
     margin: 0mm,
     numbering: none,
     header: none,
