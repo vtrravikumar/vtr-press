@@ -1,39 +1,69 @@
 # VTR Press Status
 
-Version: v0.9.1
+Current milestone: **v2.0 architecture complete**
 
 Branch: `main`
 
-Release: `v0.9.1`
+Status: **Post-v2 development baseline**
 
-## Completed
+## Current State
 
-- Generic technical-document Document Model
+VTR Press v2 establishes the generic document architecture and shared rendering infrastructure as the production foundation.
+
+Stable capabilities include:
+
+- `book` documents
+- `technical-document` documents
+- Generic Document Model
+- Document interpretation layer
 - Technical-document dispatch
-- Native Typst technical-document renderer
-- Native EPUB technical-document renderer
-- Technical-document asset resolution
-- Persistent generated asset staging
-- External image assets in PDF and EPUB
+- Native Typst technical-document rendering
+- Native EPUB technical-document rendering
+- Shared format-level rendering infrastructure
+- Technical-document asset resolution and persistent generated asset staging
 - Ordered and unordered lists
 - Deeper heading hierarchy
 - Code blocks / JSON
-- Validation against multiple technical documents
+- Markdown tables
+- External image assets in PDF and EPUB
 - PDF and EPUB generation
+- Print-book PDF pagination conventions
 - ISBN publication artifacts
-- Full regression coverage: **207 tests passing**
+- Automated regression coverage
 
-## Current
+## Architecture
 
-- v0.9.1 is the released baseline.
-- `main` is pushed to `origin/main`.
-- Working tree is clean at the release milestone.
+The production pipeline is:
 
-## Known Limitation
+`Manuscript → Parser → Generic Document Model → Interpretation → Common Typst / Common EPUB → Book / Technical renderers → PDF / EPUB`
 
-- Markdown tables currently do not render as native tables in the
-  technical-document PDF/Typst output.
+The proven Book publishing path is retained where Book-specific structures remain useful. This is intentional and is not considered incomplete migration work.
+
+## Current Engineering Position
+
+- The v2 architecture migration is complete.
+- `main` is the current development baseline.
+- Technical-document publishing is operational through the generic pipeline.
+- Markdown tables are implemented as native tables in technical Typst and EPUB output.
+- Current work is incremental publishing-platform evolution, not further architectural migration.
+- The latest repository work is focused on theme and print-layout refinement.
 
 ## Next
 
-- Implement native Markdown table support for technical documents.
+The engineering backlog is intentionally at the post-v2 feature stage.
+
+When feature work resumes, the leading candidates are:
+
+1. BL-001 — Simplify Manuscript Discovery and Publishing Input
+2. BL-003 — Cross References
+3. BL-004 — Image Captions
+4. BL-005 — Language-aware syntax highlighting
+5. BL-002 — Markdown Compatibility
+
+No current architectural rewrite is planned.
+
+## Validation
+
+GitHub Actions runs the regression suite on pushes and pull requests.
+
+The repository status should remain synchronized with the implementation, engineering plan, roadmap, and backlog.
