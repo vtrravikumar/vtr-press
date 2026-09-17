@@ -184,9 +184,35 @@ Potential scope:
 
 ---
 
+## BL-011 — Multiple Authors / Author Metadata
+
+**Priority:** P1  
+**Status:** Backlog — v2.1
+
+Extend the manuscript and publishing metadata model to support more than one author, preserving author information consistently across document parsing, the generic Document Model, and all supported output formats.
+
+### Use case
+
+Support books and technical documents created by multiple authors, including historical project reports and other collaborative manuscripts.
+
+### Potential scope
+
+- accept an ordered list of authors in manuscript/front-matter metadata;
+- preserve author order and names through the generic Document Model;
+- render multiple authors correctly in title pages and other Book/Technical publication metadata;
+- ensure PDF and EPUB output remain consistent;
+- define compatibility behaviour for existing single-author manuscripts;
+- add parser, model, and renderer regression tests.
+
+### Constraints
+
+This is a metadata capability, **not a new publishing architecture**. The solution should extend the existing document model and interpretation pipeline rather than introduce document-type-specific author handling. Existing single-author manuscripts must continue to work unchanged.
+
+---
+
 # P2 — Output and Presentation
 
-## BL-011 — HTML Output
+## BL-012 — HTML Output
 
 **Priority:** P2  
 **Status:** Future
@@ -203,7 +229,7 @@ HTML should be a new output format, not a second document-processing pipeline.
 
 ---
 
-## BL-012 — Kindle Publishing Output
+## BL-013 — Kindle Publishing Output
 
 **Priority:** P2  
 **Status:** Future
@@ -220,7 +246,7 @@ The decision should be based on actual distribution requirements rather than ass
 
 ---
 
-## BL-013 — DOCX Output
+## BL-014 — DOCX Output
 
 **Priority:** P2  
 **Status:** Future
@@ -231,7 +257,7 @@ The investigation should establish the required Document Model capabilities and 
 
 ---
 
-## BL-014 — Theme and Custom Theme Workflow
+## BL-015 — Theme and Custom Theme Workflow
 
 **Priority:** P2  
 **Status:** Future
@@ -249,7 +275,7 @@ Do not introduce another theme framework without a concrete need.
 
 ---
 
-## BL-015 — Performance Measurement and Optimization
+## BL-016 — Performance Measurement and Optimization
 
 **Priority:** P2  
 **Status:** Backlog
@@ -271,7 +297,7 @@ No performance rewrite should be undertaken without evidence of a meaningful bot
 
 # P3 — Productization and Exploration
 
-## BL-016 — Release Readiness / 1.0 Criteria
+## BL-017 — Release Readiness / 1.0 Criteria
 
 **Priority:** P3  
 **Status:** Future
@@ -293,7 +319,7 @@ Potential areas:
 
 ---
 
-## BL-017 — PyPI Distribution
+## BL-018 — PyPI Distribution
 
 **Priority:** P3  
 **Status:** Future
@@ -302,7 +328,7 @@ Package VTR Press for installation through PyPI once the CLI, package structure 
 
 ---
 
-## BL-018 — Documentation Website
+## BL-019 — Documentation Website
 
 **Priority:** P3  
 **Status:** Future
@@ -311,7 +337,7 @@ Publish the VTR Press documentation as a web-based documentation site when the s
 
 ---
 
-## BL-019 — Homebrew Installation
+## BL-020 — Homebrew Installation
 
 **Priority:** P3  
 **Status:** Future
@@ -320,7 +346,7 @@ Investigate Homebrew distribution after the CLI and package structure have stabi
 
 ---
 
-## BL-020 — Additional Document Types
+## BL-021 — Additional Document Types
 
 **Priority:** P3  
 **Status:** Exploratory
@@ -331,7 +357,7 @@ New document types should fit the established pattern of document-type interpret
 
 ---
 
-## BL-021 — Plugin Architecture
+## BL-022 — Plugin Architecture
 
 **Priority:** P3  
 **Status:** Deferred
@@ -390,5 +416,6 @@ When engineering resumes, the first candidates to evaluate are:
 3. **BL-004 — Image Captions**
 4. **BL-005 — Language-Aware Syntax Highlighting**
 5. **BL-002 — Markdown Compatibility Improvements**
+6. **BL-011 — Multiple Authors / Author Metadata**
 
-These are the items most directly aligned with the capabilities and gaps exposed by the current v2 architecture.
+BL-011 is explicitly a **v2.1** requirement and should be considered when the v2.1 scope is opened.
