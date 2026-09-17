@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from .review import build_review_markers
 from .structure import PageStructure, StructureClassification, classify_structure
 
 
@@ -42,6 +43,7 @@ class PageOCR:
     structure: PageStructure | None = None
     structure_confidence: float | None = None
     source_image: Path | None = None
+    review_markers: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -87,6 +89,8 @@ class MarkdownAssembler:
                 blocks.append(
                     f"<!-- structure: {page.structure.value}; confidence: {confidence} -->"
                 )
+            for marker in page.review_markers:
+                blocks.append(f"<!-- review-marker: {marker} -->")
 
             if self.include_source_images and page.structure in self.image_structures:
                 blocks.extend(
@@ -151,6 +155,7 @@ class DigitizationPipeline:
                 ocr_image = self.preprocessor.process(image, processed_dir)
             text = self.ocr.ocr_image(ocr_image)
             classification = self.classifier(text) if self.classifier is not None else None
+            review_markers = build_review_markers(text, classification)
             page_results.append(
                 PageOCR(
                     source_pdf=source_pdf,
@@ -160,6 +165,7 @@ class DigitizationPipeline:
                     structure=classification.structure if classification else None,
                     structure_confidence=classification.confidence if classification else None,
                     source_image=source_image,
+                    review_markers=review_markers,
                 )
             )
 
