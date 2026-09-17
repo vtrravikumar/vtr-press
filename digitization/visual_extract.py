@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageOps
+from PIL import Image, ImageOps
 
 from .layout import VisualAnalysis, VisualRegion
 
