@@ -1,4 +1,8 @@
+from pathlib import Path
+
 from digitization.structure import PageStructure, classify_structure
+
+FIXTURES = Path(__file__).parent / "fixtures" / "digitization"
 
 
 def test_empty_text_is_layout():
@@ -52,3 +56,15 @@ def test_code_like_text_without_multiple_signals_remains_conservative():
     text = "for better performance; the network adapts its weights during training."
     result = classify_structure(text)
     assert result.structure is PageStructure.PROSE
+
+
+def test_realistic_regression_fixtures_keep_broad_structure_classes():
+    expected = {
+        "prose.txt": PageStructure.PROSE,
+        "code.txt": PageStructure.CODE,
+        "layout.txt": PageStructure.LAYOUT,
+    }
+
+    for filename, structure in expected.items():
+        result = classify_structure((FIXTURES / filename).read_text(encoding="utf-8"))
+        assert result.structure is structure
