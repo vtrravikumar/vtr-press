@@ -49,9 +49,10 @@ The proven Book publishing path is retained where Book-specific structures remai
 - `main` is the current development baseline.
 - Technical-document publishing is operational through the generic pipeline.
 - Markdown tables are implemented as native tables in technical Typst and EPUB output.
-- Digitization now has PDF rendering, OCR, conservative preprocessing, page provenance, structure classification and code-safe review handling.
+- Digitization now has PDF rendering, OCR, conservative preprocessing, page provenance, structure classification, code-safe review handling, source-image preservation and conservative review markers.
+- A repeatable `python -m digitization` PDF-to-Markdown workflow is implemented and covered by tests.
 - Real scanned college-project validation has been completed, including controlled preprocessing comparison.
-- The digitization work remains incremental and is not yet considered a complete production CLI/API feature.
+- Digitization remains incremental because semantic table/figure extraction and broader real-document validation still require evidence.
 
 ## Active Work — BL-012
 
@@ -65,17 +66,18 @@ Completed in the current increment:
 4. Page-level provenance
 5. `prose` / `code` / `layout` classification with bounded confidence
 6. Code-safe Markdown review treatment
-7. Regression fixtures for broad structure classification
-8. Real-document validation documentation
+7. Source-page visual fallback for layout-sensitive pages
+8. Conservative review markers
+9. Regression fixtures derived from real college-project OCR
+10. Repeatable digitization CLI
+11. Real-document validation documentation
 
 Remaining:
 
-1. Table/figure preservation and extraction strategy
-2. Expanded review/confidence markers
-3. Stronger real-image regression fixtures
-4. Practical end-to-end CLI/API workflow
-5. Validation against the second document case
-6. Final production-readiness review
+1. Broader end-to-end validation against the college project and the second document case
+2. Maintainable real-image regression strategy
+3. Image/layout-aware semantic table and figure extraction where fidelity can be demonstrated
+4. Final production-readiness review
 
 ## Other Backlog Candidates
 
