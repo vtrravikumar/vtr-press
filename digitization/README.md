@@ -73,21 +73,21 @@ python -m digitization source.pdf manuscript.md
 
 ### Project source-folder workflow
 
-For a digitized project whose source material is organized as:
+For a project whose source material is organized as:
 
 ```text
-source/
-├── report/
-│   ├── College-project-01.pdf
-│   ├── College-project-02.pdf
-│   └── College-project-03.pdf
-└── code/
-    ├── Code-01.pdf
-    ├── Code-02.pdf
-    └── Code-03.pdf
+project/
+├── source/
+│   ├── report/
+│   │   ├── report-01.pdf
+│   │   └── report-02.pdf
+│   └── code/                 # optional; may be absent or empty
+│       ├── code-01.pdf
+│       └── code-02.pdf
+└── manuscript.md             # generated one level above source/
 ```
 
-run one command:
+run one command from the project root:
 
 ```text
 python -m digitization source/
@@ -95,14 +95,19 @@ python -m digitization source/
 
 The command automatically:
 
-1. processes all PDFs in `report/` in filename order using the `prose` OCR profile;
-2. processes all PDFs in `code/` in filename order using the `code` OCR profile;
-3. collates all page results into **one** `source/manuscript.md`;
-4. preserves the originating PDF and page number for every page;
-5. keeps rendered source pages under `source/pages/` with collision-safe names;
-6. keeps report/code document boundaries as Markdown metadata rather than treating each PDF as a separate manuscript.
+1. requires one or more PDFs in `report/`;
+2. accepts zero or more PDFs in `code/`, including no `code/` folder at all;
+3. processes report PDFs in numbered order using the `prose` OCR profile;
+4. processes code PDFs in numbered order using the `code` OCR profile;
+5. requires multi-part PDFs to be numbered continuously from `01` (`01`, `02`, `03`, ...), preventing an accidentally missing part from going unnoticed;
+6. collates all page results into **one `manuscript.md` at the project root**;
+7. preserves the originating PDF and page number for every page;
+8. keeps rendered source pages under the project-root `pages/` directory with collision-safe names;
+9. keeps report/code document boundaries as Markdown metadata rather than treating each PDF as a separate manuscript.
 
-For the college project this means the three report PDFs and three source-code PDFs become one reviewable manuscript without manually concatenating six OCR files.
+A single report PDF may use any filename because there is no sequence to validate. Once a source category contains multiple PDFs, each must carry a numeric suffix and the sequence must be continuous from `01`.
+
+For the college project, the three report PDFs and three source-code PDFs therefore become one reviewable manuscript without manually concatenating six OCR files. If the project contains only the report PDFs, the same command works without code sources.
 
 Useful options include:
 
@@ -116,8 +121,6 @@ Useful options include:
 The `--profile` option applies to a single-PDF input. Project source folders select `prose` for `report/` and `code` for `code/` automatically.
 
 The command writes the Markdown draft and copies rendered source pages into a sibling `pages/` directory so `source-image` references remain usable. It does not modify the input PDFs.
-
-The OCR profile is an explicit acquisition choice. Automatic structure classification happens after OCR and is not used to pretend that a single OCR pass can perfectly recover every page type.
 
 ### What the command produces
 
@@ -140,9 +143,10 @@ pages/
 For a project source folder, the output is:
 
 ```text
-source/
-├── report/
-├── code/
+project/
+├── source/
+│   ├── report/
+│   └── code/
 ├── manuscript.md
 └── pages/
     ├── 01-College-project-01-page-1.png
