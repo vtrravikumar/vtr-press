@@ -1,0 +1,11 @@
+1. INTRODUCTION
+ll. GENERAL
+Artificial Neural Net models have been studied for many years on
+the hope of achieving human-like performance in various fields to find
+number of real world applications. These models are composed of many
+non - linear computational elements operating in parallel and arranged
+inpatterns reminiscent of biological neural nets. Computational elements
+or nodes are connected by weights that are typically adapted during use to
+improve performance .There has been a recent resurgence in the field of
+Artificial Neural Networks caused by new net topologies , algorithms and
+analog VLSI implementation techniques.
