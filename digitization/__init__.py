@@ -7,6 +7,7 @@ from .preprocess import PassthroughPreprocessor, PillowPreprocessor, PreprocessC
 from .review import build_review_markers
 from .structure import PageStructure, StructureClassification, classify_structure
 from .table import ExtractedTable, TableCell, extract_table_cells
+from .table_markdown import TableMarkdownResult, to_markdown_table
 
 __all__ = [
     "OCRConfig",
@@ -26,6 +27,8 @@ __all__ = [
     "TableCell",
     "ExtractedTable",
     "extract_table_cells",
+    "TableMarkdownResult",
+    "to_markdown_table",
     "preserve_page_image",
     "build_review_markers",
 ]
