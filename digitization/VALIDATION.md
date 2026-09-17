@@ -80,33 +80,51 @@ The report contains tables and diagrams whose meaning depends on spatial layout.
 
 The digitization pipeline therefore needs structure-aware handling rather than treating every page as one text block.
 
-## Preprocessing increment
+## Preprocessing validation
 
-The first implementation increment after the baseline validation now provides a conservative Pillow-based preprocessing adapter.
+The conservative preprocessing implementation provides grayscale conversion, automatic contrast normalization and optional fixed-level thresholding while leaving the source raster untouched.
 
-The preprocessing stage can independently produce a derived PNG using:
+A controlled comparison used the same representative report pages for passthrough OCR versus grayscale/autocontrast and then compared fixed thresholding as an additional variant.
 
-- grayscale conversion;
-- automatic contrast normalization;
-- optional fixed-level thresholding.
+The result was deliberately **not** treated as an accuracy claim:
 
-The original raster is never modified. Geometry-changing operations such as deskewing and cropping remain deliberately deferred until they are validated against the real scans.
+- grayscale/autocontrast produced modest changes in OCR output on prose pages, including some punctuation/spacing differences, but no consistent improvement across the sampled pages;
+- fixed thresholding introduced additional recognition changes on prose pages and did not make source-code OCR reliable;
+- source-code OCR remained unreliable under all tested variants.
 
-This increment establishes the preprocessing mechanism, but it does **not** yet establish that a particular transformation improves OCR for the college report. That requires another controlled OCR comparison using the same representative pages.
+Therefore grayscale/autocontrast is available as a conservative derived preprocessing path, while thresholding remains opt-in. Geometry-changing operations such as deskewing and cropping remain deferred until separately validated.
 
-## OCR profile increment
+## OCR profiles
 
-The OCR adapter now provides named configuration profiles for:
+The OCR adapter provides named configuration profiles for:
 
 - `prose`;
 - `layout`;
 - `code`.
 
-These are configuration presets, not automatic page classification. The real document validation showed that different page types have materially different OCR risks, so automatic structure classification remains a later step.
+These are configuration presets, not automatic page classification. Different page types have materially different OCR risks, so the pipeline now adds a separate conservative classification step.
+
+## Structure classification validation
+
+The structure classifier operates on OCR text and currently distinguishes three broad page types:
+
+- `prose` — the safe default for ordinary running text;
+- `code` — selected only when multiple independent code signals are present;
+- `layout` — selected conservatively for sparse, display-like or otherwise layout-heavy OCR.
+
+The classifier reports bounded confidence and reasons so downstream review can see why a page was classified. It does **not** attempt to infer tables or diagrams from text alone.
+
+The classifier is integrated into the page-level pipeline and Markdown assembler. Each classified page receives a source/page marker plus a structure/confidence marker. Classification can also be disabled for callers that want the earlier page-only behaviour.
+
+## Code-safe handling
+
+When a page is classified as `code`, the generated Markdown preserves the OCR text in an unlabelled fenced code block and adds an explicit review marker stating that the listing must be verified against the source scan.
+
+No programming-language hint is assigned automatically. This avoids presenting uncertain OCR as authoritative or executable source code while preserving the OCR text for human correction.
 
 ## Current result
 
-The architecture is validated at the adapter and orchestration boundary:
+The architecture is validated at the adapter, orchestration and initial structure-awareness boundaries:
 
 ```text
 scanned source
@@ -119,21 +137,21 @@ OCR profile
       ↓
 page-level text
       ↓
+conservative structure classification
+      ↓
 reviewable Markdown draft
 ```
 
-The real document also establishes the requirements for the next layer: **document-aware acquisition**.
+The real document establishes that reliable digitization requires more than raw OCR. The remaining work is increasingly about preserving information that plain OCR cannot represent safely.
 
 ## Next implementation increment
 
-The next digitization work should address these areas in order:
+The remaining digitization work should address these areas in order:
 
-1. **Controlled preprocessing comparison** — run the same representative pages with passthrough versus conservative preprocessing and record the effect on OCR.
-2. **Structure classification** — distinguish prose, headings, code, tables and figure/diagram regions before Markdown assembly.
-3. **Code-safe handling** — preserve code listings as source material requiring explicit review; do not silently transform uncertain OCR into executable-looking code.
-4. **Table/figure preservation** — retain the source image and provenance when reliable structural extraction is not available.
-5. **Review markers** — make uncertain or structure-sensitive regions visible in the generated manuscript.
-6. **Regression fixtures** — retain representative page-level examples so improvements can be measured against the same historical source.
+1. **Table/figure preservation** — retain source images and provenance where reliable structural extraction is unavailable.
+2. **Review markers** — expand review metadata beyond structure classification to identify uncertain or structure-sensitive regions where practical.
+3. **Regression fixtures** — retain representative page-level examples from real scanned documents so changes can be measured against stable source material.
+4. **End-to-end workflow** — provide a practical CLI/API path for repeatable PDF-to-Markdown digitization and validate it against the college project and a second document such as the Accupressure validation case.
 
 ## Fidelity rule
 
