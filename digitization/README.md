@@ -17,6 +17,7 @@ Source PDF / scans
         +-- OCR
         +-- structure classification
         +-- source-image preservation
+        +-- review markers
         +-- figures / diagrams
         +-- tables
         +-- source-code handling
@@ -39,8 +40,10 @@ The current increment establishes the core, adapter-based pipeline:
 - `ocr.py` — Tesseract OCR adapter with configurable language, page segmentation mode, and named profiles for prose, layout-heavy pages and code.
 - `structure.py` — conservative OCR-text classification into broad `prose`, `code` and `layout` page types, with bounded confidence and reasons.
 - `assets.py` — byte-preserving helper for copying rendered source-page images into a stable asset directory.
+- `review.py` — conservative review-marker generation for structure-sensitive pages and a small set of suspicious OCR glyph patterns.
 - `pipeline.py` — deterministic orchestration from PDF pages through preprocessing, OCR and optional structure classification, with page-level provenance.
-- `MarkdownAssembler` — produces a reviewable Markdown draft with source-PDF/page markers and structure/confidence markers. It can optionally embed the original rendered page image for layout-heavy pages.
+- `cli.py` / `__main__.py` — repeatable command-line PDF-to-Markdown workflow.
+- `MarkdownAssembler` — produces a reviewable Markdown draft with source-PDF/page markers, structure/confidence markers and review markers. It can optionally embed the original rendered page image for layout-heavy pages.
 
 Structure classification is deliberately conservative. It is a page-level routing and review aid, not a claim that OCR text can reconstruct tables or diagrams. Those require image/layout-aware handling in later increments.
 
@@ -53,6 +56,27 @@ The current concrete adapters expect these dependencies in the execution environ
 - Python Pillow for image preprocessing
 
 VTR Press does not prescribe how Tesseract or Poppler are installed. A future reproducible runtime may use a container or another managed environment. The important boundary is that the Python pipeline talks to small adapters, not directly to a specific operating-system package manager.
+
+## Command-line workflow
+
+The digitization module can be invoked directly:
+
+```text
+python -m digitization source.pdf manuscript.md
+```
+
+Useful options include:
+
+```text
+--profile prose|layout|code
+--preprocess none|conservative
+--include-source-images
+--work-dir <directory>
+```
+
+The command writes the Markdown draft and copies rendered source pages into a sibling `pages/` directory so `source-image` references remain usable. It does not modify the input PDF.
+
+The OCR profile is an explicit acquisition choice. Automatic structure classification happens after OCR and is not used to pretend that a single OCR pass can perfectly recover every page type.
 
 ## Preprocessing policy
 
@@ -73,6 +97,17 @@ Digitization keeps the rendered source-page path separately from the image actua
 Every generated page carries a `source-image` Markdown comment. By default this is metadata only, so the manuscript is not cluttered with page images. For layout-classified pages, `MarkdownAssembler(include_source_images=True)` can embed the source image as a visual fallback. This is intended for title pages, diagrams and uncertain spatial structures where plain OCR is insufficient.
 
 The fallback is deliberately page-level. It does **not** claim to have extracted a table or figure into semantic Markdown. When a table or diagram depends on spatial relationships that OCR cannot preserve, the source image remains the authoritative visual reference until a later image/layout-aware extraction step is implemented.
+
+## Review markers
+
+The review layer never edits OCR text. It adds machine-readable Markdown comments when a page needs additional human attention:
+
+- `code-ocr-verification` for code-like pages;
+- `layout-visual-verification` for layout-heavy pages;
+- `low-structure-confidence` when a non-prose classification is weak;
+- `suspicious-ocr-glyphs` for a small set of recognizable OCR artefacts.
+
+These markers are intentionally conservative. They are review signals, not proof that a particular character or word is wrong, and they are not a substitute for checking the original scan.
 
 ## Validation strategy
 
