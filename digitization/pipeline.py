@@ -161,7 +161,11 @@ class DigitizationPipeline:
             classification = self.classifier(text) if self.classifier is not None else None
             visual = self.visual_analyzer(source_image) if self.visual_analyzer is not None else None
             visual_assets: tuple[str, ...] = ()
-            if visual is not None and self.visual_extractor is not None and visual.reasons:
+            if (
+                visual is not None
+                and self.visual_extractor is not None
+                and (visual.table_likely or visual.diagram_likely or visual.figure_likely)
+            ):
                 page_visual_dir = visuals_dir / f"page-{page_number:03d}"
                 regions = self.visual_extractor(source_image, visual, page_visual_dir)
                 visual_assets = tuple(
