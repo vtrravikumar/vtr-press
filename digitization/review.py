@@ -27,7 +27,13 @@ def build_review_markers(
         elif classification.structure is PageStructure.LAYOUT:
             markers.append("layout-visual-verification")
 
-        if classification.confidence < 0.65:
+        # Prose is intentionally the safe default, so its baseline confidence
+        # does not itself create a review warning. Lower confidence matters
+        # when the classifier has routed a page away from ordinary prose.
+        if (
+            classification.structure is not PageStructure.PROSE
+            and classification.confidence < 0.65
+        ):
             markers.append("low-structure-confidence")
 
     if any(pattern.search(text) for pattern in SUSPICIOUS_PATTERNS):
