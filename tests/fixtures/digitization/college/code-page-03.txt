@@ -1,0 +1,8 @@
+double peross, pmutation;
+int no_of_sol,MIN;
+double oldrand[55};
+float se, hwgtl[MAX][MAX],hwet2rM a
+FICE *ptres:
+if (count == 0) {
+    return 1;
+}
