@@ -1,4 +1,4 @@
-"""macOS-native OCR adapter using Apple's Vision framework via ``ocrmac``."""
+"""macOS-native OCR adapter using Apple's Vision framework via PyObjC."""
 
 from __future__ import annotations
 
@@ -8,7 +8,12 @@ from .ocr import OCRConfig
 
 
 class MacOSVisionOCR:
-    """Run Apple's Vision OCR through the pip-installable ``ocrmac`` package."""
+    """Run Apple's Vision OCR with one reusable recognition request.
+
+    The request is initialized lazily on the first page and then reused for
+    every subsequent image. When the same adapter instance is shared by the
+    CLI, it is also reused across every PDF in a multi-document run.
+    """
 
     def __init__(self, config: OCRConfig | None = None):
         self.config = config or OCRConfig()
@@ -17,25 +22,75 @@ class MacOSVisionOCR:
                 "MacOSVisionOCR currently supports English only; "
                 f"received language={self.config.language!r}"
             )
+        self._vision = None
+        self._foundation = None
+        self._objc = None
+        self._request = None
 
-    def _engine(self):
+    def _initialize_request(self) -> None:
+        if self._request is not None:
+            return
+
         try:
-            from ocrmac import ocrmac
+            import objc
+            import Vision
+            from Foundation import NSData
         except ImportError as exc:
             raise RuntimeError(
-                "ocrmac is required for the macos-vision OCR engine; "
-                "install it with: python -m pip install ocrmac"
+                "macOS Vision dependencies are required; install ocrmac "
+                "with: python -m pip install ocrmac"
             ) from exc
-        return ocrmac
+
+        request = Vision.VNRecognizeTextRequest.alloc().init()
+        request.setRecognitionLevel_(0)  # accurate
+        request.setRecognitionLanguages_(["en-US"])
+
+        self._vision = Vision
+        self._foundation = NSData
+        self._objc = objc
+        self._request = request
 
     def _recognize(self, image: str | Path):
         image_path = Path(image)
         if not image_path.is_file():
             raise FileNotFoundError(image_path)
-        ocrmac = self._engine()
-        return ocrmac.OCR(
-            str(image_path), recognition_level="accurate", language_preference=["en-US"]
-        ).recognize()
+
+        self._initialize_request()
+        image_data = image_path.read_bytes()
+
+        with self._objc.autorelease_pool():
+            data = self._foundation.dataWithBytes_length_(image_data, len(image_data))
+            handler = self._vision.VNImageRequestHandler.alloc().initWithData_options_(
+                data, None
+            )
+            result = handler.performRequests_error_([self._request], None)
+            if isinstance(result, tuple):
+                ok, error = result
+            else:
+                ok, error = bool(result), None
+            if not ok or error is not None:
+                raise RuntimeError(f"macOS Vision OCR failed: {error}")
+
+            annotations = []
+            for observation in self._request.results() or []:
+                candidates = observation.topCandidates_(1)
+                if not candidates:
+                    continue
+                item = candidates[0]
+                bbox = observation.boundingBox()
+                annotations.append(
+                    (
+                        str(item.string()),
+                        float(item.confidence()),
+                        [
+                            float(bbox.origin.x),
+                            float(bbox.origin.y),
+                            float(bbox.size.width),
+                            float(bbox.size.height),
+                        ],
+                    )
+                )
+            return annotations
 
     @staticmethod
     def _ordered(annotations):
@@ -57,12 +112,5 @@ class MacOSVisionOCR:
         return text, confidence
 
     def version(self) -> str:
-        """Return the installed ocrmac version."""
-        try:
-            import importlib.metadata
-            return importlib.metadata.version("ocrmac")
-        except importlib.metadata.PackageNotFoundError as exc:
-            raise RuntimeError(
-                "ocrmac is required for the macos-vision OCR engine; "
-                "install it with: python -m pip install ocrmac"
-            ) from exc
+        """Return the OCR backend identifier."""
+        return "macOS Vision"
