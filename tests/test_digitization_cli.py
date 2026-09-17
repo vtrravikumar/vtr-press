@@ -39,6 +39,21 @@ def test_cli_writes_markdown_and_source_pages(tmp_path: Path, monkeypatch):
     assert (tmp_path / "pages" / "page-1.png").is_file()
 
 
+def test_cli_supports_default_manuscript_output(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(cli, "PdftoppmRenderer", FakeRenderer)
+    monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
+
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+
+    assert cli.main([str(pdf)]) == 0
+
+    output = tmp_path / "manuscript.md"
+    assert output.exists()
+    assert "<!-- source: source.pdf; page: 1 -->" in output.read_text(encoding="utf-8")
+    assert (tmp_path / "pages" / "page-1.png").is_file()
+
+
 def test_cli_supports_passthrough_preprocessing(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(cli, "PdftoppmRenderer", FakeRenderer)
     monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
