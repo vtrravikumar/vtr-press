@@ -17,6 +17,8 @@ For validation experiments, PDF pages were rasterized and OCR was executed in a 
 
 This runtime is an experiment environment, not a VTR Press installation requirement. The VTR Press code keeps PDF rendering and OCR behind adapter boundaries.
 
+For the full-document run described below, the scanned PDF was also rasterized with PyMuPDF at reduced validation resolution because `pdftoppm` did not complete the full scan within the temporary execution window. This is explicitly a validation-environment limitation; it is not being treated as evidence that the production renderer is incorrect.
+
 ## Pages sampled
 
 ### Report pages
@@ -151,6 +153,32 @@ The repository now contains small text snapshots derived from the actual college
 
 These fixtures exercise structure classification and review-marker behaviour in CI without storing duplicate large binary scans inside VTR Press. The authoritative scanned pages remain in the `college-project` source repository. The fixture tests therefore protect the reusable classification/review contract while real-image validation remains an integration-level activity.
 
+## Full-document validation — College-project-01.pdf
+
+The complete 24-page `College-project-01.pdf` was processed as a real-document OCR run. All 24 pages rendered successfully in the validation environment and all 24 produced non-empty OCR text.
+
+At the validation rasterization used for this run, the OCR output contained 21,462 characters in total. No page was empty or near-empty enough to indicate a pipeline-level OCR failure.
+
+The current text-only classifier produced:
+
+| Structure | Pages |
+|---|---:|
+| prose | 20 |
+| layout | 4 |
+| code | 0 |
+
+The four pages classified as layout were pages 1, 2, 3 and 16. This is directionally useful: the title/submission pages and the diagrammatic page were separated from ordinary running text.
+
+The run also exposed an important limitation: pages 4 and 5 are visibly certificate/viva-style layout pages, but their OCR text is sufficiently dense that the current text-only classifier labels them as `prose`. This is not an OCR failure; it is a known limitation of classification from OCR text alone. It reinforces the need for image/layout-aware classification before semantic table/figure extraction is attempted.
+
+The full run produced no empty OCR pages. It also confirmed that OCR defects are distributed through otherwise readable prose rather than being confined to a few failed pages. Examples observed include malformed words, punctuation/spacing errors and technical-name recognition errors such as `METHODILOGY` and `Netiral`.
+
+### Full source-code validation — Code-01.pdf
+
+The complete 24-page `Code-01.pdf` was also processed as a real source-code OCR run. All 24 pages produced OCR text.
+
+The pages were consistently code-like in content, but the OCR output contained the same class of syntax-sensitive errors observed in the earlier six-page sample: malformed preprocessor directives, punctuation, brackets, identifiers and operators. This confirms that source-code OCR needs a mandatory visual verification workflow rather than an assumption of executable fidelity.
+
 ## End-to-end workflow
 
 A repeatable command-line path is now available:
@@ -162,22 +190,6 @@ python -m digitization source.pdf manuscript.md
 The CLI supports explicit `prose`, `layout` and `code` OCR profiles, conservative or passthrough preprocessing, an optional working directory, and optional source-image embedding for layout pages. It writes the Markdown draft and copies rendered source pages beside it so the generated `source-image` references remain usable.
 
 The CLI does not modify the input PDF and does not claim that OCR output is final publication text.
-
-## Real-document end-to-end smoke run
-
-A real-document smoke run was executed against rendered pages from the authoritative college-project scans using Tesseract 5.5.0. The run exercised the same logical stages as the CLI path: source page image → OCR → structure classification → review markers → traceable Markdown.
-
-The sampled results were:
-
-| Source | Page | Observed result |
-| --- | ---: | --- |
-| `College-project-01.pdf` | 3 | Classified as `layout` (confidence 0.75) and retained with a visual source-image fallback. The OCR recovered the project title, three author names and institutional details, while preserving visible OCR noise for review. |
-| `College-project-01.pdf` | 8 | Classified as `prose` (confidence 0.50). The introduction text was substantially recovered, with known OCR defects such as `inpatterns`, `novell` and punctuation/spacing errors left untouched. |
-| `Code-01.pdf` | 3 | Classified as `code` (confidence 0.90). The generated Markdown used an unlabelled code fence and `code-ocr-verification`; OCR visibly corrupted C syntax such as array brackets and pointer/declaration punctuation, confirming the need for manual source verification. |
-
-This smoke run validates the important real-document boundary: the pipeline can carry different page types from actual scanned material into a reviewable Markdown representation without silently correcting OCR or presenting uncertain code as authoritative.
-
-A small generated Markdown sample from this run was also inspected for the expected provenance, structure, source-image and review-marker comments.
 
 ## Current result
 
@@ -209,7 +221,7 @@ The real document establishes that reliable digitization requires more than raw 
 
 The remaining digitization work should address these areas in order:
 
-1. **Broader end-to-end validation** — extend the real-document smoke run to the full college project and a second document such as the Accupressure validation case in an environment with the required OCR/PDF tools.
+1. **Broader end-to-end validation** — run the workflow against the college project and a second document such as the Accupressure validation case in an environment with the required OCR/PDF tools.
 2. **Real-image regression strategy** — decide how to maintain a small, representative set of binary page fixtures without bloating the publishing repository; the source project scans remain the current integration source.
 3. **Image/layout-aware table and figure extraction** — investigate semantic extraction only where spatial relationships can be preserved faithfully; keep the page-image fallback when they cannot.
 
