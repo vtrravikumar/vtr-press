@@ -38,6 +38,7 @@ class RunStats:
     total_duration_seconds: float
     average_seconds_per_page: float
     documents: list[DocumentStats] = field(default_factory=list)
+    combined_sources: bool = False
 
     def to_dict(self) -> dict:
         return asdict(self)
