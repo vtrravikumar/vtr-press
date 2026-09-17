@@ -38,13 +38,25 @@ def build_parser() -> argparse.ArgumentParser:
         "--profile",
         choices=("prose", "layout", "code"),
         default="prose",
-        help="Tesseract OCR profile for a single PDF input (default: prose)",
+        help="OCR profile for a single PDF input (default: prose)",
     )
     parser.add_argument(
         "--preprocess",
         choices=("none", "conservative"),
         default="conservative",
         help="image preprocessing mode (default: conservative)",
+    )
+    parser.add_argument(
+        "--pdf-renderer",
+        choices=("pdftoppm", "pymupdf"),
+        default="pdftoppm",
+        help="PDF rendering backend; use pymupdf for a pip-only local macOS setup",
+    )
+    parser.add_argument(
+        "--ocr-engine",
+        choices=("tesseract", "macos-vision"),
+        default="tesseract",
+        help="OCR backend; macos-vision uses Apple's Vision framework via ocrmac",
     )
     parser.add_argument(
         "--include-source-images",
@@ -133,6 +145,23 @@ def _build_preprocessor(mode: str):
     return PassthroughPreprocessor()
 
 
+def _build_renderer(name: str):
+    if name == "pymupdf":
+        from .pdf_pymupdf import PyMuPDFRenderer
+
+        return PyMuPDFRenderer()
+    return PdftoppmRenderer()
+
+
+def _build_ocr(engine: str, profile: str):
+    config = get_ocr_profile(profile)
+    if engine == "macos-vision":
+        from .ocr_macos import MacOSVisionOCR
+
+        return MacOSVisionOCR(config=config)
+    return TesseractOCR(config=config)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     input_path = args.input.resolve()
@@ -153,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     work_root = (args.work_dir or output.parent / ".digitization-work").resolve()
     output_pages = output.parent / "pages"
 
-    renderer = PdftoppmRenderer()
+    renderer = _build_renderer(args.pdf_renderer)
     preprocessor = _build_preprocessor(args.preprocess)
     assembler = MarkdownAssembler(include_source_images=args.include_source_images)
     manuscript_parts: list[str] = []
@@ -163,7 +192,7 @@ def main(argv: list[str] | None = None) -> int:
         if source_work.exists():
             shutil.rmtree(source_work)
 
-        ocr = TesseractOCR(config=get_ocr_profile(profile))
+        ocr = _build_ocr(args.ocr_engine, profile)
         pipeline = DigitizationPipeline(renderer, ocr, preprocessor=preprocessor)
         result = pipeline.run(pdf, source_work)
         result = _copy_source_pages(result, output_pages, source_index)
