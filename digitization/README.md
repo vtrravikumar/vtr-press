@@ -2,7 +2,7 @@
 
 The `digitization` package is the upstream source-conversion layer of VTR Press.
 
-Its purpose is to convert scanned or otherwise image-based source material into a **reviewable Markdown manuscript draft**. The existing VTR Press publishing pipeline remains responsible for parsing, interpreting, and rendering that manuscript.
+Its purpose is to convert scanned or otherwise image-based source material into a **reviewable, VTR Press-compatible Markdown manuscript**. The existing VTR Press publishing pipeline remains responsible for parsing, interpreting, and rendering that manuscript.
 
 ## Architectural boundary
 
@@ -16,14 +16,16 @@ Source PDF / scans
         +-- image preprocessing
         +-- OCR
         +-- structure classification
+        +-- VTR Press metadata
+        +-- Markdown heading normalization
+        +-- compatibility validation
         +-- source-image preservation
-        +-- review markers
         +-- figures / diagrams
         +-- tables
         +-- source-code handling
         |
         v
- Markdown draft
+ VTR Press-compatible manuscript.md
         |
         v
 Existing VTR Press publishing pipeline
@@ -36,30 +38,55 @@ Digitization must not silently rewrite, modernize, or correct the source. OCR ou
 The current increment establishes the core, adapter-based pipeline:
 
 - `pdf.py` — PDF-to-page rendering through a `pdftoppm` adapter.
+- `pdf_pymupdf.py` — pip-installable PyMuPDF renderer for local macOS use without Poppler.
 - `preprocess.py` — conservative preprocessing with both an unchanged passthrough and a Pillow-based grayscale/contrast/threshold path.
 - `ocr.py` — Tesseract OCR adapter with configurable language, page segmentation mode, and named profiles for prose, layout-heavy pages and code.
+- `ocr_macos.py` — macOS-native Apple Vision OCR through the pip-installable `ocrmac` package.
 - `structure.py` — conservative OCR-text classification into broad `prose`, `code` and `layout` page types, with bounded confidence and reasons.
+- `compatibility.py` — VTR Press metadata template generation, conservative heading normalization and manuscript compatibility validation.
 - `assets.py` — byte-preserving helper for copying rendered source-page images into a stable asset directory.
 - `review.py` — conservative review-marker generation for structure-sensitive pages and a small set of suspicious OCR glyph patterns.
-- `pipeline.py` — deterministic orchestration from PDF pages through preprocessing, OCR and optional structure classification, with page-level provenance.
-- `cli.py` / `__main__.py` — repeatable command-line PDF-to-Markdown workflow, including multi-PDF project-source batching.
+- `pipeline.py` — deterministic orchestration from PDF pages through preprocessing, OCR and structure classification, with page-level provenance and heading normalization.
+- `cli.py` / `__main__.py` — repeatable command-line PDF-to-Markdown workflow, including multi-PDF project-source batching and compatibility validation.
 - `MarkdownAssembler` — produces a reviewable Markdown draft with source-PDF/page markers, structure/confidence markers and review markers. It can optionally embed the original rendered page image for layout-heavy pages.
 
 Structure classification is deliberately conservative. It is a page-level routing and review aid, not a claim that OCR text can reconstruct tables or diagrams. Those require image/layout-aware handling in later increments.
 
 ## Runtime requirements
 
-The current concrete adapters expect these dependencies in the execution environment:
+### Standard Tesseract/Poppler runtime
+
+The standard concrete adapters expect:
 
 - Tesseract OCR (`tesseract`)
 - Poppler's `pdftoppm`
 - Python Pillow for image preprocessing
 
-VTR Press does not prescribe how Tesseract or Poppler are installed. A future reproducible runtime may use a container or another managed environment. The important boundary is that the Python pipeline talks to small adapters, not directly to a specific operating-system package manager.
+### Pip-only local macOS runtime
+
+On macOS, the digitization engine can run without installing Tesseract or Poppler by using the Python packages below:
+
+```text
+python -m pip install pymupdf ocrmac
+```
+
+`PyMuPDF` provides PDF page rendering from a Python wheel, while `ocrmac` uses Apple's Vision framework through PyObjC for OCR. This path is macOS-specific and is intended primarily for fast local development. The repository continues to retain Tesseract/Poppler adapters for CI and other environments.
+
+Run it with:
+
+```text
+python -m digitization source/ \
+  --pdf-renderer pymupdf \
+  --ocr-engine macos-vision
+```
+
+The macOS OCR backend currently uses Apple's accurate Vision recognition mode for English documents. It does not require a Tesseract executable on `PATH`.
+
+VTR Press does not prescribe how native Tesseract or Poppler are installed for the standard backend. The important boundary is that the Python pipeline talks to small adapters, not directly to a specific operating-system package manager.
 
 ## Command-line workflow
 
-The normal user-facing workflow is intentionally simple: provide a source PDF and get a `manuscript.md` draft plus the rendered source pages used for review.
+The normal user-facing workflow is intentionally simple: provide a source PDF or source folder and get a `manuscript.md` draft plus the rendered source pages used for review.
 
 ```text
 python -m digitization source.pdf
@@ -93,6 +120,12 @@ run one command from the project root:
 python -m digitization source/
 ```
 
+For the pip-only macOS backend:
+
+```text
+python -m digitization source/ --pdf-renderer pymupdf --ocr-engine macos-vision
+```
+
 The command automatically:
 
 1. requires one or more PDFs in `report/`;
@@ -101,28 +134,57 @@ The command automatically:
 4. processes code PDFs in numbered order using the `code` OCR profile;
 5. requires multi-part PDFs to be numbered continuously from `01` (`01`, `02`, `03`, ...), preventing an accidentally missing part from going unnoticed;
 6. collates all page results into **one `manuscript.md` at the project root**;
-7. preserves the originating PDF and page number for every page;
-8. keeps rendered source pages under the project-root `pages/` directory with collision-safe names;
-9. keeps report/code document boundaries as Markdown metadata rather than treating each PDF as a separate manuscript.
+7. creates VTR Press YAML front matter, defaulting the document type to `technical-document`;
+8. populates title/subtitle/author metadata only when the title page provides sufficiently recognizable evidence, leaving unknown metadata blank rather than inventing it;
+9. converts high-confidence numbered source headings to Markdown `#` / `##` / `###` / `####` headings and removes printed section numbers because VTR Press owns rendered numbering;
+10. validates the generated Markdown against the VTR Press manuscript contract before writing the final file;
+11. preserves the originating PDF and page number for every page;
+12. keeps rendered source pages under the project-root `pages/` directory with collision-safe names;
+13. keeps report/code document boundaries as Markdown metadata rather than treating each PDF as a separate manuscript.
 
 A single report PDF may use any filename because there is no sequence to validate. Once a source category contains multiple PDFs, each must carry a numeric suffix and the sequence must be continuous from `01`.
-
-For the college project, the three report PDFs and three source-code PDFs therefore become one reviewable manuscript without manually concatenating six OCR files. If the project contains only the report PDFs, the same command works without code sources.
 
 Useful options include:
 
 ```text
 --profile prose|layout|code
 --preprocess none|conservative
+--pdf-renderer pdftoppm|pymupdf
+--ocr-engine tesseract|macos-vision
 --include-source-images
 --work-dir <directory>
 ```
 
 The `--profile` option applies to a single-PDF input. Project source folders select `prose` for `report/` and `code` for `code/` automatically.
 
-The command writes the Markdown draft and copies rendered source pages into a sibling `pages/` directory so `source-image` references remain usable. It does not modify the input PDFs.
+The command writes the Markdown manuscript and copies rendered source pages into a sibling `pages/` directory so `source-image` references remain usable. It does not modify the input PDFs.
 
-### What the command produces
+## VTR Press manuscript compatibility
+
+Every generated manuscript now starts with YAML front matter matching the metadata contract consumed by the VTR Press reader. The default template is:
+
+```yaml
+---
+title: ""
+subtitle: ""
+author: ""
+type: "technical-document"
+edition: ""
+version: ""
+copyright_year: ""
+language: "en"
+---
+```
+
+Only metadata supported by evidence in the source is populated automatically. `type: technical-document` is the default for digitized technical material and can be changed manually to `book` when the resulting manuscript is intentionally published as a standard book.
+
+Digitization does **not** emit printed section numbering such as `1`, `1.1` or `1.1.1` in generated Markdown headings. It emits the heading hierarchy itself. VTR Press remains responsible for rendered numbering.
+
+The compatibility gate checks that front matter exists, required metadata keys exist, the default document type is valid, and generated headings do not contain printed numeric prefixes or exceed the supported four-level digitization hierarchy.
+
+This is deliberately a compatibility gate, not a claim of publication readiness. OCR fidelity, tables, diagrams and source code still require review against the scans.
+
+## What the command produces
 
 For a single input such as:
 
@@ -158,7 +220,7 @@ project/
 
 The Markdown contains page provenance and review metadata, allowing the manuscript to be checked back against the original scans. Layout-sensitive pages can optionally include their source image directly in the Markdown.
 
-This is the intended boundary: **PDF in → reviewable `manuscript.md` out**. Human review remains necessary before the manuscript is treated as publication-ready.
+This is the intended boundary: **PDF in → VTR Press-compatible, reviewable `manuscript.md` out**. Human review remains necessary before the manuscript is treated as publication-ready.
 
 ## Preprocessing policy
 
