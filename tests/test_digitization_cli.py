@@ -32,8 +32,8 @@ def test_cli_writes_markdown_and_source_pages(tmp_path: Path, monkeypatch, capsy
     assert cli.main([str(pdf), str(output), "--include-source-images"]) == 0
     text = output.read_text(encoding="utf-8")
     assert text.startswith("---\n")
-    assert "type: technical-document" in text
-    assert "title: \"TITLE\"" in text
+    assert 'title: ""' in text
+    assert 'type: "technical-document"' in text
     assert "<!-- source-document: source.pdf; profile: prose -->" in text
     assert "<!-- source: source.pdf; page: 1 -->" in text
     assert (tmp_path / "pages" / "01-source-page-1.png").is_file()
