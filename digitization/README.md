@@ -47,6 +47,7 @@ The current increment establishes the core, adapter-based pipeline:
 - `assets.py` — byte-preserving helper for copying rendered source-page images into a stable asset directory.
 - `review.py` — conservative review-marker generation for structure-sensitive pages and a small set of suspicious OCR glyph patterns.
 - `pipeline.py` — deterministic orchestration from PDF pages through preprocessing, OCR and structure classification, with page-level provenance and heading normalization.
+- `stats.py` — machine-readable timestamped run statistics, including per-document and per-page timing data.
 - `cli.py` / `__main__.py` — repeatable command-line PDF-to-Markdown workflow, including multi-PDF project-source batching and compatibility validation.
 - `MarkdownAssembler` — produces a reviewable Markdown draft with source-PDF/page markers, structure/confidence markers and review markers. It can optionally embed the original rendered page image for layout-heavy pages.
 
@@ -140,7 +141,8 @@ The command automatically:
 10. validates the generated Markdown against the VTR Press manuscript contract before writing the final file;
 11. preserves the originating PDF and page number for every page;
 12. keeps rendered source pages under the project-root `pages/` directory with collision-safe names;
-13. keeps report/code document boundaries as Markdown metadata rather than treating each PDF as a separate manuscript.
+13. keeps report/code document boundaries as Markdown metadata rather than treating each PDF as a separate manuscript;
+14. writes a timestamped JSON run record under `digitization/runs/` containing document totals, per-document timings and per-page timings.
 
 A single report PDF may use any filename because there is no sequence to validate. Once a source category contains multiple PDFs, each must carry a numeric suffix and the sequence must be continuous from `01`.
 
@@ -158,6 +160,20 @@ Useful options include:
 The `--profile` option applies to a single-PDF input. Project source folders select `prose` for `report/` and `code` for `code/` automatically.
 
 The command writes the Markdown manuscript and copies rendered source pages into a sibling `pages/` directory so `source-image` references remain usable. It does not modify the input PDFs.
+
+### Run statistics
+
+Each successful run writes a timestamped JSON file under the output project's `digitization/runs/` directory. The record contains:
+
+- run start/end timestamps;
+- source path and output manuscript;
+- renderer, OCR engine and preprocessing mode;
+- total document/page counts;
+- total and average run duration;
+- per-document start/end timestamps, duration and average page time;
+- individual page processing durations.
+
+The statistics are intended to make real-document performance measurable rather than relying on console output alone. They also provide the baseline needed to evaluate later OCR/rendering performance improvements.
 
 ## VTR Press manuscript compatibility
 
@@ -200,6 +216,9 @@ pages/
     01-old-report-page-1.png
     01-old-report-page-2.png
     ...
+digitization/
+    runs/
+        2026-09-17_11-42-18.json
 ```
 
 For a project source folder, the output is:
@@ -210,12 +229,15 @@ project/
 │   ├── report/
 │   └── code/
 ├── manuscript.md
-└── pages/
-    ├── 01-College-project-01-page-1.png
-    ├── 01-College-project-01-page-2.png
-    ├── ...
-    ├── 04-Code-01-page-1.png
-    └── ...
+├── pages/
+│   ├── 01-College-project-01-page-1.png
+│   ├── 01-College-project-01-page-2.png
+│   ├── ...
+│   ├── 04-Code-01-page-1.png
+│   └── ...
+└── digitization/
+    └── runs/
+        └── <run-timestamp>.json
 ```
 
 The Markdown contains page provenance and review metadata, allowing the manuscript to be checked back against the original scans. Layout-sensitive pages can optionally include their source image directly in the Markdown.
