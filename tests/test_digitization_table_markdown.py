@@ -3,7 +3,7 @@ from digitization.layout import VisualRegion
 from digitization.table_markdown import to_markdown_table
 
 
-def _table(rows: list[list[str]]) -> ExtractedTable:
+def _table(rows: list[list[str]], confidence: float | None = None) -> ExtractedTable:
     cells = []
     for row, values in enumerate(rows):
         for column, text in enumerate(values):
@@ -13,6 +13,7 @@ def _table(rows: list[list[str]]) -> ExtractedTable:
                     column=column,
                     region=VisualRegion("table-cell", column * 100, row * 100, (column + 1) * 100, (row + 1) * 100),
                     text=text,
+                    confidence=confidence,
                 )
             )
     return ExtractedTable(tuple(cells))
@@ -27,7 +28,7 @@ def test_table_markdown_requires_explicit_confidence_gate():
 
 def test_table_markdown_can_serialize_when_caller_sets_low_threshold():
     result = to_markdown_table(
-        _table([["Name", "Value"], ["A", "10"], ["B | C", "20"]]),
+        _table([["Name", "Value"], ["A", "10"], ["B | C", "20"]], confidence=0.72),
         minimum_confidence=0.70,
     )
     assert result.publishable is True
@@ -40,7 +41,7 @@ def test_table_markdown_can_serialize_when_caller_sets_low_threshold():
 
 
 def test_table_markdown_rejects_incomplete_cells():
-    result = to_markdown_table(_table([["Name", "Value"], ["A", ""]]), minimum_confidence=0.0)
+    result = to_markdown_table(_table([["Name", "Value"], ["A", ""]], confidence=0.95), minimum_confidence=0.0)
     assert result.publishable is False
     assert result.markdown is None
     assert "table-incomplete-cells" in result.reasons
