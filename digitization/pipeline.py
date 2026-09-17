@@ -10,6 +10,7 @@ from .compatibility import normalize_ocr_headings
 from .layout import VisualAnalysis, analyze_page
 from .review import build_review_markers
 from .structure import PageStructure, StructureClassification, classify_structure
+from .visual_extract import extract_visual_candidates
 
 
 class PageRenderer(Protocol):
@@ -44,6 +45,7 @@ class PageOCR:
     source_image: Path | None = None
     review_markers: tuple[str, ...] = ()
     visual_analysis: VisualAnalysis | None = None
+    visual_assets: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -89,6 +91,9 @@ class MarkdownAssembler:
                     f"<!-- visual-structure: {','.join(signals) or 'unknown'}; "
                     f"confidence: {visual.confidence:.2f}; reasons: {','.join(visual.reasons)} -->"
                 )
+            for asset in page.visual_assets:
+                blocks.append(f"<!-- visual-candidate: {asset}; review: required -->")
+                blocks.append(f"![Visual candidate]({asset})")
             for marker in page.review_markers:
                 blocks.append(f"<!-- review-marker: {marker} -->")
 
@@ -123,12 +128,14 @@ class DigitizationPipeline:
         preprocessor: ImagePreprocessor | None = None,
         classifier: StructureClassifier | None = classify_structure,
         visual_analyzer: Callable[[str | Path], VisualAnalysis] | None = analyze_page,
+        visual_extractor: Callable[..., tuple] | None = extract_visual_candidates,
     ):
         self.renderer = renderer
         self.ocr = ocr
         self.preprocessor = preprocessor
         self.classifier = classifier
         self.visual_analyzer = visual_analyzer
+        self.visual_extractor = visual_extractor
 
     def run(self, pdf: str | Path, work_dir: str | Path, *, progress_callback: ProgressCallback | None = None) -> DigitizationResult:
         source_pdf = Path(pdf)
@@ -138,6 +145,7 @@ class DigitizationPipeline:
         root = Path(work_dir)
         pages_dir = root / "pages"
         processed_dir = root / "processed"
+        visuals_dir = root / "visuals"
         images = self.renderer.render(source_pdf, pages_dir)
 
         page_results: list[PageOCR] = []
@@ -149,6 +157,14 @@ class DigitizationPipeline:
             text = self.ocr.ocr_image(ocr_image)
             classification = self.classifier(text) if self.classifier is not None else None
             visual = self.visual_analyzer(source_image) if self.visual_analyzer is not None else None
+            visual_assets: tuple[str, ...] = ()
+            if visual is not None and self.visual_extractor is not None and visual.reasons:
+                page_visual_dir = visuals_dir / f"page-{page_number:03d}"
+                regions = self.visual_extractor(source_image, visual, page_visual_dir)
+                visual_assets = tuple(
+                    str(path.relative_to(root))
+                    for path in sorted(page_visual_dir.glob("*.png"))
+                ) if regions else ()
             review_markers = build_review_markers(text, classification, visual)
             page_results.append(PageOCR(
                 source_pdf=source_pdf,
@@ -160,6 +176,7 @@ class DigitizationPipeline:
                 source_image=source_image,
                 review_markers=review_markers,
                 visual_analysis=visual,
+                visual_assets=visual_assets,
             ))
             if progress_callback is not None:
                 progress_callback(page_number, len(images), 0.0)
