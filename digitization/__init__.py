@@ -6,6 +6,7 @@ from .ocr import OCRConfig, OCR_PROFILES, TesseractOCR, get_ocr_profile
 from .preprocess import PassthroughPreprocessor, PillowPreprocessor, PreprocessConfig
 from .review import build_review_markers
 from .structure import PageStructure, StructureClassification, classify_structure
+from .table import ExtractedTable, TableCell, extract_table_cells
 
 __all__ = [
     "OCRConfig",
@@ -22,6 +23,9 @@ __all__ = [
     "TableGrid",
     "VisualAnalysis",
     "analyze_page",
+    "TableCell",
+    "ExtractedTable",
+    "extract_table_cells",
     "preserve_page_image",
     "build_review_markers",
 ]
