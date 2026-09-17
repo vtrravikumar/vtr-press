@@ -10,7 +10,14 @@ import re
 import shutil
 import time
 
-from .combined import ProfileRoutingOCR, combine_pdfs, remap_result_pages, split_page_durations
+from .combined import (
+    ProfileRoutingOCR,
+    combine_pdfs,
+    combined_cache_valid,
+    load_cached_segments,
+    remap_result_pages,
+    split_page_durations,
+)
 from .compatibility import build_front_matter, extract_metadata, validate_vtr_press_markdown
 from .ocr import TesseractOCR, get_ocr_profile
 from .pdf import PdftoppmRenderer
@@ -29,7 +36,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pdf-renderer", choices=("pdftoppm", "pymupdf"), default="pdftoppm", help="PDF rendering backend")
     parser.add_argument("--ocr-engine", choices=("tesseract", "macos-vision"), default="tesseract", help="OCR backend")
     parser.add_argument("--include-source-images", action="store_true", help="embed source images for layout-classified pages")
-    parser.add_argument("--combine-sources", action="store_true", help="combine all source PDFs into one temporary PDF and process them in one sequential session (requires pymupdf)")
+    parser.add_argument("--combine-sources", action="store_true", help="combine all source PDFs into a persistent cached PDF and process them in one sequential session (requires pymupdf)")
+    parser.add_argument("--rebuild-combined", action="store_true", help="force regeneration of the cached combined PDF")
     return parser
 
 
@@ -112,12 +120,9 @@ def _timestamp_after(started_at: str, seconds: float) -> str:
     return timestamp.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
-def _build_combined_ocr(engine: str, segments) -> ProfileRoutingOCR:
+def _build_combined_ocr(engine: str, segments):
     profiles = tuple(dict.fromkeys(segment.profile for segment in segments))
     if engine == "macos-vision":
-        # Vision does not use Tesseract-style PSM profiles, so one adapter is
-        # shared for every logical source segment. This preserves one OCR
-        # request/session while retaining profile labels in provenance.
         shared = _build_ocr(engine, "prose")
         engines = {profile: shared for profile in profiles}
     else:
@@ -127,6 +132,8 @@ def _build_combined_ocr(engine: str, segments) -> ProfileRoutingOCR:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.rebuild_combined and not args.combine_sources:
+        raise SystemExit("--rebuild-combined requires --combine-sources")
     input_path = args.input.resolve()
     if not input_path.exists():
         raise SystemExit(f"Input not found: {input_path}")
@@ -161,12 +168,19 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Preprocessing: {args.preprocess}")
 
     if args.combine_sources:
-        combined_pdf = work_root / "combined-source.pdf"
-        try:
-            combined_pdf, segments = combine_pdfs(sources, combined_pdf)
-        except RuntimeError as exc:
-            raise SystemExit(str(exc)) from exc
-        print("Source PDFs: combined into one temporary PDF")
+        cache_dir = input_path / "combined"
+        combined_pdf = cache_dir / "source.pdf"
+        manifest_path = cache_dir / "manifest.json"
+        cache_valid = (not args.rebuild_combined) and combined_cache_valid(combined_pdf, manifest_path, sources)
+        if cache_valid:
+            segments = load_cached_segments(manifest_path, sources)
+            print(f"Source PDFs: using cached combined PDF {combined_pdf}")
+        else:
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            print("Source PDFs: building cached combined PDF...")
+            combine_start = time.monotonic()
+            combined_pdf, segments = combine_pdfs(sources, combined_pdf, manifest_path)
+            print(f"Source PDFs: combined in {_format_duration(time.monotonic() - combine_start)} -> {combined_pdf}")
         print("OCR session: single sequential session with profile routing")
         print()
         combined_work = work_root / "combined-run"
@@ -177,16 +191,21 @@ def main(argv: list[str] | None = None) -> int:
         combined_start = time.monotonic()
         page_started = combined_start
         page_durations = []
+        recent_durations: list[float] = []
 
         def report_progress(page_number: int, total_pages: int, _unused: float) -> None:
             nonlocal page_started
             now = time.monotonic()
-            page_durations.append(now - page_started)
+            duration = now - page_started
+            page_durations.append(duration)
+            recent_durations.append(duration)
+            if len(recent_durations) > 10:
+                recent_durations.pop(0)
             page_started = now
             elapsed = now - combined_start
-            average = elapsed / page_number
-            remaining = max(0.0, average * (total_pages - page_number))
-            print(f"[{page_number:>3}/{total_pages}] OCR complete ({elapsed / page_number:.1f}s/page) | elapsed {_format_duration(elapsed)} | ETA ~{_format_duration(remaining)}")
+            rate = sum(recent_durations) / len(recent_durations)
+            remaining = rate * (total_pages - page_number)
+            print(f"[{page_number:>3}/{total_pages}] OCR complete ({duration:.1f}s/page; recent {rate:.1f}s/page) | elapsed {_format_duration(elapsed)} | ETA ~{_format_duration(remaining)}")
 
         combined_result = pipeline.run(combined_pdf, combined_work, progress_callback=report_progress)
         remapped_pages = remap_result_pages(combined_result, segments)
@@ -228,9 +247,9 @@ def main(argv: list[str] | None = None) -> int:
                 page_durations.append(now - page_started)
                 page_started = now
                 elapsed = now - source_start
-                average = elapsed / page_number
-                remaining = max(0.0, average * (total_pages - page_number))
-                print(f"[{page_number:>2}/{total_pages}] OCR complete ({elapsed / page_number:.1f}s/page) | elapsed {_format_duration(elapsed)} | ETA ~{_format_duration(remaining)}")
+                recent = sum(page_durations[-10:]) / len(page_durations[-10:])
+                remaining = recent * (total_pages - page_number)
+                print(f"[{page_number:>2}/{total_pages}] OCR complete ({page_durations[-1]:.1f}s/page; recent {recent:.1f}s/page) | elapsed {_format_duration(elapsed)} | ETA ~{_format_duration(remaining)}")
 
             result = _copy_source_pages(pipeline.run(pdf, source_work, progress_callback=report_progress), output_pages, source_index)
             source_duration = time.monotonic() - source_start
