@@ -1,3 +1,4 @@
+from digitization.layout import VisualAnalysis
 from digitization.review import build_review_markers
 from digitization.structure import PageStructure, StructureClassification
 
@@ -21,6 +22,26 @@ def test_low_confidence_non_prose_is_marked():
     assert build_review_markers("TITLE", classification) == (
         "layout-visual-verification",
         "low-structure-confidence",
+    )
+
+
+def test_visual_table_requires_verification():
+    visual = VisualAnalysis(table_likely=True, confidence=0.75, reasons=("ruled-grid-signals",))
+    assert build_review_markers("row one", None, visual) == (
+        "table-visual-verification",
+    )
+
+
+def test_visual_diagram_and_figure_markers_are_distinct():
+    visual = VisualAnalysis(
+        diagram_likely=True,
+        figure_likely=True,
+        confidence=0.7,
+        reasons=("line-structure-signals", "non-text-visual-density"),
+    )
+    assert build_review_markers("visual page", None, visual) == (
+        "diagram-visual-verification",
+        "figure-visual-verification",
     )
 
 
