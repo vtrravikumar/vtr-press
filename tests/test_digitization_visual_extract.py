@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from digitization.layout import VisualAnalysis, VisualRegion
+from digitization.layout import TableGrid, VisualAnalysis, VisualRegion
 from digitization.visual_extract import extract_visual_candidates
 
 
@@ -20,9 +20,7 @@ def test_extracts_table_region_and_cells(tmp_path: Path) -> None:
         table_likely=True,
         confidence=0.8,
         regions=(VisualRegion("table", 100, 80, 401, 321, 0.8),),
-        table_grid=__import__("digitization.layout", fromlist=["TableGrid"]).TableGrid(
-            columns=(100, 250, 400), rows=(80, 160, 240, 320)
-        ),
+        table_grid=TableGrid(columns=(100, 250, 400), rows=(80, 160, 240, 320)),
     )
     output = tmp_path / "assets"
     regions = extract_visual_candidates(image_path, analysis, output)
