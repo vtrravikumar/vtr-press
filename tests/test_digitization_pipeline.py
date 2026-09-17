@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from digitization.pipeline import DigitizationPipeline, MarkdownAssembler
+from digitization.structure import PageStructure
 
 
 class FakeRenderer:
@@ -30,6 +31,7 @@ def test_pipeline_preserves_page_provenance(tmp_path: Path):
         "OCR for page-1.png",
         "OCR for page-2.png",
     ]
+    assert all(page.structure is PageStructure.PROSE for page in result.pages)
 
 
 def test_pipeline_can_assemble_traceable_markdown(tmp_path: Path):
@@ -42,8 +44,20 @@ def test_pipeline_can_assemble_traceable_markdown(tmp_path: Path):
 
     assert "<!-- source: source.pdf; page: 1 -->" in markdown
     assert "<!-- source: source.pdf; page: 2 -->" in markdown
+    assert "<!-- structure: prose; confidence: 0.50 -->" in markdown
     assert "OCR for page-1.png" in markdown
     assert "OCR for page-2.png" in markdown
+
+
+def test_pipeline_allows_classification_to_be_disabled(tmp_path: Path):
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+
+    result = DigitizationPipeline(
+        FakeRenderer(), FakeOCR(), classifier=None
+    ).run(pdf, tmp_path / "work")
+
+    assert all(page.structure is None for page in result.pages)
 
 
 def test_markdown_assembler_does_not_modify_ocr_text():
