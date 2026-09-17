@@ -4,7 +4,7 @@ Current milestone: **v2.0 architecture complete**
 
 Branch: `main`
 
-Status: **Post-v2 development baseline**
+Status: **Post-v2 development baseline — digitization in progress**
 
 ## Current State
 
@@ -33,9 +33,13 @@ Stable capabilities include:
 
 ## Architecture
 
-The production pipeline is:
+The production publishing pipeline remains:
 
 `Manuscript → Parser → Generic Document Model → Interpretation → Common Typst / Common EPUB → Book / Technical renderers → PDF / EPUB`
+
+Digitization is an upstream acquisition layer:
+
+`Scanned source → page rendering → preprocessing → OCR → structure classification → reviewable Markdown → publishing pipeline`
 
 The proven Book publishing path is retained where Book-specific structures remain useful. This is intentional and is not considered incomplete migration work.
 
@@ -45,25 +49,47 @@ The proven Book publishing path is retained where Book-specific structures remai
 - `main` is the current development baseline.
 - Technical-document publishing is operational through the generic pipeline.
 - Markdown tables are implemented as native tables in technical Typst and EPUB output.
-- Current work is incremental publishing-platform evolution, not further architectural migration.
-- The latest repository work is focused on theme and print-layout refinement.
+- Digitization now has PDF rendering, OCR, conservative preprocessing, page provenance, structure classification and code-safe review handling.
+- Real scanned college-project validation has been completed, including controlled preprocessing comparison.
+- The digitization work remains incremental and is not yet considered a complete production CLI/API feature.
 
-## Next
+## Active Work — BL-012
 
-The engineering backlog is intentionally at the post-v2 feature stage.
+**Document Digitization / OCR Pipeline — P1, candidate for v2.2**
 
-When feature work resumes, the leading candidates are:
+Completed in the current increment:
 
-1. BL-001 — Simplify Manuscript Discovery and Publishing Input
-2. BL-003 — Cross References
-3. BL-004 — Image Captions
-4. BL-005 — Language-aware syntax highlighting
-5. BL-002 — Markdown Compatibility
+1. PDF/page rendering adapter
+2. Tesseract OCR adapter and OCR profiles
+3. Conservative preprocessing
+4. Page-level provenance
+5. `prose` / `code` / `layout` classification with bounded confidence
+6. Code-safe Markdown review treatment
+7. Regression fixtures for broad structure classification
+8. Real-document validation documentation
 
-No current architectural rewrite is planned.
+Remaining:
+
+1. Table/figure preservation and extraction strategy
+2. Expanded review/confidence markers
+3. Stronger real-image regression fixtures
+4. Practical end-to-end CLI/API workflow
+5. Validation against the second document case
+6. Final production-readiness review
+
+## Other Backlog Candidates
+
+After digitization work reaches a stable handover point, the broader post-v2 backlog remains available, including:
+
+- BL-001 — Simplify Manuscript Discovery and Publishing Input
+- BL-003 — Cross References
+- BL-004 — Image Captions
+- BL-005 — Language-aware syntax highlighting
+- BL-002 — Markdown Compatibility
+- BL-011 — Multiple Authors / Author Metadata (v2.1)
+
+No architectural rewrite is planned.
 
 ## Validation
 
-GitHub Actions runs the regression suite on pushes and pull requests.
-
-The repository status should remain synchronized with the implementation, engineering plan, roadmap, and backlog.
+GitHub Actions runs the regression suite on pushes and pull requests. The repository status should remain synchronized with the implementation, engineering plan, roadmap, and backlog.
