@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from PIL import Image
+
 from digitization import cli
 
 
@@ -8,7 +10,7 @@ class FakeRenderer:
         output = Path(output_dir)
         output.mkdir(parents=True, exist_ok=True)
         page = output / "page-1.png"
-        page.write_bytes(b"page")
+        Image.new("RGB", (16, 16), "white").save(page, format="PNG")
         return [page]
 
 
@@ -34,7 +36,7 @@ def test_cli_writes_markdown_and_source_pages(tmp_path: Path, monkeypatch):
         "<!-- source: source.pdf; page: 1 -->"
     )
     assert "![Source page 1](pages/page-1.png)" in output.read_text(encoding="utf-8")
-    assert (tmp_path / "pages" / "page-1.png").read_bytes() == b"page"
+    assert (tmp_path / "pages" / "page-1.png").is_file()
 
 
 def test_cli_supports_passthrough_preprocessing(tmp_path: Path, monkeypatch):
