@@ -64,10 +64,12 @@ class MarkdownAssembler:
         include_source_images: bool = False,
         source_image_prefix: str = "pages",
         image_structures: tuple[PageStructure, ...] = (PageStructure.LAYOUT,),
+        visual_asset_prefix: str = "assets",
     ):
         self.include_source_images = include_source_images
         self.source_image_prefix = source_image_prefix.strip("/")
         self.image_structures = image_structures
+        self.visual_asset_prefix = visual_asset_prefix.strip("/")
 
     def assemble(self, result: DigitizationResult) -> str:
         blocks: list[str] = []
@@ -92,8 +94,9 @@ class MarkdownAssembler:
                     f"confidence: {visual.confidence:.2f}; reasons: {','.join(visual.reasons)} -->"
                 )
             for asset in page.visual_assets:
-                blocks.append(f"<!-- visual-candidate: {asset}; review: required -->")
-                blocks.append(f"![Visual candidate]({asset})")
+                reference = f"{self.visual_asset_prefix}/{asset}" if self.visual_asset_prefix else asset
+                blocks.append(f"<!-- visual-candidate: {reference}; review: required -->")
+                blocks.append(f"![Visual candidate]({reference})")
             for marker in page.review_markers:
                 blocks.append(f"<!-- review-marker: {marker} -->")
 
@@ -145,7 +148,7 @@ class DigitizationPipeline:
         root = Path(work_dir)
         pages_dir = root / "pages"
         processed_dir = root / "processed"
-        visuals_dir = root / "visuals"
+        visuals_dir = root / "visuals" / source_pdf.stem
         images = self.renderer.render(source_pdf, pages_dir)
 
         page_results: list[PageOCR] = []
@@ -162,7 +165,7 @@ class DigitizationPipeline:
                 page_visual_dir = visuals_dir / f"page-{page_number:03d}"
                 regions = self.visual_extractor(source_image, visual, page_visual_dir)
                 visual_assets = tuple(
-                    str(path.relative_to(root))
+                    str(path.relative_to(root)).replace("\\", "/")
                     for path in sorted(page_visual_dir.glob("*.png"))
                 ) if regions else ()
             review_markers = build_review_markers(text, classification, visual)
