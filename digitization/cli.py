@@ -24,14 +24,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "input",
         type=Path,
-        help="input PDF or source folder containing report/ and code/ folders",
+        help="input PDF or source folder containing report/ and optional code/ folders",
     )
     parser.add_argument(
         "output",
         type=Path,
         nargs="?",
         default=None,
-        help="output Markdown file (default: manuscript.md beside the input)",
+        help="output Markdown file (default: manuscript.md one level above a source folder, or beside a PDF)",
     )
     parser.add_argument("--work-dir", type=Path, help="working directory for rendered pages")
     parser.add_argument(
@@ -54,27 +54,56 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _discover_sources(source_dir: Path) -> list[tuple[Path, str]]:
-    """Discover report and source-code PDFs in a standard project source tree."""
+def _numbered_sort_key(path: Path) -> tuple[int, str]:
+    """Sort PDFs by the final numeric component, with name as a tiebreaker."""
+    match = re.search(r"(?:^|[-_ ])(\d+)(?=\.pdf$)", path.name, re.IGNORECASE)
+    return (int(match.group(1)) if match else 10**9, path.name.lower())
 
+
+def _ordered_pdfs(directory: Path, kind: str, *, required: bool) -> list[Path]:
+    """Return PDFs in numbered order and reject gaps in multi-part inputs."""
+    pdfs = sorted(
+        (p for p in directory.iterdir() if p.is_file() and p.suffix.lower() == ".pdf"),
+        key=_numbered_sort_key,
+    )
+    if not pdfs:
+        if required:
+            raise SystemExit(f"No PDF files found in {kind} source folder: {directory}")
+        return []
+
+    numbered = []
+    unnumbered = []
+    for pdf in pdfs:
+        match = re.search(r"(?:^|[-_ ])(\d+)(?=\.pdf$)", pdf.name, re.IGNORECASE)
+        (numbered if match else unnumbered).append((pdf, int(match.group(1)) if match else 0))
+
+    if len(pdfs) == 1:
+        return pdfs
+    if unnumbered:
+        names = ", ".join(p.name for p, _ in unnumbered)
+        raise SystemExit(
+            f"Multiple {kind} PDFs must be numbered 01, 02, 03, ...; unnumbered: {names}"
+        )
+
+    numbers = [number for _, number in numbered]
+    expected = list(range(1, len(numbers) + 1))
+    if numbers != expected:
+        raise SystemExit(
+            f"{kind} PDF sequence must be continuous starting at 01; found: "
+            + ", ".join(f"{number:02d}" for number in numbers)
+        )
+    return pdfs
+
+
+def _discover_sources(source_dir: Path) -> list[tuple[Path, str]]:
+    """Discover report PDFs and optional code PDFs in a standard source tree."""
     report_dir = source_dir / "report"
     code_dir = source_dir / "code"
     if not report_dir.is_dir():
         raise SystemExit(f"Report source folder not found: {report_dir}")
-    if not code_dir.is_dir():
-        raise SystemExit(f"Code source folder not found: {code_dir}")
 
-    report_pdfs = sorted(
-        p for p in report_dir.iterdir() if p.is_file() and p.suffix.lower() == ".pdf"
-    )
-    code_pdfs = sorted(
-        p for p in code_dir.iterdir() if p.is_file() and p.suffix.lower() == ".pdf"
-    )
-    if not report_pdfs:
-        raise SystemExit(f"No PDF files found in report source folder: {report_dir}")
-    if not code_pdfs:
-        raise SystemExit(f"No PDF files found in code source folder: {code_dir}")
-
+    report_pdfs = _ordered_pdfs(report_dir, "report", required=True)
+    code_pdfs = _ordered_pdfs(code_dir, "code", required=False) if code_dir.is_dir() else []
     return [(pdf, "prose") for pdf in report_pdfs] + [(pdf, "code") for pdf in code_pdfs]
 
 
@@ -88,7 +117,6 @@ def _copy_source_pages(
     source_index: int,
 ) -> DigitizationResult:
     """Copy rendered pages with collision-safe names and update provenance paths."""
-
     output_pages.mkdir(parents=True, exist_ok=True)
     updated_pages = []
     prefix = f"{source_index:02d}-{_safe_stem(result.source_pdf.stem)}"
@@ -107,14 +135,13 @@ def _build_preprocessor(mode: str):
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-
     input_path = args.input.resolve()
     if not input_path.exists():
         raise SystemExit(f"Input not found: {input_path}")
 
     if input_path.is_dir():
         sources = _discover_sources(input_path)
-        default_output_dir = input_path
+        default_output_dir = input_path.parent
     else:
         if input_path.suffix.lower() != ".pdf":
             raise SystemExit(f"Input must be a PDF or source folder: {input_path}")
@@ -140,7 +167,6 @@ def main(argv: list[str] | None = None) -> int:
         pipeline = DigitizationPipeline(renderer, ocr, preprocessor=preprocessor)
         result = pipeline.run(pdf, source_work)
         result = _copy_source_pages(result, output_pages, source_index)
-
         manuscript_parts.append(
             f"<!-- source-document: {pdf.name}; profile: {profile} -->\n"
             + assembler.assemble(result).rstrip()
@@ -148,7 +174,6 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Processed {pdf.name} ({profile}, {len(result.pages)} pages)")
 
     output.write_text("\n\n".join(manuscript_parts) + "\n", encoding="utf-8")
-
     print(f"Wrote Markdown: {output}")
     print(f"Source pages:   {output_pages}")
     print(f"Documents:      {len(sources)}")
