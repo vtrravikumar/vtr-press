@@ -14,6 +14,7 @@ from .ocr import TesseractOCR, get_ocr_profile
 from .pdf import PdftoppmRenderer
 from .pipeline import DigitizationPipeline, DigitizationResult, MarkdownAssembler
 from .preprocess import PassthroughPreprocessor, PillowPreprocessor, PreprocessConfig
+from .stats import DocumentStats, RunStats, utc_timestamp, write_run_stats
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -194,8 +195,10 @@ def main(argv: list[str] | None = None) -> int:
     preprocessor = _build_preprocessor(args.preprocess)
     assembler = MarkdownAssembler(include_source_images=args.include_source_images)
     manuscript_parts: list[str] = []
+    document_stats: list[DocumentStats] = []
     first_report_page_text: str | None = None
     overall_start = time.monotonic()
+    run_started_at = utc_timestamp()
 
     print("VTR Press — Document Digitization")
     print(f"Source: {input_path}")
@@ -213,9 +216,16 @@ def main(argv: list[str] | None = None) -> int:
         ocr = _build_ocr(args.ocr_engine, profile)
         pipeline = DigitizationPipeline(renderer, ocr, preprocessor=preprocessor)
         source_start = time.monotonic()
+        source_started_at = utc_timestamp()
+        page_started = source_start
+        page_durations: list[float] = []
 
         def report_progress(page_number: int, total_pages: int, _unused: float) -> None:
-            elapsed = time.monotonic() - source_start
+            nonlocal page_started
+            now = time.monotonic()
+            page_durations.append(now - page_started)
+            page_started = now
+            elapsed = now - source_start
             average = elapsed / page_number
             remaining = max(0.0, average * (total_pages - page_number))
             print(
@@ -227,6 +237,8 @@ def main(argv: list[str] | None = None) -> int:
 
         result = pipeline.run(pdf, source_work, progress_callback=report_progress)
         result = _copy_source_pages(result, output_pages, source_index)
+        source_duration = time.monotonic() - source_start
+        source_ended_at = utc_timestamp()
         if first_report_page_text is None and profile == "prose" and result.pages:
             first_report_page_text = result.pages[0].text
 
@@ -234,9 +246,23 @@ def main(argv: list[str] | None = None) -> int:
             f"<!-- source-document: {pdf.name}; profile: {profile} -->\n"
             + assembler.assemble(result).rstrip()
         )
+        document_stats.append(
+            DocumentStats(
+                filename=pdf.name,
+                profile=profile,
+                pages=len(result.pages),
+                started_at=source_started_at,
+                ended_at=source_ended_at,
+                duration_seconds=round(source_duration, 3),
+                average_seconds_per_page=round(source_duration / len(result.pages), 3)
+                if result.pages
+                else 0.0,
+                page_durations_seconds=[round(value, 3) for value in page_durations],
+            )
+        )
         print(
             f"Completed {pdf.name}: {len(result.pages)} pages in "
-            f"{_format_duration(time.monotonic() - source_start)}"
+            f"{_format_duration(source_duration)}"
         )
         print()
 
@@ -248,10 +274,29 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("VTR Press manuscript compatibility check failed:\n- " + "\n- ".join(errors))
 
     output.write_text(manuscript, encoding="utf-8")
+    total_duration = time.monotonic() - overall_start
+    total_pages = sum(item.pages for item in document_stats)
+    stats = RunStats(
+        run_started_at=run_started_at,
+        run_ended_at=utc_timestamp(),
+        source=str(input_path),
+        document_count=len(document_stats),
+        total_pages=total_pages,
+        renderer=args.pdf_renderer,
+        ocr_engine=args.ocr_engine,
+        preprocessing=args.preprocess,
+        output_manuscript=str(output),
+        total_duration_seconds=round(total_duration, 3),
+        average_seconds_per_page=round(total_duration / total_pages, 3) if total_pages else 0.0,
+        documents=document_stats,
+    )
+    stats_path = write_run_stats(stats, output.parent / "digitization" / "runs")
+
     print(f"Wrote Markdown: {output}")
     print(f"Source pages:   {output_pages}")
+    print(f"Run statistics: {stats_path}")
     print(f"Documents:      {len(sources)}")
-    print(f"Elapsed:        {_format_duration(time.monotonic() - overall_start)}")
+    print(f"Elapsed:        {_format_duration(total_duration)}")
     print("VTR Press compatibility: OK")
     return 0
 
