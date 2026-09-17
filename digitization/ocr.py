@@ -18,12 +18,36 @@ class OCRConfig:
     """Configuration passed to an OCR engine.
 
     ``language`` and ``psm`` map directly to Tesseract concepts, but the
-    surrounding pipeline should depend only on this configuration object.
+    surrounding pipeline depends only on this configuration object.
     """
 
     language: str = "eng"
     psm: int | None = None
     extra_args: tuple[str, ...] = field(default_factory=tuple)
+
+
+# Conservative starting profiles for the document classes observed during
+# real scanned-document validation. They are configuration presets only;
+# structure classification belongs to a later digitization layer.
+OCR_PROFILES: dict[str, OCRConfig] = {
+    "prose": OCRConfig(psm=6),
+    "layout": OCRConfig(psm=11),
+    "code": OCRConfig(psm=6),
+}
+
+
+def get_ocr_profile(name: str) -> OCRConfig:
+    """Return a named OCR profile configuration.
+
+    The returned configuration is immutable. Unknown profile names fail early
+    so a typo cannot silently select an unsuitable OCR strategy.
+    """
+
+    try:
+        return OCR_PROFILES[name]
+    except KeyError as exc:
+        available = ", ".join(sorted(OCR_PROFILES))
+        raise ValueError(f"unknown OCR profile {name!r}; choose from: {available}") from exc
 
 
 class TesseractOCR:
