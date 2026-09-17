@@ -59,7 +59,13 @@ VTR Press does not prescribe how Tesseract or Poppler are installed. A future re
 
 ## Command-line workflow
 
-The digitization module can be invoked directly:
+The normal user-facing workflow is intentionally simple: provide a source PDF and get a `manuscript.md` draft plus the rendered source pages used for review.
+
+```text
+python -m digitization source.pdf
+```
+
+This writes `manuscript.md` in the current directory. An explicit output path is also supported:
 
 ```text
 python -m digitization source.pdf manuscript.md
@@ -77,6 +83,28 @@ Useful options include:
 The command writes the Markdown draft and copies rendered source pages into a sibling `pages/` directory so `source-image` references remain usable. It does not modify the input PDF.
 
 The OCR profile is an explicit acquisition choice. Automatic structure classification happens after OCR and is not used to pretend that a single OCR pass can perfectly recover every page type.
+
+### What the command produces
+
+For an input such as:
+
+```text
+old-report.pdf
+```
+
+the default workflow produces:
+
+```text
+manuscript.md
+pages/
+    page-1.png
+    page-2.png
+    ...
+```
+
+The Markdown contains page provenance and review metadata, allowing the manuscript to be checked back against the source pages. Layout-sensitive pages can optionally include their source image directly in the Markdown.
+
+This is the intended boundary: **PDF in → reviewable `manuscript.md` out**. Human review remains necessary before the manuscript is treated as publication-ready.
 
 ## Preprocessing policy
 
