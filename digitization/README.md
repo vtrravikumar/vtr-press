@@ -42,7 +42,7 @@ The current increment establishes the core, adapter-based pipeline:
 - `assets.py` — byte-preserving helper for copying rendered source-page images into a stable asset directory.
 - `review.py` — conservative review-marker generation for structure-sensitive pages and a small set of suspicious OCR glyph patterns.
 - `pipeline.py` — deterministic orchestration from PDF pages through preprocessing, OCR and optional structure classification, with page-level provenance.
-- `cli.py` / `__main__.py` — repeatable command-line PDF-to-Markdown workflow.
+- `cli.py` / `__main__.py` — repeatable command-line PDF-to-Markdown workflow, including multi-PDF project-source batching.
 - `MarkdownAssembler` — produces a reviewable Markdown draft with source-PDF/page markers, structure/confidence markers and review markers. It can optionally embed the original rendered page image for layout-heavy pages.
 
 Structure classification is deliberately conservative. It is a page-level routing and review aid, not a claim that OCR text can reconstruct tables or diagrams. Those require image/layout-aware handling in later increments.
@@ -65,11 +65,44 @@ The normal user-facing workflow is intentionally simple: provide a source PDF an
 python -m digitization source.pdf
 ```
 
-This writes `manuscript.md` in the current directory. An explicit output path is also supported:
+This writes `manuscript.md` beside the input PDF. An explicit output path is also supported:
 
 ```text
 python -m digitization source.pdf manuscript.md
 ```
+
+### Project source-folder workflow
+
+For a digitized project whose source material is organized as:
+
+```text
+source/
+├── report/
+│   ├── College-project-01.pdf
+│   ├── College-project-02.pdf
+│   └── College-project-03.pdf
+└── code/
+    ├── Code-01.pdf
+    ├── Code-02.pdf
+    └── Code-03.pdf
+```
+
+run one command:
+
+```text
+python -m digitization source/
+```
+
+The command automatically:
+
+1. processes all PDFs in `report/` in filename order using the `prose` OCR profile;
+2. processes all PDFs in `code/` in filename order using the `code` OCR profile;
+3. collates all page results into **one** `source/manuscript.md`;
+4. preserves the originating PDF and page number for every page;
+5. keeps rendered source pages under `source/pages/` with collision-safe names;
+6. keeps report/code document boundaries as Markdown metadata rather than treating each PDF as a separate manuscript.
+
+For the college project this means the three report PDFs and three source-code PDFs become one reviewable manuscript without manually concatenating six OCR files.
 
 Useful options include:
 
@@ -80,13 +113,15 @@ Useful options include:
 --work-dir <directory>
 ```
 
-The command writes the Markdown draft and copies rendered source pages into a sibling `pages/` directory so `source-image` references remain usable. It does not modify the input PDF.
+The `--profile` option applies to a single-PDF input. Project source folders select `prose` for `report/` and `code` for `code/` automatically.
+
+The command writes the Markdown draft and copies rendered source pages into a sibling `pages/` directory so `source-image` references remain usable. It does not modify the input PDFs.
 
 The OCR profile is an explicit acquisition choice. Automatic structure classification happens after OCR and is not used to pretend that a single OCR pass can perfectly recover every page type.
 
 ### What the command produces
 
-For an input such as:
+For a single input such as:
 
 ```text
 old-report.pdf
@@ -97,12 +132,27 @@ the default workflow produces:
 ```text
 manuscript.md
 pages/
-    page-1.png
-    page-2.png
+    01-old-report-page-1.png
+    01-old-report-page-2.png
     ...
 ```
 
-The Markdown contains page provenance and review metadata, allowing the manuscript to be checked back against the source pages. Layout-sensitive pages can optionally include their source image directly in the Markdown.
+For a project source folder, the output is:
+
+```text
+source/
+├── report/
+├── code/
+├── manuscript.md
+└── pages/
+    ├── 01-College-project-01-page-1.png
+    ├── 01-College-project-01-page-2.png
+    ├── ...
+    ├── 04-Code-01-page-1.png
+    └── ...
+```
+
+The Markdown contains page provenance and review metadata, allowing the manuscript to be checked back against the original scans. Layout-sensitive pages can optionally include their source image directly in the Markdown.
 
 This is the intended boundary: **PDF in → reviewable `manuscript.md` out**. Human review remains necessary before the manuscript is treated as publication-ready.
 
