@@ -19,6 +19,11 @@ class FakeOCR:
         return f"OCR for {Path(image).name}"
 
 
+class CodeOCR:
+    def ocr_image(self, image: str | Path) -> str:
+        return "#include <stdio.h>\nint main(void) {\n    return 0;\n}"
+
+
 def test_pipeline_preserves_page_provenance(tmp_path: Path):
     pdf = tmp_path / "source.pdf"
     pdf.write_bytes(b"pdf")
@@ -58,6 +63,21 @@ def test_pipeline_allows_classification_to_be_disabled(tmp_path: Path):
     ).run(pdf, tmp_path / "work")
 
     assert all(page.structure is None for page in result.pages)
+
+
+def test_code_page_is_marked_for_review_without_language_hint(tmp_path: Path):
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+
+    markdown = DigitizationPipeline(FakeRenderer(), CodeOCR()).run_to_markdown(
+        pdf, tmp_path / "work"
+    )
+
+    assert "<!-- structure: code;" in markdown
+    assert "<!-- review: OCR code listing requires verification against the source scan -->" in markdown
+    assert "````\n#include <stdio.h>" in markdown
+    assert "````" in markdown
+    assert "```c" not in markdown
 
 
 def test_markdown_assembler_does_not_modify_ocr_text():
