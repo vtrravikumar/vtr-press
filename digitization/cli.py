@@ -7,6 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 import re
 import shutil
+import time
 
 from .compatibility import build_front_matter, extract_metadata, validate_vtr_press_markdown
 from .ocr import TesseractOCR, get_ocr_profile
@@ -163,6 +164,12 @@ def _build_ocr(engine: str, profile: str):
     return TesseractOCR(config=config)
 
 
+def _format_duration(seconds: float) -> str:
+    total = max(0, int(round(seconds)))
+    minutes, secs = divmod(total, 60)
+    return f"{minutes:02d}:{secs:02d}"
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     input_path = args.input.resolve()
@@ -188,6 +195,15 @@ def main(argv: list[str] | None = None) -> int:
     assembler = MarkdownAssembler(include_source_images=args.include_source_images)
     manuscript_parts: list[str] = []
     first_report_page_text: str | None = None
+    overall_start = time.monotonic()
+
+    print("VTR Press — Document Digitization")
+    print(f"Source: {input_path}")
+    print(f"Documents: {len(sources)}")
+    print(f"Renderer: {args.pdf_renderer}")
+    print(f"OCR: {args.ocr_engine}")
+    print(f"Preprocessing: {args.preprocess}")
+    print()
 
     for source_index, (pdf, profile) in enumerate(sources, start=1):
         source_work = work_root / f"{source_index:02d}-{_safe_stem(pdf.stem)}"
@@ -196,7 +212,20 @@ def main(argv: list[str] | None = None) -> int:
 
         ocr = _build_ocr(args.ocr_engine, profile)
         pipeline = DigitizationPipeline(renderer, ocr, preprocessor=preprocessor)
-        result = pipeline.run(pdf, source_work)
+        source_start = time.monotonic()
+
+        def report_progress(page_number: int, total_pages: int, _unused: float) -> None:
+            elapsed = time.monotonic() - source_start
+            average = elapsed / page_number
+            remaining = max(0.0, average * (total_pages - page_number))
+            print(
+                f"[{page_number:>2}/{total_pages}] OCR complete "
+                f"({elapsed / page_number:.1f}s/page) | "
+                f"elapsed {_format_duration(elapsed)} | "
+                f"ETA ~{_format_duration(remaining)}"
+            )
+
+        result = pipeline.run(pdf, source_work, progress_callback=report_progress)
         result = _copy_source_pages(result, output_pages, source_index)
         if first_report_page_text is None and profile == "prose" and result.pages:
             first_report_page_text = result.pages[0].text
@@ -205,7 +234,11 @@ def main(argv: list[str] | None = None) -> int:
             f"<!-- source-document: {pdf.name}; profile: {profile} -->\n"
             + assembler.assemble(result).rstrip()
         )
-        print(f"Processed {pdf.name} ({profile}, {len(result.pages)} pages)")
+        print(
+            f"Completed {pdf.name}: {len(result.pages)} pages in "
+            f"{_format_duration(time.monotonic() - source_start)}"
+        )
+        print()
 
     metadata = extract_metadata(first_report_page_text or "")
     body = "\n\n".join(manuscript_parts).strip()
@@ -218,6 +251,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Wrote Markdown: {output}")
     print(f"Source pages:   {output_pages}")
     print(f"Documents:      {len(sources)}")
+    print(f"Elapsed:        {_format_duration(time.monotonic() - overall_start)}")
     print("VTR Press compatibility: OK")
     return 0
 
