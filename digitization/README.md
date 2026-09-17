@@ -22,6 +22,10 @@ Source PDF / scans
         +-- source-image preservation
         +-- figures / diagrams
         +-- tables
+        |     +-- table detection
+        |     +-- grid boundaries
+        |     +-- cell crops / OCR
+        |     +-- later Markdown conversion
         +-- source-code handling
         |
         v
@@ -46,252 +50,27 @@ The current increment establishes the core, adapter-based pipeline:
 - `compatibility.py` — VTR Press metadata template generation, conservative heading normalization and manuscript compatibility validation.
 - `assets.py` — byte-preserving helper for copying rendered source-page images into a stable asset directory.
 - `review.py` — conservative review-marker generation for structure-sensitive pages and a small set of suspicious OCR glyph patterns.
+- `layout.py` — conservative visual analysis that detects ruled-table signals and records source-image regions, row boundaries and column boundaries.
+- `table.py` — layout-aware table cell extraction that crops individual cells from the original source image and can send each crop through an existing OCR adapter. It intentionally does not yet promote OCR output to semantic Markdown.
 - `pipeline.py` — deterministic orchestration from PDF pages through preprocessing, OCR and structure classification, with page-level provenance and heading normalization.
 - `stats.py` — machine-readable timestamped run statistics, including per-document and per-page timing data.
 - `cli.py` / `__main__.py` — repeatable command-line PDF-to-Markdown workflow, including multi-PDF project-source batching and compatibility validation.
 - `MarkdownAssembler` — produces a reviewable Markdown draft with source-PDF/page markers, structure/confidence markers and review markers. It can optionally embed the original rendered page image for layout-heavy pages.
 
-Structure classification is deliberately conservative. It is a page-level routing and review aid, not a claim that OCR text can reconstruct tables or diagrams. Those require image/layout-aware handling in later increments.
+Structure classification is deliberately conservative. It is a page-level routing and review aid, not a claim that OCR text can reconstruct tables or diagrams. Tables now have a separate spatial-analysis path: detected grids can be decomposed into cell regions, and those regions can be OCR'd independently. This still requires review before semantic Markdown generation.
 
-## Runtime requirements
+## Table extraction path
 
-### Standard Tesseract/Poppler runtime
-
-The standard concrete adapters expect:
-
-- Tesseract OCR (`tesseract`)
-- Poppler's `pdftoppm`
-- Python Pillow for image preprocessing
-
-### Pip-only local macOS runtime
-
-On macOS, the digitization engine can run without installing Tesseract or Poppler by using the Python packages below:
+For a detected ruled table, `TableGrid` records the source-image column and row boundaries. Its cell regions are derived deterministically from those boundaries. `extract_table_cells()` then writes stable PNG crops such as:
 
 ```text
-python -m pip install pymupdf ocrmac
-```
-
-`PyMuPDF` provides PDF page rendering from a Python wheel, while `ocrmac` uses Apple's Vision framework through PyObjC for OCR. This path is macOS-specific and is intended primarily for fast local development. The repository continues to retain Tesseract/Poppler adapters for CI and other environments.
-
-Run it with:
-
-```text
-python -m digitization source/ \
-  --pdf-renderer pymupdf \
-  --ocr-engine macos-vision
-```
-
-The macOS OCR backend currently uses Apple's accurate Vision recognition mode for English documents. It does not require a Tesseract executable on `PATH`.
-
-VTR Press does not prescribe how native Tesseract or Poppler are installed for the standard backend. The important boundary is that the Python pipeline talks to small adapters, not directly to a specific operating-system package manager.
-
-## Command-line workflow
-
-The normal user-facing workflow is intentionally simple: provide a source PDF or source folder and get a `manuscript.md` draft plus the rendered source pages used for review.
-
-```text
-python -m digitization source.pdf
-```
-
-This writes `manuscript.md` beside the input PDF. An explicit output path is also supported:
-
-```text
-python -m digitization source.pdf manuscript.md
-```
-
-### Project source-folder workflow
-
-For a project whose source material is organized as:
-
-```text
-project/
-├── source/
-│   ├── report/
-│   │   ├── report-01.pdf
-│   │   └── report-02.pdf
-│   └── code/                 # optional; may be absent or empty
-│       ├── code-01.pdf
-│       └── code-02.pdf
-└── manuscript.md             # generated one level above source/
-```
-
-run one command from the project root:
-
-```text
-python -m digitization source/
-```
-
-For the pip-only macOS backend:
-
-```text
-python -m digitization source/ --pdf-renderer pymupdf --ocr-engine macos-vision
-```
-
-The command automatically:
-
-1. requires one or more PDFs in `report/`;
-2. accepts zero or more PDFs in `code/`, including no `code/` folder at all;
-3. processes report PDFs in numbered order using the `prose` OCR profile;
-4. processes code PDFs in numbered order using the `code` OCR profile;
-5. requires multi-part PDFs to be numbered continuously from `01` (`01`, `02`, `03`, ...), preventing an accidentally missing part from going unnoticed;
-6. collates all page results into **one `manuscript.md` at the project root**;
-7. creates VTR Press YAML front matter, defaulting the document type to `technical-document`;
-8. populates title/subtitle/author metadata only when the title page provides sufficiently recognizable evidence, leaving unknown metadata blank rather than inventing it;
-9. converts high-confidence numbered source headings to Markdown `#` / `##` / `###` / `####` headings and removes printed section numbers because VTR Press owns rendered numbering;
-10. validates the generated Markdown against the VTR Press manuscript contract before writing the final file;
-11. preserves the originating PDF and page number for every page;
-12. keeps rendered source pages under the project-root `pages/` directory with collision-safe names;
-13. keeps report/code document boundaries as Markdown metadata rather than treating each PDF as a separate manuscript;
-14. writes a timestamped JSON run record under `digitization/runs/` containing document totals, per-document timings and per-page timings.
-
-A single report PDF may use any filename because there is no sequence to validate. Once a source category contains multiple PDFs, each must carry a numeric suffix and the sequence must be continuous from `01`.
-
-Useful options include:
-
-```text
---profile prose|layout|code
---preprocess none|conservative
---pdf-renderer pdftoppm|pymupdf
---ocr-engine tesseract|macos-vision
---include-source-images
---work-dir <directory>
-```
-
-The `--profile` option applies to a single-PDF input. Project source folders select `prose` for `report/` and `code` for `code/` automatically.
-
-The command writes the Markdown manuscript and copies rendered source pages into a sibling `pages/` directory so `source-image` references remain usable. It does not modify the input PDFs.
-
-### Run statistics
-
-Each successful run writes a timestamped JSON file under the output project's `digitization/runs/` directory. The record contains:
-
-- run start/end timestamps;
-- source path and output manuscript;
-- renderer, OCR engine and preprocessing mode;
-- total document/page counts;
-- total and average run duration;
-- per-document start/end timestamps, duration and average page time;
-- individual page processing durations.
-
-The statistics are intended to make real-document performance measurable rather than relying on console output alone. They also provide the baseline needed to evaluate later OCR/rendering performance improvements.
-
-## VTR Press manuscript compatibility
-
-Every generated manuscript now starts with YAML front matter matching the metadata contract consumed by the VTR Press reader. The default template is:
-
-```yaml
----
-title: ""
-subtitle: ""
-author: ""
-type: "technical-document"
-edition: ""
-version: ""
-copyright_year: ""
-language: "en"
----
-```
-
-Only metadata supported by evidence in the source is populated automatically. `type: technical-document` is the default for digitized technical material and can be changed manually to `book` when the resulting manuscript is intentionally published as a standard book.
-
-Digitization does **not** emit printed section numbering such as `1`, `1.1` or `1.1.1` in generated Markdown headings. It emits the heading hierarchy itself. VTR Press remains responsible for rendered numbering.
-
-The compatibility gate checks that front matter exists, required metadata keys exist, the default document type is valid, and generated headings do not contain printed numeric prefixes or exceed the supported four-level digitization hierarchy.
-
-This is deliberately a compatibility gate, not a claim of publication readiness. OCR fidelity, tables, diagrams and source code still require review against the scans.
-
-## What the command produces
-
-For a single input such as:
-
-```text
-old-report.pdf
-```
-
-the default workflow produces:
-
-```text
-manuscript.md
-pages/
-    01-old-report-page-1.png
-    01-old-report-page-2.png
+cells/
+    cell-r01-c01.png
+    cell-r01-c02.png
+    cell-r02-c01.png
     ...
-digitization/
-    runs/
-        2026-09-17_11-42-18.json
 ```
 
-For a project source folder, the output is:
+An OCR adapter can be supplied to obtain text independently for each cell. The resulting `ExtractedTable` keeps the row/column relationship intact. This is deliberately an intermediate representation: **it does not silently invent headers, merge cells, infer alignment, or emit Markdown yet**.
 
-```text
-project/
-├── source/
-│   ├── report/
-│   └── code/
-├── manuscript.md
-├── pages/
-│   ├── 01-College-project-01-page-1.png
-│   ├── 01-College-project-01-page-2.png
-│   ├── ...
-│   ├── 04-Code-01-page-1.png
-│   └── ...
-└── digitization/
-    └── runs/
-        └── <run-timestamp>.json
-```
-
-The Markdown contains page provenance and review metadata, allowing the manuscript to be checked back against the original scans. Layout-sensitive pages can optionally include their source image directly in the Markdown.
-
-This is the intended boundary: **PDF in → VTR Press-compatible, reviewable `manuscript.md` out**. Human review remains necessary before the manuscript is treated as publication-ready.
-
-## Preprocessing policy
-
-The original raster page is never modified. `PassthroughPreprocessor` preserves it byte-for-byte, while `PillowPreprocessor` writes a separate derived PNG.
-
-The initial Pillow path deliberately limits transformations to:
-
-- grayscale conversion;
-- automatic contrast normalization;
-- optional fixed-level thresholding.
-
-Geometry-changing operations such as deskewing and cropping are intentionally deferred until they are validated against real scanned documents.
-
-## Source-image preservation
-
-Digitization keeps the rendered source-page path separately from the image actually passed to OCR. This matters when preprocessing is enabled: review must always be able to return to the unmodified page image.
-
-Every generated page carries a `source-image` Markdown comment. By default this is metadata only, so the manuscript is not cluttered with page images. For layout-classified pages, `MarkdownAssembler(include_source_images=True)` can embed the source image as a visual fallback. This is intended for title pages, diagrams and uncertain spatial structures where plain OCR is insufficient.
-
-The fallback is deliberately page-level. It does **not** claim to have extracted a table or figure into semantic Markdown. When a table or diagram depends on spatial relationships that OCR cannot preserve, the source image remains the authoritative visual reference until a later image/layout-aware extraction step is implemented.
-
-## Review markers
-
-The review layer never edits OCR text. It adds machine-readable Markdown comments when a page needs additional human attention:
-
-- `code-ocr-verification` for code-like pages;
-- `layout-visual-verification` for layout-heavy pages;
-- `low-structure-confidence` when a non-prose classification is weak;
-- `suspicious-ocr-glyphs` for a small set of recognizable OCR artefacts.
-
-These markers are intentionally conservative. They are review signals, not proof that a particular character or word is wrong, and they are not a substitute for checking the original scan.
-
-## Validation strategy
-
-The first real-document validation used the historical college project report, including prose, title/certificate pages and source-code listings. That experiment showed that ordinary prose is viable as an OCR draft, while code, tables and diagrams require structure-aware handling and explicit review.
-
-A controlled comparison of representative report and code pages found that grayscale/autocontrast can change OCR output modestly but does not establish a universal accuracy improvement. Fixed thresholding introduced additional recognition changes and therefore remains opt-in rather than a default transformation.
-
-Validation should compare generated Markdown against the original scan after each preprocessing or classification change. A transformation or classifier is useful only if it supports faithful transcription and review without silently changing source meaning.
-
-## Design principles
-
-1. Keep digitization separate from parsing and rendering.
-2. Prefer deterministic, reproducible processing.
-3. Preserve the source faithfully; do not silently normalize content.
-4. Treat OCR as an imperfect acquisition step, not as authoritative text.
-5. Keep OCR engines behind a small adapter boundary so alternatives can be added later.
-6. Keep external runtime dependencies outside the publishing engine's core model.
-7. Never modify the authoritative source raster during preprocessing.
-8. Use structure classification as a conservative review/routing aid, not as a substitute for visual inspection.
-9. Preserve a visual source fallback when spatial structure cannot be represented safely as text.
-10. Test the pipeline with real-world documents containing prose, tables, diagrams, and code.
+The eventual target is standard Markdown table syntax consumed by the existing VTR Press table model. If spatial confidence is insufficient, the source-page image remains the authoritative fallback.
