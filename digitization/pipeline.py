@@ -41,6 +41,7 @@ class PageOCR:
     text: str
     structure: PageStructure | None = None
     structure_confidence: float | None = None
+    source_image: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -75,7 +76,8 @@ class MarkdownAssembler:
             blocks.append(
                 f"<!-- source: {page.source_pdf.name}; page: {page.page_number} -->"
             )
-            blocks.append(f"<!-- source-image: {self.source_image_prefix}/{page.image.name} -->")
+            source_image = page.source_image or page.image
+            blocks.append(f"<!-- source-image: {self.source_image_prefix}/{source_image.name} -->")
             if page.structure is not None:
                 confidence = (
                     f"{page.structure_confidence:.2f}"
@@ -90,7 +92,7 @@ class MarkdownAssembler:
                 blocks.extend(
                     [
                         "",
-                        f"![Source page {page.page_number}]({self.source_image_prefix}/{page.image.name})",
+                        f"![Source page {page.page_number}]({self.source_image_prefix}/{source_image.name})",
                         "",
                     ]
                 )
@@ -143,6 +145,7 @@ class DigitizationPipeline:
 
         page_results: list[PageOCR] = []
         for page_number, image in enumerate(images, start=1):
+            source_image = image
             ocr_image = image
             if self.preprocessor is not None:
                 ocr_image = self.preprocessor.process(image, processed_dir)
@@ -156,6 +159,7 @@ class DigitizationPipeline:
                     text=text,
                     structure=classification.structure if classification else None,
                     structure_confidence=classification.confidence if classification else None,
+                    source_image=source_image,
                 )
             )
 
