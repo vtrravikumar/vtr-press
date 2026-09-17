@@ -1,9 +1,4 @@
-"""Conservative Markdown serialization for digitized tables.
-
-The serializer only converts an extracted table when its structural and OCR
-quality gates are satisfied. Otherwise callers should retain the source-page
-image and review the extraction manually.
-"""
+"""Conservative Markdown serialization for digitized tables."""
 
 from __future__ import annotations
 
@@ -15,7 +10,6 @@ from .table import ExtractedTable
 @dataclass(frozen=True)
 class TableMarkdownResult:
     """Markdown candidate plus the reasons it is or is not publishable."""
-
     markdown: str | None
     confidence: float
     reasons: tuple[str, ...] = ()
@@ -26,7 +20,6 @@ class TableMarkdownResult:
 
 
 def _escape_cell(text: str) -> str:
-    """Escape Markdown table syntax without changing ordinary OCR text."""
     return text.replace("|", "\\|").replace("\n", " ").strip()
 
 
@@ -38,11 +31,9 @@ def to_markdown_table(
 ) -> TableMarkdownResult:
     """Serialize an extracted table only when conservative gates pass.
 
-    The first detected row is emitted as the Markdown header because Markdown
-    requires a header row. This is intentionally a policy decision rather than
-    an attempt to infer semantic headers. Callers should therefore use this
-    only when the source layout/review process establishes that row 1 is a
-    header.
+    The first row is emitted as a Markdown header only when the caller's
+    workflow has established that it is a header. This function does not infer
+    semantic headers, merged cells, or spanning cells.
     """
     if not table.cells:
         return TableMarkdownResult(None, 0.0, ("table-empty",))
@@ -55,16 +46,11 @@ def to_markdown_table(
     if require_complete and not complete:
         return TableMarkdownResult(None, 0.40, ("table-incomplete-cells",))
 
-    # Extraction currently carries no OCR confidence score. Until one exists,
-    # only complete tables with structurally valid dimensions can pass. The
-    # fixed score is deliberately below the default publication threshold.
-    confidence = 0.70 if complete else 0.40
+    confidence = table.confidence()
+    if confidence is None:
+        return TableMarkdownResult(None, 0.0, ("table-ocr-confidence-unavailable",))
     if confidence < minimum_confidence:
-        return TableMarkdownResult(
-            None,
-            confidence,
-            ("table-ocr-confidence-unavailable",),
-        )
+        return TableMarkdownResult(None, confidence, ("table-ocr-confidence-low",))
 
     header = "| " + " | ".join(_escape_cell(value) for value in rows[0]) + " |"
     separator = "| " + " | ".join("---" for _ in rows[0]) + " |"
