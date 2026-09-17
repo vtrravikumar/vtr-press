@@ -4,6 +4,7 @@ from pathlib import Path
 from PIL import Image
 
 from digitization import cli
+from digitization.combined import SourceSegment
 
 
 class FakeRenderer:
@@ -60,6 +61,7 @@ def test_cli_writes_timestamped_run_statistics(tmp_path: Path, monkeypatch):
     assert stats["renderer"] == "pdftoppm"
     assert stats["ocr_engine"] == "tesseract"
     assert stats["preprocessing"] == "conservative"
+    assert stats["combined_sources"] is False
     assert stats["documents"][0]["filename"] == "source.pdf"
     assert len(stats["documents"][0]["page_durations_seconds"]) == 1
     assert stats["total_duration_seconds"] >= 0
@@ -136,6 +138,42 @@ def test_cli_discovers_report_and_optional_code_into_one_root_manuscript(
     assert len(list((tmp_path / "pages").glob("*.png"))) == 6
     assert (tmp_path / "pages" / "01-College-project-01-page-1.png").is_file()
     assert (tmp_path / "pages" / "06-Code-03-page-1.png").is_file()
+
+
+def test_cli_combines_source_pdfs_into_one_session(tmp_path: Path, monkeypatch, capsys):
+    monkeypatch.setattr(cli, "PdftoppmRenderer", FakeRenderer)
+    monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
+    source = tmp_path / "source"
+    report = source / "report"
+    code = source / "code"
+    report.mkdir(parents=True)
+    code.mkdir()
+    report_pdf = report / "report-01.pdf"
+    code_pdf = code / "Code-01.pdf"
+    report_pdf.write_bytes(b"pdf")
+    code_pdf.write_bytes(b"pdf")
+    combined_pdf = tmp_path / ".digitization-work" / "combined-source.pdf"
+
+    def fake_combine(sources, output_pdf):
+        output_pdf = Path(output_pdf)
+        output_pdf.parent.mkdir(parents=True, exist_ok=True)
+        output_pdf.write_bytes(b"combined")
+        return output_pdf, (
+            SourceSegment(report_pdf, "prose", 1, 1),
+            SourceSegment(code_pdf, "code", 2, 2),
+        )
+
+    monkeypatch.setattr(cli, "combine_pdfs", fake_combine)
+    monkeypatch.setattr(cli, "_build_combined_ocr", lambda engine, segments: FakeOCR())
+
+    assert cli.main([str(source), "--combine-sources"]) == 0
+    text = (tmp_path / "manuscript.md").read_text(encoding="utf-8")
+    assert "<!-- source-document: report-01.pdf; profile: prose -->" in text
+    assert "<!-- source-document: Code-01.pdf; profile: code -->" in text
+    stats = json.loads(next((tmp_path / "digitization" / "runs").glob("*.json")).read_text(encoding="utf-8"))
+    assert stats["combined_sources"] is True
+    assert stats["document_count"] == 2
+    assert "Source PDFs: combined into one temporary PDF" in capsys.readouterr().out
 
 
 def test_cli_allows_report_without_code_folder(tmp_path: Path, monkeypatch):
