@@ -1,6 +1,6 @@
 # Digitization Validation — College Project
 
-This document records the first real-document validation of the VTR Press digitization layer using the historical college project report.
+This document records real-document validation of the VTR Press digitization layer using the historical college project report.
 
 ## Source used
 
@@ -8,9 +8,9 @@ The validation source is the scanned report **Analysis of Artificial Neural Netw
 
 The source report contains ordinary prose, title/certificate material, tables, diagrams, numerical results and source-code listings. This makes it a useful validation case for the reusable digitization pipeline.
 
-## Runtime used for this experiment
+## Runtime used for experiments
 
-For this experiment only, PDF pages were rasterized and OCR was executed in a temporary Linux/container environment providing:
+For validation experiments, PDF pages were rasterized and OCR was executed in a temporary Linux/container environment providing:
 
 - `pdftoppm`
 - Tesseract OCR 5.5.0
@@ -59,8 +59,6 @@ The title page contains large display typography, uneven illumination, page curv
 
 The certificate/viva pages similarly contain layout elements, signatures and isolated text regions that should not simply be concatenated into prose.
 
-The current passthrough preprocessing stage is therefore sufficient for the adapter test but not sufficient for production digitization.
-
 ### 3. Source code is a separate problem
 
 The scanned C source listings were significantly less reliable than ordinary prose. Tesseract introduced errors in characters that are syntactically meaningful, including:
@@ -82,37 +80,60 @@ The report contains tables and diagrams whose meaning depends on spatial layout.
 
 The digitization pipeline therefore needs structure-aware handling rather than treating every page as one text block.
 
-## Result of the first validation
+## Preprocessing increment
 
-The existing architecture is validated at the boundary level:
+The first implementation increment after the baseline validation now provides a conservative Pillow-based preprocessing adapter.
+
+The preprocessing stage can independently produce a derived PNG using:
+
+- grayscale conversion;
+- automatic contrast normalization;
+- optional fixed-level thresholding.
+
+The original raster is never modified. Geometry-changing operations such as deskewing and cropping remain deliberately deferred until they are validated against the real scans.
+
+This increment establishes the preprocessing mechanism, but it does **not** yet establish that a particular transformation improves OCR for the college report. That requires another controlled OCR comparison using the same representative pages.
+
+## OCR profile increment
+
+The OCR adapter now provides named configuration profiles for:
+
+- `prose`;
+- `layout`;
+- `code`.
+
+These are configuration presets, not automatic page classification. The real document validation showed that different page types have materially different OCR risks, so automatic structure classification remains a later step.
+
+## Current result
+
+The architecture is validated at the adapter and orchestration boundary:
 
 ```text
 scanned source
       ↓
 page rendering
       ↓
-preprocessing
+derived preprocessing
       ↓
-OCR adapter
+OCR profile
       ↓
 page-level text
       ↓
 reviewable Markdown draft
 ```
 
-However, the real document demonstrates that the next implementation increment must focus on **document-aware acquisition**, not simply better raw OCR.
+The real document also establishes the requirements for the next layer: **document-aware acquisition**.
 
 ## Next implementation increment
 
 The next digitization work should address these areas in order:
 
-1. **Conservative image preprocessing** — grayscale/contrast/thresholding and, where justified, deskew or crop handling without altering source meaning.
-2. **OCR profiles** — different Tesseract page-segmentation/configuration strategies for normal prose, sparse/layout-heavy pages and source-code listings.
-3. **Structure classification** — distinguish prose, headings, code, tables and figure/diagram regions before Markdown assembly.
-4. **Code-safe handling** — preserve code listings as source material requiring explicit review; do not silently transform uncertain OCR into executable-looking code.
-5. **Table/figure preservation** — retain the source image and provenance when reliable structural extraction is not available.
-6. **Review markers** — make uncertain or structure-sensitive regions visible in the generated manuscript.
-7. **Regression fixtures** — retain representative page-level examples so improvements can be measured against the same historical source.
+1. **Controlled preprocessing comparison** — run the same representative pages with passthrough versus conservative preprocessing and record the effect on OCR.
+2. **Structure classification** — distinguish prose, headings, code, tables and figure/diagram regions before Markdown assembly.
+3. **Code-safe handling** — preserve code listings as source material requiring explicit review; do not silently transform uncertain OCR into executable-looking code.
+4. **Table/figure preservation** — retain the source image and provenance when reliable structural extraction is not available.
+5. **Review markers** — make uncertain or structure-sensitive regions visible in the generated manuscript.
+6. **Regression fixtures** — retain representative page-level examples so improvements can be measured against the same historical source.
 
 ## Fidelity rule
 
