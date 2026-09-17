@@ -46,6 +46,11 @@ def test_visual_analysis_detects_ruled_table_and_candidate_region(tmp_path: Path
     assert result.table_grid.column_count == 3
     assert result.table_grid.row_count == 3
 
+    cells = result.table_grid.cell_regions(confidence=result.regions[0].confidence)
+    assert len(cells) == 9
+    assert cells[0] == VisualRegion("table-cell", 100, 100, 300, 200, result.regions[0].confidence)
+    assert cells[-1] == VisualRegion("table-cell", 500, 300, 700, 400, result.regions[0].confidence)
+
 
 def test_visual_analysis_maps_candidate_grid_to_original_coordinates(tmp_path: Path):
     image = Image.new("L", (3200, 2400), 255)
@@ -84,3 +89,7 @@ def test_visual_analysis_returns_no_semantic_claim_for_plain_page(tmp_path: Path
     assert result.confidence == 0.0
     assert result.regions == ()
     assert result.table_grid is None
+
+
+def test_table_grid_without_boundaries_has_no_cells():
+    assert TableGrid().cell_regions() == ()
