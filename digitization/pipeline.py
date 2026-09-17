@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, Sequence
+from typing import Protocol
+
+from .structure import PageStructure, StructureClassification, classify_structure
 
 
 class PageRenderer(Protocol):
@@ -25,14 +27,20 @@ class OCREngine(Protocol):
     def ocr_image(self, image: str | Path) -> str: ...
 
 
+class StructureClassifier(Protocol):
+    def __call__(self, text: str) -> StructureClassification: ...
+
+
 @dataclass(frozen=True)
 class PageOCR:
-    """OCR text and provenance for one source page."""
+    """OCR text, structure classification and provenance for one source page."""
 
     source_pdf: Path
     page_number: int
     image: Path
     text: str
+    structure: PageStructure | None = None
+    structure_confidence: float | None = None
 
 
 @dataclass(frozen=True)
@@ -49,16 +57,19 @@ class MarkdownAssembler:
     def assemble(self, result: DigitizationResult) -> str:
         blocks: list[str] = []
         for page in result.pages:
-            blocks.extend(
-                [
-                    f"<!-- source: {page.source_pdf.name}; page: {page.page_number} -->",
-                    "",
-                    page.text.rstrip(),
-                    "",
-                    "---",
-                    "",
-                ]
+            blocks.append(
+                f"<!-- source: {page.source_pdf.name}; page: {page.page_number} -->"
             )
+            if page.structure is not None:
+                confidence = (
+                    f"{page.structure_confidence:.2f}"
+                    if page.structure_confidence is not None
+                    else "unknown"
+                )
+                blocks.append(
+                    f"<!-- structure: {page.structure.value}; confidence: {confidence} -->"
+                )
+            blocks.extend(["", page.text.rstrip(), "", "---", ""])
         return "\n".join(blocks).rstrip() + "\n"
 
 
@@ -70,10 +81,12 @@ class DigitizationPipeline:
         renderer: PageRenderer,
         ocr: OCREngine,
         preprocessor: ImagePreprocessor | None = None,
+        classifier: StructureClassifier | None = classify_structure,
     ):
         self.renderer = renderer
         self.ocr = ocr
         self.preprocessor = preprocessor
+        self.classifier = classifier
 
     def run(self, pdf: str | Path, work_dir: str | Path) -> DigitizationResult:
         source_pdf = Path(pdf)
@@ -91,12 +104,15 @@ class DigitizationPipeline:
             if self.preprocessor is not None:
                 ocr_image = self.preprocessor.process(image, processed_dir)
             text = self.ocr.ocr_image(ocr_image)
+            classification = self.classifier(text) if self.classifier is not None else None
             page_results.append(
                 PageOCR(
                     source_pdf=source_pdf,
                     page_number=page_number,
                     image=ocr_image,
                     text=text,
+                    structure=classification.structure if classification else None,
+                    structure_confidence=classification.confidence if classification else None,
                 )
             )
 
