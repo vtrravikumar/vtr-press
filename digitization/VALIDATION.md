@@ -122,9 +122,17 @@ When a page is classified as `code`, the generated Markdown preserves the OCR te
 
 No programming-language hint is assigned automatically. This avoids presenting uncertain OCR as authoritative or executable source code while preserving the OCR text for human correction.
 
+## Source-image preservation
+
+The pipeline now keeps the original rendered page image separately from any preprocessed image used for OCR. Generated Markdown records a `source-image` comment for every page so reviewers can return to the source page even when preprocessing was enabled.
+
+For layout-classified pages, the assembler can optionally embed the source page image as a visual fallback. This is intentionally a page-level fallback rather than an attempted semantic extraction of a figure, diagram or table.
+
+This preserves information that plain OCR cannot safely represent: spatial relationships, signatures, diagrams, and table geometry. It also avoids silently inventing Markdown tables or figure boundaries from uncertain OCR.
+
 ## Current result
 
-The architecture is validated at the adapter, orchestration and initial structure-awareness boundaries:
+The architecture is validated at the adapter, orchestration, structure-awareness and visual-fallback boundaries:
 
 ```text
 scanned source
@@ -139,19 +147,21 @@ page-level text
       ↓
 conservative structure classification
       ↓
+source-image provenance / optional visual fallback
+      ↓
 reviewable Markdown draft
 ```
 
-The real document establishes that reliable digitization requires more than raw OCR. The remaining work is increasingly about preserving information that plain OCR cannot represent safely.
+The real document establishes that reliable digitization requires more than raw OCR. The remaining work is increasingly about reviewability and repeatability rather than forcing uncertain source structures into misleading Markdown.
 
 ## Next implementation increment
 
 The remaining digitization work should address these areas in order:
 
-1. **Table/figure preservation** — retain source images and provenance where reliable structural extraction is unavailable.
-2. **Review markers** — expand review metadata beyond structure classification to identify uncertain or structure-sensitive regions where practical.
-3. **Regression fixtures** — retain representative page-level examples from real scanned documents so changes can be measured against stable source material.
-4. **End-to-end workflow** — provide a practical CLI/API path for repeatable PDF-to-Markdown digitization and validate it against the college project and a second document such as the Accupressure validation case.
+1. **Review markers** — expand review metadata beyond structure classification to identify uncertain or structure-sensitive regions where practical.
+2. **Regression fixtures** — retain representative page-level examples from real scanned documents so changes can be measured against stable source material.
+3. **End-to-end workflow** — provide a practical CLI/API path for repeatable PDF-to-Markdown digitization and validate it against the college project and a second document such as the Accupressure validation case.
+4. **Table/figure extraction** — only after the visual fallback is stable, investigate image/layout-aware extraction for structures that can be represented faithfully.
 
 ## Fidelity rule
 
