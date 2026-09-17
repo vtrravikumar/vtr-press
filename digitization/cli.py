@@ -17,7 +17,13 @@ def build_parser() -> argparse.ArgumentParser:
         description="Convert a scanned PDF into a page-traceable Markdown draft."
     )
     parser.add_argument("pdf", type=Path, help="input PDF")
-    parser.add_argument("output", type=Path, help="output Markdown file")
+    parser.add_argument(
+        "output",
+        type=Path,
+        nargs="?",
+        default=Path("manuscript.md"),
+        help="output Markdown file (default: manuscript.md)",
+    )
     parser.add_argument("--work-dir", type=Path, help="working directory for rendered pages")
     parser.add_argument(
         "--profile",
