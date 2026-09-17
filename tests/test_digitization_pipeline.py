@@ -24,6 +24,20 @@ class CodeOCR:
         return "#include <stdio.h>\nint main(void) {\n    return 0;\n}"
 
 
+class PreprocessedOCR:
+    def ocr_image(self, image: str | Path) -> str:
+        return f"OCR from {Path(image).name}"
+
+
+class FakePreprocessor:
+    def process(self, image: str | Path, output_dir: str | Path) -> Path:
+        output = Path(output_dir)
+        output.mkdir(parents=True, exist_ok=True)
+        target = output / f"processed-{Path(image).name}"
+        target.write_bytes(b"processed")
+        return target
+
+
 def test_pipeline_preserves_page_provenance(tmp_path: Path):
     pdf = tmp_path / "source.pdf"
     pdf.write_bytes(b"pdf")
@@ -35,6 +49,10 @@ def test_pipeline_preserves_page_provenance(tmp_path: Path):
     assert [page.text for page in result.pages] == [
         "OCR for page-1.png",
         "OCR for page-2.png",
+    ]
+    assert [page.source_image.name for page in result.pages] == [
+        "page-1.png",
+        "page-2.png",
     ]
     assert all(page.structure is PageStructure.PROSE for page in result.pages)
 
@@ -49,9 +67,11 @@ def test_pipeline_can_assemble_traceable_markdown(tmp_path: Path):
 
     assert "<!-- source: source.pdf; page: 1 -->" in markdown
     assert "<!-- source: source.pdf; page: 2 -->" in markdown
+    assert "<!-- source-image: pages/page-1.png -->" in markdown
     assert "<!-- structure: prose; confidence: 0.50 -->" in markdown
     assert "OCR for page-1.png" in markdown
     assert "OCR for page-2.png" in markdown
+    assert "![Source page" not in markdown
 
 
 def test_pipeline_allows_classification_to_be_disabled(tmp_path: Path):
@@ -63,6 +83,35 @@ def test_pipeline_allows_classification_to_be_disabled(tmp_path: Path):
     ).run(pdf, tmp_path / "work")
 
     assert all(page.structure is None for page in result.pages)
+
+
+def test_preprocessing_keeps_original_source_image_reference(tmp_path: Path):
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+
+    result = DigitizationPipeline(
+        FakeRenderer(), PreprocessedOCR(), preprocessor=FakePreprocessor()
+    ).run(pdf, tmp_path / "work")
+
+    assert result.pages[0].image.name == "processed-page-1.png"
+    assert result.pages[0].source_image.name == "page-1.png"
+
+
+def test_layout_page_can_embed_visual_source_fallback(tmp_path: Path):
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+
+    class LayoutOCR:
+        def ocr_image(self, image: str | Path) -> str:
+            return "TITLE\n\nA PROJECT REPORT"
+
+    markdown = DigitizationPipeline(FakeRenderer(), LayoutOCR()).run_to_markdown(
+        pdf, tmp_path / "work", include_source_images=True
+    )
+
+    assert "<!-- structure: layout;" in markdown
+    assert "![Source page 1](pages/page-1.png)" in markdown
+    assert "![Source page 2](pages/page-2.png)" in markdown
 
 
 def test_code_page_is_marked_for_review_without_language_hint(tmp_path: Path):
