@@ -33,8 +33,8 @@ Digitization must not silently rewrite, modernize, or correct the source. OCR ou
 The current increment establishes the core, adapter-based pipeline:
 
 - `pdf.py` — PDF-to-page rendering through a `pdftoppm` adapter.
-- `preprocess.py` — conservative image preprocessing boundary; the initial implementation preserves pages unchanged.
-- `ocr.py` — Tesseract OCR adapter with configurable language, page segmentation mode, and extra arguments.
+- `preprocess.py` — conservative preprocessing with both an unchanged passthrough and a Pillow-based grayscale/contrast/threshold path.
+- `ocr.py` — Tesseract OCR adapter with configurable language, page segmentation mode, and named profiles for prose, layout-heavy pages and code.
 - `pipeline.py` — deterministic orchestration from PDF pages through preprocessing and OCR, with page-level provenance.
 - `MarkdownAssembler` — produces a reviewable Markdown draft with source-PDF/page markers so every OCR fragment can be traced back to the scan.
 
@@ -42,18 +42,31 @@ The adapters intentionally depend on external executables rather than bundling a
 
 ## Runtime requirements
 
-The current concrete adapters expect these external tools to be available in the execution environment:
+The current concrete adapters expect these dependencies in the execution environment:
 
 - Tesseract OCR (`tesseract`)
 - Poppler's `pdftoppm`
+- Python Pillow for image preprocessing
 
-VTR Press does not currently prescribe how those tools are installed. A future reproducible runtime may use a container or another managed environment. The important boundary is that the Python pipeline talks to small adapters, not directly to a specific operating-system package manager.
+VTR Press does not prescribe how Tesseract or Poppler are installed. A future reproducible runtime may use a container or another managed environment. The important boundary is that the Python pipeline talks to small adapters, not directly to a specific operating-system package manager.
+
+## Preprocessing policy
+
+The original raster page is never modified. `PassthroughPreprocessor` preserves it byte-for-byte, while `PillowPreprocessor` writes a separate derived PNG.
+
+The initial Pillow path deliberately limits transformations to:
+
+- grayscale conversion;
+- automatic contrast normalization;
+- optional fixed-level thresholding.
+
+Geometry-changing operations such as deskewing and cropping are intentionally deferred until they are validated against real scanned documents.
 
 ## Validation strategy
 
-The next validation step is a small real-document run against representative scanned pages containing different source characteristics. The college project is particularly useful because it contains prose, tables, diagrams, numerical material, and source code.
+The first real-document validation used the historical college project report, including prose, title/certificate pages and source-code listings. That experiment showed that ordinary prose is viable as an OCR draft, while code, tables and diagrams require structure-aware handling and explicit review.
 
-Validation should compare the generated Markdown against the original scan before stronger preprocessing or source-type-specific extraction is introduced.
+Validation should compare generated Markdown against the original scan after each preprocessing change. A preprocessing transformation is useful only if it improves OCR without compromising faithful transcription.
 
 ## Design principles
 
@@ -63,4 +76,5 @@ Validation should compare the generated Markdown against the original scan befor
 4. Treat OCR as an imperfect acquisition step, not as authoritative text.
 5. Keep OCR engines behind a small adapter boundary so alternatives can be added later.
 6. Keep external runtime dependencies outside the publishing engine's core model.
-7. Test the pipeline with real-world documents containing prose, tables, diagrams, and code.
+7. Never modify the authoritative source raster during preprocessing.
+8. Test the pipeline with real-world documents containing prose, tables, diagrams, and code.
