@@ -52,7 +52,22 @@ class DigitizationResult:
 
 
 class MarkdownAssembler:
-    """Assemble page-level OCR results into a reviewable Markdown draft."""
+    """Assemble page-level OCR results into a reviewable Markdown draft.
+
+    Source-page images are referenced only when explicitly requested. This
+    keeps the normal manuscript readable while allowing layout-heavy pages to
+    retain a visual fallback for figures, diagrams and uncertain tables.
+    """
+
+    def __init__(
+        self,
+        include_source_images: bool = False,
+        source_image_prefix: str = "pages",
+        image_structures: tuple[PageStructure, ...] = (PageStructure.LAYOUT,),
+    ):
+        self.include_source_images = include_source_images
+        self.source_image_prefix = source_image_prefix.strip("/")
+        self.image_structures = image_structures
 
     def assemble(self, result: DigitizationResult) -> str:
         blocks: list[str] = []
@@ -60,6 +75,7 @@ class MarkdownAssembler:
             blocks.append(
                 f"<!-- source: {page.source_pdf.name}; page: {page.page_number} -->"
             )
+            blocks.append(f"<!-- source-image: {self.source_image_prefix}/{page.image.name} -->")
             if page.structure is not None:
                 confidence = (
                     f"{page.structure_confidence:.2f}"
@@ -68,6 +84,15 @@ class MarkdownAssembler:
                 )
                 blocks.append(
                     f"<!-- structure: {page.structure.value}; confidence: {confidence} -->"
+                )
+
+            if self.include_source_images and page.structure in self.image_structures:
+                blocks.extend(
+                    [
+                        "",
+                        f"![Source page {page.page_number}]({self.source_image_prefix}/{page.image.name})",
+                        "",
+                    ]
                 )
 
             if page.structure is PageStructure.CODE:
@@ -136,8 +161,16 @@ class DigitizationPipeline:
 
         return DigitizationResult(source_pdf=source_pdf, pages=tuple(page_results))
 
-    def run_to_markdown(self, pdf: str | Path, work_dir: str | Path) -> str:
+    def run_to_markdown(
+        self,
+        pdf: str | Path,
+        work_dir: str | Path,
+        *,
+        include_source_images: bool = False,
+    ) -> str:
         """Run digitization and return a page-traceable Markdown draft."""
 
         result = self.run(pdf, work_dir)
-        return MarkdownAssembler().assemble(result)
+        return MarkdownAssembler(
+            include_source_images=include_source_images,
+        ).assemble(result)
