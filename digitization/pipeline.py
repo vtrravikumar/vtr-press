@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Callable, Protocol
 
 from .compatibility import normalize_ocr_headings
 from .review import build_review_markers
@@ -31,6 +31,9 @@ class OCREngine(Protocol):
 
 class StructureClassifier(Protocol):
     def __call__(self, text: str) -> StructureClassification: ...
+
+
+ProgressCallback = Callable[[int, int, float], None]
 
 
 @dataclass(frozen=True)
@@ -137,7 +140,13 @@ class DigitizationPipeline:
         self.preprocessor = preprocessor
         self.classifier = classifier
 
-    def run(self, pdf: str | Path, work_dir: str | Path) -> DigitizationResult:
+    def run(
+        self,
+        pdf: str | Path,
+        work_dir: str | Path,
+        *,
+        progress_callback: ProgressCallback | None = None,
+    ) -> DigitizationResult:
         source_pdf = Path(pdf)
         if not source_pdf.is_file():
             raise FileNotFoundError(source_pdf)
@@ -168,6 +177,8 @@ class DigitizationPipeline:
                     review_markers=review_markers,
                 )
             )
+            if progress_callback is not None:
+                progress_callback(page_number, len(images), 0.0)
 
         return DigitizationResult(source_pdf=source_pdf, pages=tuple(page_results))
 
@@ -177,10 +188,11 @@ class DigitizationPipeline:
         work_dir: str | Path,
         *,
         include_source_images: bool = False,
+        progress_callback: ProgressCallback | None = None,
     ) -> str:
         """Run digitization and return a page-traceable Markdown draft."""
 
-        result = self.run(pdf, work_dir)
+        result = self.run(pdf, work_dir, progress_callback=progress_callback)
         return MarkdownAssembler(
             include_source_images=include_source_images,
         ).assemble(result)
