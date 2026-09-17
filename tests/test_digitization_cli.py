@@ -22,7 +22,7 @@ class FakeOCR:
         return "TITLE\n\nA PROJECT REPORT"
 
 
-def test_cli_writes_markdown_and_source_pages(tmp_path: Path, monkeypatch):
+def test_cli_writes_markdown_and_source_pages(tmp_path: Path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "PdftoppmRenderer", FakeRenderer)
     monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
     pdf = tmp_path / "source.pdf"
@@ -31,9 +31,16 @@ def test_cli_writes_markdown_and_source_pages(tmp_path: Path, monkeypatch):
 
     assert cli.main([str(pdf), str(output), "--include-source-images"]) == 0
     text = output.read_text(encoding="utf-8")
-    assert text.startswith("<!-- source-document: source.pdf; profile: prose -->")
+    assert text.startswith("---\n")
+    assert "type: technical-document" in text
+    assert "title: \"TITLE\"" in text
+    assert "<!-- source-document: source.pdf; profile: prose -->" in text
     assert "<!-- source: source.pdf; page: 1 -->" in text
     assert (tmp_path / "pages" / "01-source-page-1.png").is_file()
+    captured = capsys.readouterr().out
+    assert "VTR Press — Document Digitization" in captured
+    assert "[ 1/1] OCR complete" in captured
+    assert "VTR Press compatibility: OK" in captured
 
 
 def test_cli_supports_default_manuscript_output_for_single_pdf(tmp_path: Path, monkeypatch):
