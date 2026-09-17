@@ -213,7 +213,7 @@ This is a metadata capability, **not a new publishing architecture**. The soluti
 ## BL-012 — Document Digitization / OCR Pipeline
 
 **Priority:** P1  
-**Status:** Backlog — candidate for v2.2
+**Status:** In progress — candidate for v2.2
 
 Add a reusable upstream digitization pipeline that converts scanned or image-based source material into a reviewable Markdown manuscript suitable for the existing VTR Press publishing pipeline.
 
@@ -222,6 +222,24 @@ Add a reusable upstream digitization pipeline that converts scanned or image-bas
 Support faithful digitization of historical technical reports, books, manuals and other scanned documents where the source is a physical document or scanned PDF rather than an existing Markdown manuscript.
 
 The pipeline should be reusable across projects. Project repositories should retain the original source scans and the generated/reviewed Markdown, while reusable OCR and digitization machinery belongs in VTR Press.
+
+### Implemented so far
+
+- PDF/page image extraction through a `pdftoppm` adapter;
+- Tesseract OCR adapter with named `prose`, `layout` and `code` profiles;
+- conservative Pillow preprocessing with unchanged passthrough and optional grayscale, autocontrast and thresholding;
+- deterministic page-level pipeline with source/page provenance;
+- reviewable Markdown assembly;
+- conservative page-level structure classification into `prose`, `code` and `layout` with bounded confidence and reasons;
+- real scanned college-report validation and controlled preprocessing comparison.
+
+### Remaining scope
+
+- code-safe handling and explicit review treatment for OCR'd source listings;
+- table and figure preservation/extraction support;
+- confidence and review markers beyond the current structure marker;
+- representative regression fixtures from real scanned pages;
+- final CLI/API workflow and broader end-to-end validation.
 
 ### Potential scope
 
@@ -247,214 +265,3 @@ The system must distinguish ordinary prose from code, tables and other structure
 The first implementation should be deliberately incremental and validated against real scanned documents before the CLI/API and broader feature set are finalized.
 
 ---
-
-# P2 — Output and Presentation
-
-## BL-013 — HTML Output
-
-**Priority:** P2  
-**Status:** Future
-
-Add HTML output using the same interpreted document information used by the existing renderers.
-
-Potential use cases:
-
-- standalone technical documentation;
-- web publishing;
-- local previews.
-
-HTML should be a new output format, not a second document-processing pipeline.
-
----
-
-## BL-014 — Kindle Publishing Output
-
-**Priority:** P2  
-**Status:** Future
-
-Investigate Kindle publishing support.
-
-Determine whether the appropriate product is:
-
-- Kindle-ready EPUB;
-- KPF generation;
-- or a documented external conversion workflow.
-
-The decision should be based on actual distribution requirements rather than assuming direct KPF generation is necessary.
-
----
-
-## BL-015 — DOCX Output
-
-**Priority:** P2  
-**Status:** Future
-
-Investigate DOCX as an additional output format.
-
-The investigation should establish the required Document Model capabilities and whether DOCX quality is sufficient to justify official support.
-
----
-
-## BL-016 — Theme and Custom Theme Workflow
-
-**Priority:** P2  
-**Status:** Future
-
-The current architecture already separates common rendering from Book and Technical rendering, with theme-specific presentation in the renderer/theme layer.
-
-Future work should therefore focus on:
-
-- documenting the theme contract;
-- simplifying creation of custom themes;
-- theme validation/testing;
-- adding additional built-in themes where real use cases justify them.
-
-Do not introduce another theme framework without a concrete need.
-
----
-
-## BL-017 — Performance Measurement and Optimization
-
-**Priority:** P2  
-**Status:** Backlog
-
-Measure before optimizing.
-
-Potential scope:
-
-- parser profiling;
-- rendering profiling;
-- repeated document traversal;
-- unnecessary allocations;
-- PDF/EPUB generation time;
-- regression benchmarks for representative manuscripts.
-
-No performance rewrite should be undertaken without evidence of a meaningful bottleneck.
-
----
-
-# P3 — Productization and Exploration
-
-## BL-018 — Release Readiness / 1.0 Criteria
-
-**Priority:** P3  
-**Status:** Future
-
-Define release-readiness criteria for a stable public VTR Press release.
-
-The criteria should reflect the current v2 product rather than the obsolete V1 migration terminology.
-
-Potential areas:
-
-- manuscript contract;
-- supported document types;
-- supported output formats;
-- renderer/theme stability;
-- error handling;
-- test coverage;
-- documentation;
-- installation and distribution.
-
----
-
-## BL-019 — PyPI Distribution
-
-**Priority:** P3  
-**Status:** Future
-
-Package VTR Press for installation through PyPI once the CLI, package structure and resource handling are stable.
-
----
-
-## BL-020 — Documentation Website
-
-**Priority:** P3  
-**Status:** Future
-
-Publish the VTR Press documentation as a web-based documentation site when the supported manuscript and CLI contracts are mature enough to document publicly.
-
----
-
-## BL-021 — Homebrew Installation
-
-**Priority:** P3  
-**Status:** Future
-
-Investigate Homebrew distribution after the CLI and package structure have stabilized.
-
----
-
-## BL-022 — Additional Document Types
-
-**Priority:** P3  
-**Status:** Exploratory
-
-Evaluate additional document types only when a real publishing use case exists.
-
-New document types should fit the established pattern of document-type interpretation and Book/Technical-style rendering specialization without creating another publishing stack.
-
----
-
-## BL-023 — Plugin Architecture
-
-**Priority:** P3  
-**Status:** Deferred
-
-Revisit third-party extension mechanisms only after the core architecture has demonstrated sufficient stability and there is a concrete need for external extensions.
-
-Possible future extension points include:
-
-- renderers;
-- themes;
-- document conventions;
-- output formats.
-
-The existing Interpretation layer is **not** a plugin architecture.
-
----
-
-# Explicitly Removed / Already Implemented
-
-These are intentionally not backlog items anymore.
-
-| Historical item | Decision | Reason |
-|---|---|---|
-| GitHub Actions automated tests | **Removed** | CI workflow already exists. |
-| Generic Document Model migration | **Removed** | v2 architecture is established. |
-| D1/D2/D3/D4 migration work | **Removed** | Migration is complete and recorded in `docs/MIGRATIONPLAN.md`. |
-| V2-001 / V2-002 / V2-003 labels | **Replaced** | Their surviving ideas are consolidated into BL-001. |
-| Basic fenced code blocks | **Removed** | Already implemented in the generic technical-document pipeline. |
-| Basic generic tables | **Removed** | Already implemented; remaining work is richer table capability. |
-| Basic technical-document Typst/EPUB publishing | **Removed** | Already part of the current architecture. |
-| LineBreak as a standalone backlog item | **Removed** | The generic model and EPUB renderer already contain `LineBreak`; remaining gaps should be tracked only if a concrete defect is found. |
-| V1 migration wording | **Removed** | Superseded by the completed v2 architecture. |
-
----
-
-# Backlog Rules
-
-1. **Do not add migration work here.** The v2 migration is complete.
-2. **Verify implementation before creating an item.** Do not backlog functionality that already exists.
-3. **Prefer one clear item over several historical fragments.** Related discovery/input work is consolidated under BL-001.
-4. **Document-model capabilities belong in the generic model.** Do not add renderer-specific implementations when the feature is semantic.
-5. **Common format behaviour belongs in Common Typst / Common EPUB.** Book and Technical renderers should contain document-type-specific publication behaviour.
-6. **Promote only when ready.** A backlog item becomes active engineering work only after its scope and acceptance criteria are defined.
-7. **Delete obsolete ideas.** The backlog is not an archive of every feature ever discussed.
-
----
-
-# Current Recommendation
-
-The backlog should now be **held** rather than immediately implemented.
-
-When engineering resumes, the first candidates to evaluate are:
-
-1. **BL-001 — Simplify Manuscript Discovery and Publishing Input**
-2. **BL-003 — Cross References**
-3. **BL-004 — Image Captions**
-4. **BL-005 — Language-Aware Syntax Highlighting**
-5. **BL-002 — Markdown Compatibility Improvements**
-6. **BL-011 — Multiple Authors / Author Metadata**
-7. **BL-012 — Document Digitization / OCR Pipeline**
-
-BL-011 is explicitly a **v2.1** requirement. BL-012 is a **v2.2 candidate** and should be opened only after its scope and acceptance criteria are defined against real scanned-document experiments.
