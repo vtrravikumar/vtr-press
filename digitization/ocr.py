@@ -11,7 +11,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import shutil
 import subprocess
-from typing import Sequence
 
 
 @dataclass(frozen=True)
