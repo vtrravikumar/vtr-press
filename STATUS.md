@@ -52,7 +52,9 @@ The proven Book publishing path is retained where Book-specific structures remai
 - Digitization now has PDF rendering, OCR, conservative preprocessing, page provenance, structure classification, code-safe review handling, source-image preservation and conservative review markers.
 - A repeatable `python -m digitization` PDF-to-Markdown workflow is implemented and covered by tests.
 - Real scanned college-project validation has been completed, including controlled preprocessing comparison.
-- Digitization remains incremental because semantic table/figure extraction and broader real-document validation still require evidence.
+- The complete 24-page `College-project-01.pdf` and complete 24-page `Code-01.pdf` have been exercised in full-document OCR validation.
+- The full-document validation exposed classification limitations on certificate/viva-style pages that require image/layout signals rather than OCR text alone.
+- Digitization remains incremental because semantic table/figure extraction, second-document validation and final production-readiness review still require evidence.
 
 ## Active Work — BL-012
 
@@ -71,10 +73,12 @@ Completed in the current increment:
 9. Regression fixtures derived from real college-project OCR
 10. Repeatable digitization CLI
 11. Real-document validation documentation
+12. Full 24-page college report OCR validation
+13. Full 24-page source-code OCR validation
 
 Remaining:
 
-1. Broader end-to-end validation against the college project and the second document case
+1. Validate the pipeline against a second real document
 2. Maintainable real-image regression strategy
 3. Image/layout-aware semantic table and figure extraction where fidelity can be demonstrated
 4. Final production-readiness review
