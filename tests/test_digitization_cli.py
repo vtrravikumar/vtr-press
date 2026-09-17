@@ -89,6 +89,26 @@ def test_cli_supports_passthrough_preprocessing(tmp_path: Path, monkeypatch):
     assert output.exists()
 
 
+def test_cli_reuses_macOS_vision_ocr_across_documents(tmp_path: Path, monkeypatch, capsys):
+    monkeypatch.setattr(cli, "PdftoppmRenderer", FakeRenderer)
+    calls = []
+
+    def fake_build_ocr(engine, profile):
+        calls.append((engine, profile))
+        return FakeOCR()
+
+    monkeypatch.setattr(cli, "_build_ocr", fake_build_ocr)
+    source = tmp_path / "source"
+    report = source / "report"
+    report.mkdir(parents=True)
+    (report / "report-01.pdf").write_bytes(b"pdf")
+    (report / "report-02.pdf").write_bytes(b"pdf")
+
+    assert cli.main([str(source), "--ocr-engine", "macos-vision"]) == 0
+    assert calls == [("macos-vision", "prose")]
+    assert "OCR session: persistent across documents" in capsys.readouterr().out
+
+
 def test_cli_discovers_report_and_optional_code_into_one_root_manuscript(
     tmp_path: Path, monkeypatch
 ):
