@@ -3,6 +3,7 @@
 from .assets import preserve_page_image
 from .ocr import OCRConfig, OCR_PROFILES, TesseractOCR, get_ocr_profile
 from .preprocess import PassthroughPreprocessor, PillowPreprocessor, PreprocessConfig
+from .review import build_review_markers
 from .structure import PageStructure, StructureClassification, classify_structure
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "StructureClassification",
     "classify_structure",
     "preserve_page_image",
+    "build_review_markers",
 ]
