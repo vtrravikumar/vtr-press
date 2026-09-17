@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from digitization.layout import VisualAnalysis, VisualRegion, analyze_page
+from digitization.layout import TableGrid, VisualAnalysis, VisualRegion, analyze_page
 
 
 def test_visual_analysis_handles_missing_image(tmp_path: Path):
@@ -40,8 +40,14 @@ def test_visual_analysis_detects_ruled_table_and_candidate_region(tmp_path: Path
     assert 90 <= region.top <= 110
     assert 390 <= region.bottom <= 410
 
+    assert isinstance(result.table_grid, TableGrid)
+    assert result.table_grid.columns == (100, 300, 500, 700)
+    assert result.table_grid.rows == (100, 200, 300, 400)
+    assert result.table_grid.column_count == 3
+    assert result.table_grid.row_count == 3
 
-def test_visual_analysis_maps_candidate_region_to_original_coordinates(tmp_path: Path):
+
+def test_visual_analysis_maps_candidate_grid_to_original_coordinates(tmp_path: Path):
     image = Image.new("L", (3200, 2400), 255)
     draw = ImageDraw.Draw(image)
     for y in (400, 800, 1200, 1600):
@@ -59,6 +65,9 @@ def test_visual_analysis_maps_candidate_region_to_original_coordinates(tmp_path:
     assert 2780 <= region.right <= 2820
     assert 380 <= region.top <= 420
     assert 1580 <= region.bottom <= 1620
+    assert result.table_grid is not None
+    assert result.table_grid.columns == (400, 1200, 2000, 2800)
+    assert result.table_grid.rows == (400, 800, 1200, 1600)
 
 
 def test_visual_analysis_returns_no_semantic_claim_for_plain_page(tmp_path: Path):
@@ -74,3 +83,4 @@ def test_visual_analysis_returns_no_semantic_claim_for_plain_page(tmp_path: Path
     assert result.figure_likely is False
     assert result.confidence == 0.0
     assert result.regions == ()
+    assert result.table_grid is None
