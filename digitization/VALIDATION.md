@@ -124,15 +124,48 @@ No programming-language hint is assigned automatically. This avoids presenting u
 
 ## Source-image preservation
 
-The pipeline now keeps the original rendered page image separately from any preprocessed image used for OCR. Generated Markdown records a `source-image` comment for every page so reviewers can return to the source page even when preprocessing was enabled.
+The pipeline keeps the original rendered page image separately from any preprocessed image used for OCR. Generated Markdown records a `source-image` comment for every page so reviewers can return to the source page even when preprocessing was enabled.
 
 For layout-classified pages, the assembler can optionally embed the source page image as a visual fallback. This is intentionally a page-level fallback rather than an attempted semantic extraction of a figure, diagram or table.
 
 This preserves information that plain OCR cannot safely represent: spatial relationships, signatures, diagrams, and table geometry. It also avoids silently inventing Markdown tables or figure boundaries from uncertain OCR.
 
+## Review markers
+
+The review layer never edits OCR text. It can add machine-readable Markdown comments for:
+
+- `code-ocr-verification`;
+- `layout-visual-verification`;
+- `low-structure-confidence` for weak non-prose classification;
+- `suspicious-ocr-glyphs` for a small set of recognizable OCR artefacts.
+
+These markers are conservative review signals, not proof that a particular character or word is wrong.
+
+## Regression fixtures
+
+The repository now contains small text snapshots derived from the actual college-project scan validation:
+
+- `prose-page-08.txt` — representative introduction OCR;
+- `code-page-03.txt` — representative C source OCR, including observed OCR corruption;
+- `layout-page-01.txt` — representative title-page OCR.
+
+These fixtures exercise structure classification and review-marker behaviour in CI without storing duplicate large binary scans inside VTR Press. The authoritative scanned pages remain in the `college-project` source repository. The fixture tests therefore protect the reusable classification/review contract while real-image validation remains an integration-level activity.
+
+## End-to-end workflow
+
+A repeatable command-line path is now available:
+
+```text
+python -m digitization source.pdf manuscript.md
+```
+
+The CLI supports explicit `prose`, `layout` and `code` OCR profiles, conservative or passthrough preprocessing, an optional working directory, and optional source-image embedding for layout pages. It writes the Markdown draft and copies rendered source pages beside it so the generated `source-image` references remain usable.
+
+The CLI does not modify the input PDF and does not claim that OCR output is final publication text.
+
 ## Current result
 
-The architecture is validated at the adapter, orchestration, structure-awareness and visual-fallback boundaries:
+The architecture is validated at the adapter, orchestration, structure-awareness, visual-fallback, review-marker and repeatable-workflow boundaries:
 
 ```text
 scanned source
@@ -149,19 +182,20 @@ conservative structure classification
       ↓
 source-image provenance / optional visual fallback
       ↓
+review markers
+      ↓
 reviewable Markdown draft
 ```
 
-The real document establishes that reliable digitization requires more than raw OCR. The remaining work is increasingly about reviewability and repeatability rather than forcing uncertain source structures into misleading Markdown.
+The real document establishes that reliable digitization requires more than raw OCR. The remaining work is increasingly about validation against additional real documents and about only adding semantic table/figure extraction where fidelity can be demonstrated.
 
 ## Next implementation increment
 
 The remaining digitization work should address these areas in order:
 
-1. **Review markers** — expand review metadata beyond structure classification to identify uncertain or structure-sensitive regions where practical.
-2. **Regression fixtures** — retain representative page-level examples from real scanned documents so changes can be measured against stable source material.
-3. **End-to-end workflow** — provide a practical CLI/API path for repeatable PDF-to-Markdown digitization and validate it against the college project and a second document such as the Accupressure validation case.
-4. **Table/figure extraction** — only after the visual fallback is stable, investigate image/layout-aware extraction for structures that can be represented faithfully.
+1. **Broader end-to-end validation** — run the workflow against the college project and a second document such as the Accupressure validation case in an environment with the required OCR/PDF tools.
+2. **Real-image regression strategy** — decide how to maintain a small, representative set of binary page fixtures without bloating the publishing repository; the source project scans remain the current integration source.
+3. **Image/layout-aware table and figure extraction** — investigate semantic extraction only where spatial relationships can be preserved faithfully; keep the page-image fallback when they cannot.
 
 ## Fidelity rule
 
