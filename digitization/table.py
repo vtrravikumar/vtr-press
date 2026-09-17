@@ -1,9 +1,4 @@
-"""Layout-aware table cell extraction for scanned pages.
-
-This module deliberately stops short of deciding whether OCR text is correct.
-It turns a detected :class:`TableGrid` into cell images and optionally OCRs
-those cells through the existing engine adapter.
-"""
+"""Layout-aware table cell extraction for scanned pages."""
 
 from __future__ import annotations
 
@@ -18,24 +13,22 @@ from .layout import TableGrid, VisualRegion
 
 class CellOCREngine(Protocol):
     """Minimal OCR contract required by table extraction."""
-
     def ocr_image(self, image: str | Path) -> str: ...
 
 
 @dataclass(frozen=True)
 class TableCell:
     """One table cell with its row/column position and OCR text."""
-
     row: int
     column: int
     region: VisualRegion
     text: str = ""
+    confidence: float | None = None
 
 
 @dataclass(frozen=True)
 class ExtractedTable:
     """Reviewable table extraction result; no Markdown is generated here."""
-
     cells: tuple[TableCell, ...] = ()
 
     @property
@@ -47,19 +40,22 @@ class ExtractedTable:
         return max((cell.column for cell in self.cells), default=-1) + 1
 
     def rows(self) -> tuple[tuple[str, ...], ...]:
-        """Return OCR text arranged by detected row and column."""
         if not self.cells:
             return ()
         return tuple(
             tuple(
-                next(
-                    (cell.text for cell in self.cells if cell.row == row and cell.column == column),
-                    "",
-                )
+                next((cell.text for cell in self.cells if cell.row == row and cell.column == column), "")
                 for column in range(self.column_count)
             )
             for row in range(self.row_count)
         )
+
+    def confidence(self) -> float | None:
+        """Return mean cell confidence when every non-empty cell has one."""
+        non_empty = [cell for cell in self.cells if cell.text.strip()]
+        if not non_empty or any(cell.confidence is None for cell in non_empty):
+            return None
+        return sum(cell.confidence for cell in non_empty if cell.confidence is not None) / len(non_empty)
 
 
 def _crop_region(image: Image.Image, region: VisualRegion, padding: int = 2) -> Image.Image:
@@ -81,13 +77,7 @@ def extract_table_cells(
     ocr_engine: CellOCREngine | None = None,
     padding: int = 2,
 ) -> ExtractedTable:
-    """Extract detected cells from an original source image.
-
-    Cell crops are written as deterministic PNG assets. If ``ocr_engine`` is
-    supplied, each crop is OCR'd independently. No source image is modified,
-    and OCR output is kept as reviewable text rather than converted to a
-    semantic Markdown table.
-    """
+    """Extract cells and optionally OCR them with per-cell confidence."""
     image_path = Path(image)
     if not image_path.is_file():
         raise FileNotFoundError(image_path)
@@ -101,15 +91,22 @@ def extract_table_cells(
             for column in range(grid.column_count):
                 region = VisualRegion(
                     kind="table-cell",
-                    left=grid.columns[column],
-                    top=grid.rows[row],
-                    right=grid.columns[column + 1],
-                    bottom=grid.rows[row + 1],
+                    left=grid.columns[column], top=grid.rows[row],
+                    right=grid.columns[column + 1], bottom=grid.rows[row + 1],
                 )
                 crop = _crop_region(source_image, region, padding=padding)
                 crop_path = destination / f"cell-r{row + 1:02d}-c{column + 1:02d}.png"
                 crop.save(crop_path, format="PNG")
-                text = ocr_engine.ocr_image(crop_path).strip() if ocr_engine else ""
-                cells.append(TableCell(row, column, region, text))
+
+                confidence = None
+                if ocr_engine is not None:
+                    confidence_method = getattr(ocr_engine, "ocr_image_with_confidence", None)
+                    if confidence_method is not None:
+                        text, confidence = confidence_method(crop_path)
+                    else:
+                        text = ocr_engine.ocr_image(crop_path)
+                else:
+                    text = ""
+                cells.append(TableCell(row, column, region, text.strip(), confidence))
 
     return ExtractedTable(tuple(cells))
