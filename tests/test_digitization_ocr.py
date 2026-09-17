@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from digitization.ocr import OCRConfig, TesseractOCR
+from digitization.ocr import OCRConfig, TesseractOCR, get_ocr_profile
 
 
 def test_ocr_config_defaults():
@@ -13,6 +13,17 @@ def test_ocr_config_defaults():
     assert config.language == "eng"
     assert config.psm is None
     assert config.extra_args == ()
+
+
+def test_ocr_profiles_have_conservative_defaults():
+    assert get_ocr_profile("prose").psm == 6
+    assert get_ocr_profile("layout").psm == 11
+    assert get_ocr_profile("code").psm == 6
+
+
+def test_unknown_ocr_profile_fails_early():
+    with pytest.raises(ValueError, match="unknown OCR profile"):
+        get_ocr_profile("unknown")
 
 
 def test_ocr_missing_image_fails_before_invoking_engine(tmp_path: Path):
