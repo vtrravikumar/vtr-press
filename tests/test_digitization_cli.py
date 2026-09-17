@@ -32,11 +32,10 @@ def test_cli_writes_markdown_and_source_pages(tmp_path: Path, monkeypatch):
 
     assert cli.main([str(pdf), str(output), "--include-source-images"]) == 0
 
-    assert output.read_text(encoding="utf-8").startswith(
-        "<!-- source: source.pdf; page: 1 -->"
-    )
-    assert "![Source page 1](pages/page-1.png)" in output.read_text(encoding="utf-8")
-    assert (tmp_path / "pages" / "page-1.png").is_file()
+    text = output.read_text(encoding="utf-8")
+    assert text.startswith("<!-- source-document: source.pdf; profile: prose -->")
+    assert "<!-- source: source.pdf; page: 1 -->" in text
+    assert (tmp_path / "pages" / "01-source-page-1.png").is_file()
 
 
 def test_cli_supports_default_manuscript_output(tmp_path: Path, monkeypatch):
@@ -52,7 +51,7 @@ def test_cli_supports_default_manuscript_output(tmp_path: Path, monkeypatch):
     output = tmp_path / "manuscript.md"
     assert output.exists()
     assert "<!-- source: source.pdf; page: 1 -->" in output.read_text(encoding="utf-8")
-    assert (tmp_path / "pages" / "page-1.png").is_file()
+    assert (tmp_path / "pages" / "01-source-page-1.png").is_file()
 
 
 def test_cli_supports_passthrough_preprocessing(tmp_path: Path, monkeypatch):
@@ -65,3 +64,46 @@ def test_cli_supports_passthrough_preprocessing(tmp_path: Path, monkeypatch):
 
     assert cli.main([str(pdf), str(output), "--preprocess", "none"]) == 0
     assert output.exists()
+
+
+def test_cli_discovers_report_and_code_folders_into_one_manuscript(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.setattr(cli, "PdftoppmRenderer", FakeRenderer)
+    monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
+
+    source = tmp_path / "source"
+    report = source / "report"
+    code = source / "code"
+    report.mkdir(parents=True)
+    code.mkdir()
+    for name in ("College-project-01.pdf", "College-project-02.pdf", "College-project-03.pdf"):
+        (report / name).write_bytes(b"pdf")
+    for name in ("Code-01.pdf", "Code-02.pdf", "Code-03.pdf"):
+        (code / name).write_bytes(b"pdf")
+
+    assert cli.main([str(source)]) == 0
+
+    output = source / "manuscript.md"
+    text = output.read_text(encoding="utf-8")
+    assert text.count("<!-- source-document:") == 6
+    assert text.index("College-project-01.pdf") < text.index("College-project-02.pdf")
+    assert text.index("College-project-03.pdf") < text.index("Code-01.pdf")
+    assert text.index("Code-02.pdf") < text.index("Code-03.pdf")
+    assert "profile: prose" in text
+    assert "profile: code" in text
+    assert len(list((source / "pages").glob("*.png"))) == 6
+    assert (source / "pages" / "01-College-project-01-page-1.png").is_file()
+    assert (source / "pages" / "06-Code-03-page-1.png").is_file()
+
+
+def test_cli_rejects_source_folder_without_report_or_code(tmp_path: Path):
+    source = tmp_path / "source"
+    (source / "report").mkdir(parents=True)
+
+    try:
+        cli.main([str(source)])
+    except SystemExit as exc:
+        assert "Code source folder not found" in str(exc)
+    else:
+        raise AssertionError("expected missing code folder error")
