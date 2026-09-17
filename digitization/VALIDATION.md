@@ -163,6 +163,22 @@ The CLI supports explicit `prose`, `layout` and `code` OCR profiles, conservativ
 
 The CLI does not modify the input PDF and does not claim that OCR output is final publication text.
 
+## Real-document end-to-end smoke run
+
+A real-document smoke run was executed against rendered pages from the authoritative college-project scans using Tesseract 5.5.0. The run exercised the same logical stages as the CLI path: source page image → OCR → structure classification → review markers → traceable Markdown.
+
+The sampled results were:
+
+| Source | Page | Observed result |
+| --- | ---: | --- |
+| `College-project-01.pdf` | 3 | Classified as `layout` (confidence 0.75) and retained with a visual source-image fallback. The OCR recovered the project title, three author names and institutional details, while preserving visible OCR noise for review. |
+| `College-project-01.pdf` | 8 | Classified as `prose` (confidence 0.50). The introduction text was substantially recovered, with known OCR defects such as `inpatterns`, `novell` and punctuation/spacing errors left untouched. |
+| `Code-01.pdf` | 3 | Classified as `code` (confidence 0.90). The generated Markdown used an unlabelled code fence and `code-ocr-verification`; OCR visibly corrupted C syntax such as array brackets and pointer/declaration punctuation, confirming the need for manual source verification. |
+
+This smoke run validates the important real-document boundary: the pipeline can carry different page types from actual scanned material into a reviewable Markdown representation without silently correcting OCR or presenting uncertain code as authoritative.
+
+A small generated Markdown sample from this run was also inspected for the expected provenance, structure, source-image and review-marker comments.
+
 ## Current result
 
 The architecture is validated at the adapter, orchestration, structure-awareness, visual-fallback, review-marker and repeatable-workflow boundaries:
@@ -193,7 +209,7 @@ The real document establishes that reliable digitization requires more than raw 
 
 The remaining digitization work should address these areas in order:
 
-1. **Broader end-to-end validation** — run the workflow against the college project and a second document such as the Accupressure validation case in an environment with the required OCR/PDF tools.
+1. **Broader end-to-end validation** — extend the real-document smoke run to the full college project and a second document such as the Accupressure validation case in an environment with the required OCR/PDF tools.
 2. **Real-image regression strategy** — decide how to maintain a small, representative set of binary page fixtures without bloating the publishing repository; the source project scans remain the current integration source.
 3. **Image/layout-aware table and figure extraction** — investigate semantic extraction only where spatial relationships can be preserved faithfully; keep the page-image fallback when they cannot.
 
