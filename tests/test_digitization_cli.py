@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from PIL import Image
@@ -41,6 +42,27 @@ def test_cli_writes_markdown_and_source_pages(tmp_path: Path, monkeypatch, capsy
     assert "VTR Press — Document Digitization" in captured
     assert "[ 1/1] OCR complete" in captured
     assert "VTR Press compatibility: OK" in captured
+
+
+def test_cli_writes_timestamped_run_statistics(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(cli, "PdftoppmRenderer", FakeRenderer)
+    monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+
+    assert cli.main([str(pdf)]) == 0
+    run_files = sorted((tmp_path / "digitization" / "runs").glob("*.json"))
+    assert len(run_files) == 1
+    stats = json.loads(run_files[0].read_text(encoding="utf-8"))
+    assert stats["source"] == str(pdf.resolve())
+    assert stats["document_count"] == 1
+    assert stats["total_pages"] == 1
+    assert stats["renderer"] == "pdftoppm"
+    assert stats["ocr_engine"] == "tesseract"
+    assert stats["preprocessing"] == "conservative"
+    assert stats["documents"][0]["filename"] == "source.pdf"
+    assert len(stats["documents"][0]["page_durations_seconds"]) == 1
+    assert stats["total_duration_seconds"] >= 0
 
 
 def test_cli_supports_default_manuscript_output_for_single_pdf(tmp_path: Path, monkeypatch):
