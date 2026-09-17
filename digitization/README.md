@@ -12,6 +12,7 @@ Source PDF / scans
         v
    Digitization
         |
+        +-- source batching / optional PDF combination
         +-- page extraction
         +-- image preprocessing
         +-- OCR
@@ -52,12 +53,32 @@ The current increment establishes the core, adapter-based pipeline:
 - `review.py` — conservative review-marker generation for structure-sensitive pages and a small set of suspicious OCR glyph patterns.
 - `layout.py` — conservative visual analysis that detects ruled-table signals and records source-image regions, row boundaries and column boundaries.
 - `table.py` — layout-aware table cell extraction that crops individual cells from the original source image and can send each crop through an existing OCR adapter. It intentionally does not yet promote OCR output to semantic Markdown.
+- `combined.py` — optional optimization for multi-PDF source folders: combines the physical PDFs into one temporary PDF, retains logical source/page boundaries, and routes pages to the appropriate OCR profile in one sequential rendering/OCR session.
 - `pipeline.py` — deterministic orchestration from PDF pages through preprocessing, OCR and structure classification, with page-level provenance and heading normalization.
-- `stats.py` — machine-readable timestamped run statistics, including per-document and per-page timing data.
-- `cli.py` / `__main__.py` — repeatable command-line PDF-to-Markdown workflow, including multi-PDF project-source batching and compatibility validation.
+- `stats.py` — machine-readable timestamped run statistics, including per-document and per-page timing data and whether source PDFs were combined.
+- `cli.py` / `__main__.py` — repeatable command-line PDF-to-Markdown workflow, including multi-PDF project-source batching, optional source combination and compatibility validation.
 - `MarkdownAssembler` — produces a reviewable Markdown draft with source-PDF/page markers, structure/confidence markers and review markers. It can optionally embed the original rendered page image for layout-heavy pages.
 
 Structure classification is deliberately conservative. It is a page-level routing and review aid, not a claim that OCR text can reconstruct tables or diagrams. Tables now have a separate spatial-analysis path: detected grids can be decomposed into cell regions, and those regions can be OCR'd independently. This still requires review before semantic Markdown generation.
+
+## Combining multi-part sources
+
+A source folder normally contains numbered report PDFs and optional numbered code PDFs. By default, each PDF is rendered separately. The optional `--combine-sources` mode creates one temporary PDF and processes all pages sequentially in one pipeline invocation.
+
+The combination is **physical, but provenance remains logical**. Each original PDF keeps its own `source-document` marker, page numbering, OCR profile and output image naming. The combined PDF is only an execution optimization and is not used as the manuscript's source identity.
+
+For mixed report/code sources, page ranges are retained internally so the appropriate `prose` or `code` OCR profile is selected for each original source segment. The final Markdown ordering and source boundaries remain unchanged.
+
+Example:
+
+```bash
+python -m digitization ~/Projects/college-project/source \
+  --pdf-renderer pymupdf \
+  --ocr-engine macos-vision \
+  --combine-sources
+```
+
+`--combine-sources` requires the optional `pymupdf` package. It is deliberately opt-in until benchmark results establish whether the reduction in repeated PDF/session overhead is worthwhile on real source material. Run statistics record `combined_sources: true` so runs can be compared directly.
 
 ## Table extraction path
 
