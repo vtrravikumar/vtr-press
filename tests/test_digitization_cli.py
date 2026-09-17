@@ -152,9 +152,9 @@ def test_cli_combines_source_pdfs_into_one_session(tmp_path: Path, monkeypatch, 
     code_pdf = code / "Code-01.pdf"
     report_pdf.write_bytes(b"pdf")
     code_pdf.write_bytes(b"pdf")
-    combined_pdf = tmp_path / ".digitization-work" / "combined-source.pdf"
+    combined_pdf = source / "combined" / "source.pdf"
 
-    def fake_combine(sources, output_pdf):
+    def fake_combine(sources, output_pdf, manifest_path=None):
         output_pdf = Path(output_pdf)
         output_pdf.parent.mkdir(parents=True, exist_ok=True)
         output_pdf.write_bytes(b"combined")
@@ -167,13 +167,14 @@ def test_cli_combines_source_pdfs_into_one_session(tmp_path: Path, monkeypatch, 
     monkeypatch.setattr(cli, "_build_combined_ocr", lambda engine, segments: FakeOCR())
 
     assert cli.main([str(source), "--combine-sources"]) == 0
+    assert combined_pdf.is_file()
     text = (tmp_path / "manuscript.md").read_text(encoding="utf-8")
     assert "<!-- source-document: report-01.pdf; profile: prose -->" in text
     assert "<!-- source-document: Code-01.pdf; profile: code -->" in text
     stats = json.loads(next((tmp_path / "digitization" / "runs").glob("*.json")).read_text(encoding="utf-8"))
     assert stats["combined_sources"] is True
     assert stats["document_count"] == 2
-    assert "Source PDFs: combined into one temporary PDF" in capsys.readouterr().out
+    assert "Source PDFs: building cached combined PDF..." in capsys.readouterr().out
 
 
 def test_cli_allows_report_without_code_folder(tmp_path: Path, monkeypatch):
