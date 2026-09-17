@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -48,11 +49,10 @@ def test_markdown_references_visual_assets_as_review_candidates(tmp_path: Path) 
 
     result = DigitizationPipeline(ImageRenderer(), OCR()).run(pdf, tmp_path / "work")
     page = result.pages[0]
-    # Simulate the CLI's final asset relocation: assets are manuscript-relative.
     relocated = tuple(asset.replace("visuals/source/", "visuals/01-source/") for asset in page.visual_assets)
-    page = page.__class__(**{**page.__dict__, "visual_assets": relocated})
+    page = replace(page, visual_assets=relocated)
 
-    markdown = MarkdownAssembler().assemble(result.__class__(source_pdf=pdf, pages=(page,)))
+    markdown = MarkdownAssembler().assemble(replace(result, pages=(page,)))
 
     assert "<!-- visual-candidate: assets/visuals/01-source/page-001/" in markdown
     assert "![Visual candidate](assets/visuals/01-source/page-001/" in markdown
