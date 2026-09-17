@@ -235,14 +235,17 @@ The pipeline should be reusable across projects. Project repositories should ret
 - source-image preservation and optional visual fallback for layout-sensitive pages;
 - conservative review markers for code, layout, low non-prose classification confidence and suspicious OCR glyphs;
 - real scanned college-report validation and controlled preprocessing comparison;
+- full 24-page real-document OCR validation for `College-project-01.pdf`;
+- full 24-page real source-code OCR validation for `Code-01.pdf`;
+- repeatable digitization CLI and end-to-end CLI tests;
 - unit/regression coverage for the digitization components added so far.
 
 ### Remaining scope
 
 - representative regression fixtures using real scanned page images in a maintainable test strategy;
-- final CLI/API workflow for repeatable PDF-to-Markdown digitization;
-- broader end-to-end validation against the college project and a second document such as the Accupressure case;
-- image/layout-aware extraction of tables and figures where faithful semantic representation can be demonstrated.
+- broader end-to-end validation against a second document such as the Accupressure case;
+- image/layout-aware extraction of tables and figures where faithful semantic representation can be demonstrated;
+- final production-readiness review, including runtime/dependency validation on supported environments.
 
 ### Potential scope
 
