@@ -53,6 +53,7 @@ def write_run_stats(stats: RunStats, output_dir: str | Path) -> Path:
     directory = Path(output_dir)
     directory.mkdir(parents=True, exist_ok=True)
     timestamp = stats.run_started_at.replace(":", "-").replace("Z", "")
-    path = directory / f"{timestamp.replace("T", "_")}.json"
+    filename = timestamp.replace("T", "_") + ".json"
+    path = directory / filename
     path.write_text(json.dumps(stats.to_dict(), indent=2) + "\n", encoding="utf-8")
     return path
