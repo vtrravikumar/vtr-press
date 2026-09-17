@@ -55,6 +55,7 @@ def test_pipeline_preserves_page_provenance(tmp_path: Path):
         "page-2.png",
     ]
     assert all(page.structure is PageStructure.PROSE for page in result.pages)
+    assert all(page.review_markers == () for page in result.pages)
 
 
 def test_pipeline_can_assemble_traceable_markdown(tmp_path: Path):
@@ -83,6 +84,7 @@ def test_pipeline_allows_classification_to_be_disabled(tmp_path: Path):
     ).run(pdf, tmp_path / "work")
 
     assert all(page.structure is None for page in result.pages)
+    assert all(page.review_markers == () for page in result.pages)
 
 
 def test_preprocessing_keeps_original_source_image_reference(tmp_path: Path):
@@ -110,6 +112,7 @@ def test_layout_page_can_embed_visual_source_fallback(tmp_path: Path):
     )
 
     assert "<!-- structure: layout;" in markdown
+    assert "<!-- review-marker: layout-visual-verification -->" in markdown
     assert "![Source page 1](pages/page-1.png)" in markdown
     assert "![Source page 2](pages/page-2.png)" in markdown
 
@@ -123,6 +126,7 @@ def test_code_page_is_marked_for_review_without_language_hint(tmp_path: Path):
     )
 
     assert "<!-- structure: code;" in markdown
+    assert "<!-- review-marker: code-ocr-verification -->" in markdown
     assert "<!-- review: OCR code listing requires verification against the source scan -->" in markdown
     assert "````\n#include <stdio.h>" in markdown
     assert "````" in markdown
