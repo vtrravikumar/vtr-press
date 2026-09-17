@@ -59,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--ocr-engine",
         choices=("tesseract", "macos-vision"),
         default="tesseract",
-        help="OCR backend; macos-vision uses Apple's Vision framework via ocrmac",
+        help="OCR backend; macos-vision uses Apple's Vision framework",
     )
     parser.add_argument(
         "--include-source-images",
@@ -200,11 +200,17 @@ def main(argv: list[str] | None = None) -> int:
     overall_start = time.monotonic()
     run_started_at = utc_timestamp()
 
+    # macOS Vision is deliberately shared across all documents. Tesseract
+    # profiles differ between prose and code, so those remain per-document.
+    shared_ocr = _build_ocr(args.ocr_engine, "prose") if args.ocr_engine == "macos-vision" else None
+
     print("VTR Press — Document Digitization")
     print(f"Source: {input_path}")
     print(f"Documents: {len(sources)}")
     print(f"Renderer: {args.pdf_renderer}")
     print(f"OCR: {args.ocr_engine}")
+    if shared_ocr is not None:
+        print("OCR session: persistent across documents")
     print(f"Preprocessing: {args.preprocess}")
     print()
 
@@ -213,7 +219,7 @@ def main(argv: list[str] | None = None) -> int:
         if source_work.exists():
             shutil.rmtree(source_work)
 
-        ocr = _build_ocr(args.ocr_engine, profile)
+        ocr = shared_ocr or _build_ocr(args.ocr_engine, profile)
         pipeline = DigitizationPipeline(renderer, ocr, preprocessor=preprocessor)
         source_start = time.monotonic()
         source_started_at = utc_timestamp()
