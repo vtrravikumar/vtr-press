@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
 import shutil
 import time
 
+from .combined import ProfileRoutingOCR, combine_pdfs, remap_result_pages, split_page_durations
 from .compatibility import build_front_matter, extract_metadata, validate_vtr_press_markdown
 from .ocr import TesseractOCR, get_ocr_profile
 from .pdf import PdftoppmRenderer
@@ -65,6 +67,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--include-source-images",
         action="store_true",
         help="embed source images for layout-classified pages",
+    )
+    parser.add_argument(
+        "--combine-sources",
+        action="store_true",
+        help=(
+            "combine all source PDFs into one temporary PDF and digitize them "
+            "in a single rendering/OCR session (requires pymupdf)"
+        ),
     )
     return parser
 
@@ -171,6 +181,20 @@ def _format_duration(seconds: float) -> str:
     return f"{minutes:02d}:{secs:02d}"
 
 
+def _timestamp_after(started_at: str, seconds: float) -> str:
+    """Return an ISO UTC timestamp offset from a recorded run start."""
+    value = started_at.replace("Z", "+00:00")
+    timestamp = datetime.fromisoformat(value) + timedelta(seconds=seconds)
+    return timestamp.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _build_combined_ocr(engine: str, segments) -> ProfileRoutingOCR:
+    """Build profile-specific engines behind one sequential OCR adapter."""
+    profiles = tuple(dict.fromkeys(segment.profile for segment in segments))
+    engines = {profile: _build_ocr(engine, profile) for profile in profiles}
+    return ProfileRoutingOCR(engines, segments)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     input_path = args.input.resolve()
@@ -181,6 +205,8 @@ def main(argv: list[str] | None = None) -> int:
         sources = _discover_sources(input_path)
         default_output_dir = input_path.parent
     else:
+        if args.combine_sources:
+            raise SystemExit("--combine-sources requires a source folder input")
         if input_path.suffix.lower() != ".pdf":
             raise SystemExit(f"Input must be a PDF or source folder: {input_path}")
         sources = [(input_path, args.profile)]
@@ -200,30 +226,40 @@ def main(argv: list[str] | None = None) -> int:
     overall_start = time.monotonic()
     run_started_at = utc_timestamp()
 
-    # macOS Vision is deliberately shared across all documents. Tesseract
-    # profiles differ between prose and code, so those remain per-document.
-    shared_ocr = _build_ocr(args.ocr_engine, "prose") if args.ocr_engine == "macos-vision" else None
-
     print("VTR Press — Document Digitization")
     print(f"Source: {input_path}")
     print(f"Documents: {len(sources)}")
     print(f"Renderer: {args.pdf_renderer}")
     print(f"OCR: {args.ocr_engine}")
-    if shared_ocr is not None:
-        print("OCR session: persistent across documents")
     print(f"Preprocessing: {args.preprocess}")
-    print()
 
-    for source_index, (pdf, profile) in enumerate(sources, start=1):
-        source_work = work_root / f"{source_index:02d}-{_safe_stem(pdf.stem)}"
-        if source_work.exists():
-            shutil.rmtree(source_work)
+    if args.combine_sources:
+        combined_pdf = work_root / "combined-source.pdf"
+        try:
+            combined_pdf, segments = combine_pdfs(sources, combined_pdf)
+        except RuntimeError as exc:
+            raise SystemExit(str(exc)) from exc
 
-        ocr = shared_ocr or _build_ocr(args.ocr_engine, profile)
+        print("Source PDFs: combined into one temporary PDF")
+        print("OCR session: single sequential session with profile routing")
+        print()
+
+        if work_root.exists():
+            # Preserve the freshly created combined PDF while clearing stale rendered pages.
+            for child in work_root.iterdir():
+                if child != combined_pdf:
+                    if child.is_dir():
+                        shutil.rmtree(child)
+                    else:
+                        child.unlink()
+        combined_work = work_root / "combined-run"
+        if combined_work.exists():
+            shutil.rmtree(combined_work)
+
+        ocr = _build_combined_ocr(args.ocr_engine, segments)
         pipeline = DigitizationPipeline(renderer, ocr, preprocessor=preprocessor)
-        source_start = time.monotonic()
-        source_started_at = utc_timestamp()
-        page_started = source_start
+        combined_start = time.monotonic()
+        page_started = combined_start
         page_durations: list[float] = []
 
         def report_progress(page_number: int, total_pages: int, _unused: float) -> None:
@@ -231,46 +267,125 @@ def main(argv: list[str] | None = None) -> int:
             now = time.monotonic()
             page_durations.append(now - page_started)
             page_started = now
-            elapsed = now - source_start
+            elapsed = now - combined_start
             average = elapsed / page_number
             remaining = max(0.0, average * (total_pages - page_number))
             print(
-                f"[{page_number:>2}/{total_pages}] OCR complete "
+                f"[{page_number:>3}/{total_pages}] OCR complete "
                 f"({elapsed / page_number:.1f}s/page) | "
                 f"elapsed {_format_duration(elapsed)} | "
                 f"ETA ~{_format_duration(remaining)}"
             )
 
-        result = pipeline.run(pdf, source_work, progress_callback=report_progress)
-        result = _copy_source_pages(result, output_pages, source_index)
-        source_duration = time.monotonic() - source_start
-        source_ended_at = utc_timestamp()
-        if first_report_page_text is None and profile == "prose" and result.pages:
-            first_report_page_text = result.pages[0].text
+        combined_result = pipeline.run(combined_pdf, combined_work, progress_callback=report_progress)
+        remapped_pages = remap_result_pages(combined_result, segments)
+        timings_by_source = split_page_durations(page_durations, segments)
+        elapsed_before = 0.0
 
-        manuscript_parts.append(
-            f"<!-- source-document: {pdf.name}; profile: {profile} -->\n"
-            + assembler.assemble(result).rstrip()
-        )
-        document_stats.append(
-            DocumentStats(
-                filename=pdf.name,
-                profile=profile,
-                pages=len(result.pages),
-                started_at=source_started_at,
-                ended_at=source_ended_at,
-                duration_seconds=round(source_duration, 3),
-                average_seconds_per_page=round(source_duration / len(result.pages), 3)
-                if result.pages
-                else 0.0,
-                page_durations_seconds=[round(value, 3) for value in page_durations],
+        for source_index, segment in enumerate(segments, start=1):
+            source_pages = tuple(
+                page
+                for page in remapped_pages
+                if page.source_pdf == segment.source_pdf
             )
-        )
-        print(
-            f"Completed {pdf.name}: {len(result.pages)} pages in "
-            f"{_format_duration(source_duration)}"
-        )
+            result = DigitizationResult(source_pdf=segment.source_pdf, pages=source_pages)
+            result = _copy_source_pages(result, output_pages, source_index)
+            durations = timings_by_source[segment.source_pdf]
+            source_duration = sum(durations)
+            source_started_at = _timestamp_after(run_started_at, elapsed_before)
+            elapsed_before += source_duration
+            source_ended_at = _timestamp_after(run_started_at, elapsed_before)
+            if first_report_page_text is None and segment.profile == "prose" and result.pages:
+                first_report_page_text = result.pages[0].text
+
+            manuscript_parts.append(
+                f"<!-- source-document: {segment.source_pdf.name}; profile: {segment.profile} -->\n"
+                + assembler.assemble(result).rstrip()
+            )
+            document_stats.append(
+                DocumentStats(
+                    filename=segment.source_pdf.name,
+                    profile=segment.profile,
+                    pages=len(result.pages),
+                    started_at=source_started_at,
+                    ended_at=source_ended_at,
+                    duration_seconds=round(source_duration, 3),
+                    average_seconds_per_page=round(source_duration / len(result.pages), 3)
+                    if result.pages
+                    else 0.0,
+                    page_durations_seconds=[round(value, 3) for value in durations],
+                )
+            )
+            print(
+                f"Completed {segment.source_pdf.name}: {len(result.pages)} pages in "
+                f"{_format_duration(source_duration)}"
+            )
         print()
+    else:
+        # macOS Vision is deliberately shared across all documents. Tesseract
+        # profiles differ between prose and code, so those remain per-document.
+        shared_ocr = _build_ocr(args.ocr_engine, "prose") if args.ocr_engine == "macos-vision" else None
+        if shared_ocr is not None:
+            print("OCR session: persistent across documents")
+        print()
+
+        for source_index, (pdf, profile) in enumerate(sources, start=1):
+            source_work = work_root / f"{source_index:02d}-{_safe_stem(pdf.stem)}"
+            if source_work.exists():
+                shutil.rmtree(source_work)
+
+            ocr = shared_ocr or _build_ocr(args.ocr_engine, profile)
+            pipeline = DigitizationPipeline(renderer, ocr, preprocessor=preprocessor)
+            source_start = time.monotonic()
+            source_started_at = utc_timestamp()
+            page_started = source_start
+            page_durations: list[float] = []
+
+            def report_progress(page_number: int, total_pages: int, _unused: float) -> None:
+                nonlocal page_started
+                now = time.monotonic()
+                page_durations.append(now - page_started)
+                page_started = now
+                elapsed = now - source_start
+                average = elapsed / page_number
+                remaining = max(0.0, average * (total_pages - page_number))
+                print(
+                    f"[{page_number:>2}/{total_pages}] OCR complete "
+                    f"({elapsed / page_number:.1f}s/page) | "
+                    f"elapsed {_format_duration(elapsed)} | "
+                    f"ETA ~{_format_duration(remaining)}"
+                )
+
+            result = pipeline.run(pdf, source_work, progress_callback=report_progress)
+            result = _copy_source_pages(result, output_pages, source_index)
+            source_duration = time.monotonic() - source_start
+            source_ended_at = utc_timestamp()
+            if first_report_page_text is None and profile == "prose" and result.pages:
+                first_report_page_text = result.pages[0].text
+
+            manuscript_parts.append(
+                f"<!-- source-document: {pdf.name}; profile: {profile} -->\n"
+                + assembler.assemble(result).rstrip()
+            )
+            document_stats.append(
+                DocumentStats(
+                    filename=pdf.name,
+                    profile=profile,
+                    pages=len(result.pages),
+                    started_at=source_started_at,
+                    ended_at=source_ended_at,
+                    duration_seconds=round(source_duration, 3),
+                    average_seconds_per_page=round(source_duration / len(result.pages), 3)
+                    if result.pages
+                    else 0.0,
+                    page_durations_seconds=[round(value, 3) for value in page_durations],
+                )
+            )
+            print(
+                f"Completed {pdf.name}: {len(result.pages)} pages in "
+                f"{_format_duration(source_duration)}"
+            )
+            print()
 
     metadata = extract_metadata(first_report_page_text or "")
     body = "\n\n".join(manuscript_parts).strip()
