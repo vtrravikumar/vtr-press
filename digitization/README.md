@@ -16,6 +16,7 @@ Source PDF / scans
         +-- image preprocessing
         +-- OCR
         +-- structure classification
+        +-- source-image preservation
         +-- figures / diagrams
         +-- tables
         +-- source-code handling
@@ -37,12 +38,11 @@ The current increment establishes the core, adapter-based pipeline:
 - `preprocess.py` — conservative preprocessing with both an unchanged passthrough and a Pillow-based grayscale/contrast/threshold path.
 - `ocr.py` — Tesseract OCR adapter with configurable language, page segmentation mode, and named profiles for prose, layout-heavy pages and code.
 - `structure.py` — conservative OCR-text classification into broad `prose`, `code` and `layout` page types, with bounded confidence and reasons.
+- `assets.py` — byte-preserving helper for copying rendered source-page images into a stable asset directory.
 - `pipeline.py` — deterministic orchestration from PDF pages through preprocessing, OCR and optional structure classification, with page-level provenance.
-- `MarkdownAssembler` — produces a reviewable Markdown draft with source-PDF/page markers and, when classification is enabled, structure/confidence markers.
+- `MarkdownAssembler` — produces a reviewable Markdown draft with source-PDF/page markers and structure/confidence markers. It can optionally embed the original rendered page image for layout-heavy pages.
 
 Structure classification is deliberately conservative. It is a page-level routing and review aid, not a claim that OCR text can reconstruct tables or diagrams. Those require image/layout-aware handling in later increments.
-
-The adapters intentionally depend on external executables rather than bundling an OCR/PDF runtime into VTR Press. This keeps the publishing engine portable and allows the runtime environment to be selected separately.
 
 ## Runtime requirements
 
@@ -66,6 +66,14 @@ The initial Pillow path deliberately limits transformations to:
 
 Geometry-changing operations such as deskewing and cropping are intentionally deferred until they are validated against real scanned documents.
 
+## Source-image preservation
+
+Digitization keeps the rendered source-page path separately from the image actually passed to OCR. This matters when preprocessing is enabled: review must always be able to return to the unmodified page image.
+
+Every generated page carries a `source-image` Markdown comment. By default this is metadata only, so the manuscript is not cluttered with page images. For layout-classified pages, `MarkdownAssembler(include_source_images=True)` can embed the source image as a visual fallback. This is intended for title pages, diagrams and uncertain spatial structures where plain OCR is insufficient.
+
+The fallback is deliberately page-level. It does **not** claim to have extracted a table or figure into semantic Markdown. When a table or diagram depends on spatial relationships that OCR cannot preserve, the source image remains the authoritative visual reference until a later image/layout-aware extraction step is implemented.
+
 ## Validation strategy
 
 The first real-document validation used the historical college project report, including prose, title/certificate pages and source-code listings. That experiment showed that ordinary prose is viable as an OCR draft, while code, tables and diagrams require structure-aware handling and explicit review.
@@ -84,4 +92,5 @@ Validation should compare generated Markdown against the original scan after eac
 6. Keep external runtime dependencies outside the publishing engine's core model.
 7. Never modify the authoritative source raster during preprocessing.
 8. Use structure classification as a conservative review/routing aid, not as a substitute for visual inspection.
-9. Test the pipeline with real-world documents containing prose, tables, diagrams, and code.
+9. Preserve a visual source fallback when spatial structure cannot be represented safely as text.
+10. Test the pipeline with real-world documents containing prose, tables, diagrams, and code.
