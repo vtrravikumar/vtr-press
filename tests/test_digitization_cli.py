@@ -42,6 +42,7 @@ def test_cli_writes_markdown_and_source_pages(tmp_path: Path, monkeypatch):
 def test_cli_supports_default_manuscript_output(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(cli, "PdftoppmRenderer", FakeRenderer)
     monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
+    monkeypatch.chdir(tmp_path)
 
     pdf = tmp_path / "source.pdf"
     pdf.write_bytes(b"pdf")
