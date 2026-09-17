@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from .compatibility import normalize_ocr_headings
 from .review import build_review_markers
 from .structure import PageStructure, StructureClassification, classify_structure
 
@@ -55,7 +56,7 @@ class DigitizationResult:
 
 
 class MarkdownAssembler:
-    """Assemble page-level OCR results into a reviewable Markdown draft.
+    """Assemble page-level OCR results into a VTR Press-compatible draft.
 
     Source-page images are referenced only when explicitly requested. This
     keeps the normal manuscript readable while allowing layout-heavy pages to
@@ -102,8 +103,6 @@ class MarkdownAssembler:
                 )
 
             if page.structure is PageStructure.CODE:
-                # Keep OCR'd source listings visually distinct without assigning
-                # a language or implying that the OCR is executable/authoritative.
                 blocks.extend(
                     [
                         "",
@@ -118,7 +117,8 @@ class MarkdownAssembler:
                     ]
                 )
             else:
-                blocks.extend(["", page.text.rstrip(), "", "---", ""])
+                text = normalize_ocr_headings(page.text.rstrip(), page.structure)
+                blocks.extend(["", text, "", "---", ""])
         return "\n".join(blocks).rstrip() + "\n"
 
 
@@ -184,3 +184,4 @@ class DigitizationPipeline:
         return MarkdownAssembler(
             include_source_images=include_source_images,
         ).assemble(result)
+
