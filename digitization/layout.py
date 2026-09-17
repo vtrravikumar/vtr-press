@@ -49,6 +49,23 @@ class TableGrid:
     def row_count(self) -> int:
         return max(len(self.rows) - 1, 0)
 
+    def cell_regions(self, confidence: float = 0.0) -> tuple[VisualRegion, ...]:
+        """Return cell rectangles derived only from the detected grid."""
+        if self.column_count == 0 or self.row_count == 0:
+            return ()
+        return tuple(
+            VisualRegion(
+                kind="table-cell",
+                left=self.columns[column],
+                top=self.rows[row],
+                right=self.columns[column + 1],
+                bottom=self.rows[row + 1],
+                confidence=confidence,
+            )
+            for row in range(self.row_count)
+            for column in range(self.column_count)
+        )
+
 
 @dataclass(frozen=True)
 class VisualAnalysis:
@@ -137,8 +154,6 @@ def _grid_region(
     if len(columns) < 3 or len(rows) < 3:
         return None
 
-    # Only treat the area as a grid when the detected boundaries span the
-    # table region. This avoids turning isolated page rules into tables.
     if columns[0] > left + 8 or columns[-1] < right - 9:
         return None
     if rows[0] > top + 8 or rows[-1] < bottom - 9:
