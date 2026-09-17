@@ -231,15 +231,18 @@ The pipeline should be reusable across projects. Project repositories should ret
 - deterministic page-level pipeline with source/page provenance;
 - reviewable Markdown assembly;
 - conservative page-level structure classification into `prose`, `code` and `layout` with bounded confidence and reasons;
-- real scanned college-report validation and controlled preprocessing comparison.
+- code-safe handling with explicit verification treatment for OCR'd source listings;
+- source-image preservation and optional visual fallback for layout-sensitive pages;
+- conservative review markers for code, layout, low non-prose classification confidence and suspicious OCR glyphs;
+- real scanned college-report validation and controlled preprocessing comparison;
+- unit/regression coverage for the digitization components added so far.
 
 ### Remaining scope
 
-- code-safe handling and explicit review treatment for OCR'd source listings;
-- table and figure preservation/extraction support;
-- confidence and review markers beyond the current structure marker;
-- representative regression fixtures from real scanned pages;
-- final CLI/API workflow and broader end-to-end validation.
+- representative regression fixtures using real scanned page images in a maintainable test strategy;
+- final CLI/API workflow for repeatable PDF-to-Markdown digitization;
+- broader end-to-end validation against the college project and a second document such as the Accupressure case;
+- image/layout-aware extraction of tables and figures where faithful semantic representation can be demonstrated.
 
 ### Potential scope
 
