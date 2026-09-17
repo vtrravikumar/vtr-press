@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 
+from .compatibility import build_front_matter, extract_metadata, validate_vtr_press_markdown
 from .ocr import TesseractOCR, get_ocr_profile
 from .pdf import PdftoppmRenderer
 from .pipeline import DigitizationPipeline, DigitizationResult, MarkdownAssembler
@@ -18,7 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Convert a scanned PDF, or a report/code source folder, "
-            "into a page-traceable Markdown draft."
+            "into a VTR Press-compatible, page-traceable Markdown manuscript."
         )
     )
     parser.add_argument(
@@ -186,6 +187,7 @@ def main(argv: list[str] | None = None) -> int:
     preprocessor = _build_preprocessor(args.preprocess)
     assembler = MarkdownAssembler(include_source_images=args.include_source_images)
     manuscript_parts: list[str] = []
+    first_report_page_text: str | None = None
 
     for source_index, (pdf, profile) in enumerate(sources, start=1):
         source_work = work_root / f"{source_index:02d}-{_safe_stem(pdf.stem)}"
@@ -196,16 +198,27 @@ def main(argv: list[str] | None = None) -> int:
         pipeline = DigitizationPipeline(renderer, ocr, preprocessor=preprocessor)
         result = pipeline.run(pdf, source_work)
         result = _copy_source_pages(result, output_pages, source_index)
+        if first_report_page_text is None and profile == "prose" and result.pages:
+            first_report_page_text = result.pages[0].text
+
         manuscript_parts.append(
             f"<!-- source-document: {pdf.name}; profile: {profile} -->\n"
             + assembler.assemble(result).rstrip()
         )
         print(f"Processed {pdf.name} ({profile}, {len(result.pages)} pages)")
 
-    output.write_text("\n\n".join(manuscript_parts) + "\n", encoding="utf-8")
+    metadata = extract_metadata(first_report_page_text or "")
+    body = "\n\n".join(manuscript_parts).strip()
+    manuscript = build_front_matter(metadata) + "\n\n" + body + "\n"
+    errors = validate_vtr_press_markdown(manuscript)
+    if errors:
+        raise SystemExit("VTR Press manuscript compatibility check failed:\n- " + "\n- ".join(errors))
+
+    output.write_text(manuscript, encoding="utf-8")
     print(f"Wrote Markdown: {output}")
     print(f"Source pages:   {output_pages}")
     print(f"Documents:      {len(sources)}")
+    print("VTR Press compatibility: OK")
     return 0
 
 
