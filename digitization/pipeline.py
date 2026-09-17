@@ -69,7 +69,25 @@ class MarkdownAssembler:
                 blocks.append(
                     f"<!-- structure: {page.structure.value}; confidence: {confidence} -->"
                 )
-            blocks.extend(["", page.text.rstrip(), "", "---", ""])
+
+            if page.structure is PageStructure.CODE:
+                # Keep OCR'd source listings visually distinct without assigning
+                # a language or implying that the OCR is executable/authoritative.
+                blocks.extend(
+                    [
+                        "",
+                        "<!-- review: OCR code listing requires verification against the source scan -->",
+                        "",
+                        "````",
+                        page.text.rstrip("\n"),
+                        "````",
+                        "",
+                        "---",
+                        "",
+                    ]
+                )
+            else:
+                blocks.extend(["", page.text.rstrip(), "", "---", ""])
         return "\n".join(blocks).rstrip() + "\n"
 
 
