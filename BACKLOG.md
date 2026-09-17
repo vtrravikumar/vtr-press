@@ -26,7 +26,7 @@ This backlog contains only work that remains meaningful against the current impl
 
 The current CLI is driven by an explicit `books.yaml` entry and a named publishing target. The same mechanism is used for Books and Technical Documents even though Technical Documents already carry their document type and metadata in manuscript front matter.
 
-The current implementation still requires the manifest to identify each manuscript and its output name. fileciteturn72file0L2-L2
+The current implementation still requires the manifest to identify each manuscript and its output name.
 
 ### Desired outcome
 
@@ -78,7 +78,7 @@ Potential requirements:
 - output-specific reference rendering;
 - consistent behaviour in PDF and EPUB.
 
-The current model already has generic headings, images, tables and links, making this a natural post-v2 document capability. fileciteturn76file0L2-L2
+The current model already has generic headings, images, tables and links, making this a natural post-v2 document capability.
 
 ---
 
@@ -89,7 +89,7 @@ The current model already has generic headings, images, tables and links, making
 
 Add captions to block images and define consistent rendering across PDF and EPUB.
 
-The current generic `Image` model contains only `source` and `alt_text`; there is no caption field. fileciteturn76file0L2-L2
+The current generic `Image` model contains only `source` and `alt_text`; there is no caption field.
 
 The feature should be implemented at the document-model level so both output formats consume the same semantic information.
 
@@ -100,7 +100,7 @@ The feature should be implemented at the document-model level so both output for
 **Priority:** P0  
 **Status:** Partially implemented
 
-Basic fenced code blocks are already represented by `CodeBlock` with an optional language and are rendered by both common Typst and EPUB infrastructure. fileciteturn74file0L2-L2 fileciteturn75file0L2-L2
+Basic fenced code blocks are already represented by `CodeBlock` with an optional language and are rendered by both common Typst and EPUB infrastructure.
 
 Remaining scope:
 
@@ -169,7 +169,7 @@ The implementation should be based on stable semantic anchors rather than render
 **Priority:** P1  
 **Status:** Backlog
 
-The generic Document Model already supports tables with headers, rows and column alignment, and the Technical Typst/EPUB renderers consume them. fileciteturn76file0L2-L2 fileciteturn85file0L2-L2
+The generic Document Model already supports tables with headers, rows and column alignment, and the Technical Typst/EPUB renderers consume them.
 
 Remaining work should therefore focus on genuine publishing gaps rather than basic table support.
 
@@ -210,9 +210,47 @@ This is a metadata capability, **not a new publishing architecture**. The soluti
 
 ---
 
+## BL-012 — Document Digitization / OCR Pipeline
+
+**Priority:** P1  
+**Status:** Backlog — candidate for v2.2
+
+Add a reusable upstream digitization pipeline that converts scanned or image-based source material into a reviewable Markdown manuscript suitable for the existing VTR Press publishing pipeline.
+
+### Use case
+
+Support faithful digitization of historical technical reports, books, manuals and other scanned documents where the source is a physical document or scanned PDF rather than an existing Markdown manuscript.
+
+The pipeline should be reusable across projects. Project repositories should retain the original source scans and the generated/reviewed Markdown, while reusable OCR and digitization machinery belongs in VTR Press.
+
+### Potential scope
+
+- PDF/page image extraction;
+- image preprocessing for OCR quality;
+- Tesseract or another pluggable OCR engine;
+- OCR-to-Markdown generation;
+- page and section boundary preservation;
+- detection/handling of figures and diagrams;
+- table extraction or structured table review support;
+- source-code-aware OCR handling for technical documents;
+- preservation of technical punctuation and symbols;
+- OCR confidence/review markers where practical;
+- deterministic, repeatable processing;
+- validation and regression tests using representative scanned documents.
+
+### Constraints
+
+This is an **upstream digitization capability**, not a replacement for the publishing pipeline. Digitization should produce a Markdown manuscript; the existing parser → Document Model → interpretation → renderer pipeline remains responsible for publishing.
+
+The system must distinguish ordinary prose from code, tables and other structures where OCR errors can materially change meaning. It must not silently modernize, correct or rewrite source content during faithful digitization.
+
+The first implementation should be deliberately incremental and validated against real scanned documents before the CLI/API and broader feature set are finalized.
+
+---
+
 # P2 — Output and Presentation
 
-## BL-012 — HTML Output
+## BL-013 — HTML Output
 
 **Priority:** P2  
 **Status:** Future
@@ -229,7 +267,7 @@ HTML should be a new output format, not a second document-processing pipeline.
 
 ---
 
-## BL-013 — Kindle Publishing Output
+## BL-014 — Kindle Publishing Output
 
 **Priority:** P2  
 **Status:** Future
@@ -246,7 +284,7 @@ The decision should be based on actual distribution requirements rather than ass
 
 ---
 
-## BL-014 — DOCX Output
+## BL-015 — DOCX Output
 
 **Priority:** P2  
 **Status:** Future
@@ -257,12 +295,12 @@ The investigation should establish the required Document Model capabilities and 
 
 ---
 
-## BL-015 — Theme and Custom Theme Workflow
+## BL-016 — Theme and Custom Theme Workflow
 
 **Priority:** P2  
 **Status:** Future
 
-The current architecture already separates common rendering from Book and Technical rendering, with theme-specific presentation in the renderer/theme layer. fileciteturn74file0L2-L2 fileciteturn85file0L2-L2
+The current architecture already separates common rendering from Book and Technical rendering, with theme-specific presentation in the renderer/theme layer.
 
 Future work should therefore focus on:
 
@@ -275,7 +313,7 @@ Do not introduce another theme framework without a concrete need.
 
 ---
 
-## BL-016 — Performance Measurement and Optimization
+## BL-017 — Performance Measurement and Optimization
 
 **Priority:** P2  
 **Status:** Backlog
@@ -297,7 +335,7 @@ No performance rewrite should be undertaken without evidence of a meaningful bot
 
 # P3 — Productization and Exploration
 
-## BL-017 — Release Readiness / 1.0 Criteria
+## BL-018 — Release Readiness / 1.0 Criteria
 
 **Priority:** P3  
 **Status:** Future
@@ -319,7 +357,7 @@ Potential areas:
 
 ---
 
-## BL-018 — PyPI Distribution
+## BL-019 — PyPI Distribution
 
 **Priority:** P3  
 **Status:** Future
@@ -328,7 +366,7 @@ Package VTR Press for installation through PyPI once the CLI, package structure 
 
 ---
 
-## BL-019 — Documentation Website
+## BL-020 — Documentation Website
 
 **Priority:** P3  
 **Status:** Future
@@ -337,7 +375,7 @@ Publish the VTR Press documentation as a web-based documentation site when the s
 
 ---
 
-## BL-020 — Homebrew Installation
+## BL-021 — Homebrew Installation
 
 **Priority:** P3  
 **Status:** Future
@@ -346,7 +384,7 @@ Investigate Homebrew distribution after the CLI and package structure have stabi
 
 ---
 
-## BL-021 — Additional Document Types
+## BL-022 — Additional Document Types
 
 **Priority:** P3  
 **Status:** Exploratory
@@ -357,7 +395,7 @@ New document types should fit the established pattern of document-type interpret
 
 ---
 
-## BL-022 — Plugin Architecture
+## BL-023 — Plugin Architecture
 
 **Priority:** P3  
 **Status:** Deferred
@@ -388,7 +426,7 @@ These are intentionally not backlog items anymore.
 | Basic fenced code blocks | **Removed** | Already implemented in the generic technical-document pipeline. |
 | Basic generic tables | **Removed** | Already implemented; remaining work is richer table capability. |
 | Basic technical-document Typst/EPUB publishing | **Removed** | Already part of the current architecture. |
-| LineBreak as a standalone backlog item | **Removed** | The generic model and EPUB renderer already contain `LineBreak`; remaining gaps should be tracked only if a concrete defect is found. fileciteturn75file0L2-L2 |
+| LineBreak as a standalone backlog item | **Removed** | The generic model and EPUB renderer already contain `LineBreak`; remaining gaps should be tracked only if a concrete defect is found. |
 | V1 migration wording | **Removed** | Superseded by the completed v2 architecture. |
 
 ---
@@ -417,5 +455,6 @@ When engineering resumes, the first candidates to evaluate are:
 4. **BL-005 — Language-Aware Syntax Highlighting**
 5. **BL-002 — Markdown Compatibility Improvements**
 6. **BL-011 — Multiple Authors / Author Metadata**
+7. **BL-012 — Document Digitization / OCR Pipeline**
 
-BL-011 is explicitly a **v2.1** requirement and should be considered when the v2.1 scope is opened.
+BL-011 is explicitly a **v2.1** requirement. BL-012 is a **v2.2 candidate** and should be opened only after its scope and acceptance criteria are defined against real scanned-document experiments.
