@@ -42,8 +42,8 @@ def classify_structure(text: str) -> StructureClassification:
 
     Code requires multiple independent signals so ordinary technical prose is
     not easily promoted to a code page. Sparse, title-like text is classified
-    as layout only when it has strong layout signals. Everything else defaults
-    to prose.
+    as layout only when it has strong display or multi-line layout signals.
+    Everything else defaults to prose.
     """
 
     if not text.strip():
@@ -78,7 +78,8 @@ def classify_structure(text: str) -> StructureClassification:
     if uppercase_words >= 2:
         layout_signals.append("display-uppercase")
 
-    if len(layout_signals) >= 2 and len(words) <= 80:
+    strong_layout = "display-uppercase" in layout_signals or len(lines) >= 2
+    if len(layout_signals) >= 2 and len(words) <= 80 and strong_layout:
         confidence = min(0.55 + 0.10 * len(layout_signals), 0.80)
         return StructureClassification(PageStructure.LAYOUT, confidence, tuple(layout_signals))
 
