@@ -79,14 +79,37 @@ def _safe_stem(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-") or "source"
 
 
-def _copy_source_pages(result: DigitizationResult, output_pages: Path, source_index: int) -> DigitizationResult:
+def _copy_source_pages(
+    result: DigitizationResult,
+    output_pages: Path,
+    source_index: int,
+    output_assets: Path,
+) -> DigitizationResult:
     output_pages.mkdir(parents=True, exist_ok=True)
+    output_assets.mkdir(parents=True, exist_ok=True)
     updated_pages = []
     prefix = f"{source_index:02d}-{_safe_stem(result.source_pdf.stem)}"
     for page in result.pages:
         destination = output_pages / f"{prefix}-page-{page.page_number}.png"
         shutil.copy2(page.source_image or page.image, destination)
-        updated_pages.append(replace(page, source_image=destination))
+
+        visual_assets: list[str] = []
+        for asset in page.visual_assets:
+            source_root = page.image.parent.parent
+            source_asset = source_root / asset
+            if not source_asset.is_file():
+                continue
+            asset_parts = Path(asset).parts
+            if asset_parts and asset_parts[0] == "visuals":
+                relative_asset = Path("visuals") / prefix / Path(*asset_parts[2:])
+            else:
+                relative_asset = Path("visuals") / prefix / Path(*asset_parts)
+            asset_destination = output_assets / relative_asset
+            asset_destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_asset, asset_destination)
+            visual_assets.append(relative_asset.as_posix())
+
+        updated_pages.append(replace(page, source_image=destination, visual_assets=tuple(visual_assets)))
     return replace(result, pages=tuple(updated_pages))
 
 
@@ -152,6 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
     work_root = (args.work_dir or output.parent / ".digitization-work").resolve()
     output_pages = output.parent / "pages"
+    output_assets = output.parent / "assets"
     renderer = _build_renderer(args.pdf_renderer)
     preprocessor = _build_preprocessor(args.preprocess)
     assembler = MarkdownAssembler(include_source_images=args.include_source_images)
@@ -213,7 +237,7 @@ def main(argv: list[str] | None = None) -> int:
         elapsed_before = 0.0
         for source_index, segment in enumerate(segments, start=1):
             source_pages = tuple(page for page in remapped_pages if page.source_pdf == segment.source_pdf)
-            result = _copy_source_pages(DigitizationResult(segment.source_pdf, source_pages), output_pages, source_index)
+            result = _copy_source_pages(DigitizationResult(segment.source_pdf, source_pages), output_pages, source_index, output_assets)
             durations = timings_by_source[segment.source_pdf]
             source_duration = sum(durations)
             source_started_at = _timestamp_after(run_started_at, elapsed_before)
@@ -251,7 +275,7 @@ def main(argv: list[str] | None = None) -> int:
                 remaining = recent * (total_pages - page_number)
                 print(f"[{page_number:>2}/{total_pages}] OCR complete ({page_durations[-1]:.1f}s/page; recent {recent:.1f}s/page) | elapsed {_format_duration(elapsed)} | ETA ~{_format_duration(remaining)}")
 
-            result = _copy_source_pages(pipeline.run(pdf, source_work, progress_callback=report_progress), output_pages, source_index)
+            result = _copy_source_pages(pipeline.run(pdf, source_work, progress_callback=report_progress), output_pages, source_index, output_assets)
             source_duration = time.monotonic() - source_start
             source_ended_at = utc_timestamp()
             if first_report_page_text is None and profile == "prose" and result.pages:
@@ -273,6 +297,7 @@ def main(argv: list[str] | None = None) -> int:
     stats_path = write_run_stats(stats, output.parent / "digitization" / "runs")
     print(f"Wrote Markdown: {output}")
     print(f"Source pages:   {output_pages}")
+    print(f"Visual assets:  {output_assets}")
     print(f"Run statistics: {stats_path}")
     print(f"Documents:      {len(sources)}")
     print(f"Elapsed:        {_format_duration(total_duration)}")
