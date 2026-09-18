@@ -101,10 +101,24 @@ def read(path: str | Path) -> tuple[Metadata, str]:
             f"Supported types are: {supported}."
         )
 
+    raw_author = data.get("author", "")
+
+    if isinstance(raw_author, str):
+        author: str | list[str] = raw_author
+    elif isinstance(raw_author, list) and all(
+        isinstance(name, str) and name.strip()
+        for name in raw_author
+    ):
+        author = raw_author
+    else:
+        raise FrontMatterError(
+            "author must be a string or a non-empty list of author names."
+        )
+
     metadata = Metadata(
         title=data.get("title", ""),
         subtitle=data.get("subtitle", ""),
-        author=data.get("author", ""),
+        author=author,
 
         type=doc_type,
 
