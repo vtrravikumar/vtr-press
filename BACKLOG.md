@@ -118,26 +118,11 @@ Do not duplicate the basic fenced-code implementation.
 ## BL-013 — Migrate Deprecated PyMuPDF `fitz` API Usage
 
 **Priority:** P0  
-**Status:** Backlog — next change
+**Status:** Completed
 
-Remove remaining use of the deprecated `fitz` API in the digitization/PyMuPDF integration and migrate to the supported `pymupdf` import/API surface.
+The PyMuPDF integration has been migrated to the supported `pymupdf` API surface. No remaining `fitz` usage is expected in the digitization implementation.
 
-### Requirement
-
-The digitization command currently emits a deprecation warning indicating that the `fitz` API will be removed in a future release. The next engineering change touching the relevant PDF rendering code must address this rather than carrying the warning forward.
-
-### Scope
-
-- locate all `fitz` imports/usages in VTR Press;
-- replace them with the supported `pymupdf` API;
-- preserve existing PDF rendering behaviour;
-- update tests and documentation where imports/examples are affected;
-- verify the digitization CLI no longer emits the deprecation warning on supported environments;
-- keep compatibility with the current PyMuPDF versions supported by the project.
-
-### Constraint
-
-This is a maintenance/API migration only. Do not change PDF rendering semantics or use it as an opportunity for unrelated refactoring.
+---
 
 ---
 
