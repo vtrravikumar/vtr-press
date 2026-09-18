@@ -200,7 +200,7 @@ Potential scope:
 ## BL-011 — Multiple Authors / Author Metadata
 
 **Priority:** P1  
-**Status:** Backlog — v2.1
+**Status:** Completed — v2.1
 
 Extend the manuscript and publishing metadata model to support more than one author, preserving author information consistently across document parsing, the generic Document Model, and all supported output formats.
 
@@ -208,14 +208,16 @@ Extend the manuscript and publishing metadata model to support more than one aut
 
 Support books and technical documents created by multiple authors, including historical project reports and other collaborative manuscripts.
 
-### Potential scope
+### Completed
 
-- accept an ordered list of authors in manuscript/front-matter metadata;
-- preserve author order and names through the generic Document Model;
-- render multiple authors correctly in title pages and other Book/Technical publication metadata;
-- ensure PDF and EPUB output remain consistent;
-- define compatibility behaviour for existing single-author manuscripts;
-- add parser, model, and renderer regression tests.
+- accepts the existing scalar `author` format unchanged;
+- accepts an ordered YAML list of author names;
+- preserves author order through the canonical `Metadata.authors` representation;
+- renders multiple authors on Typst title pages for both classic and technical themes;
+- renders one `dc:creator` per author in EPUB metadata and preserves order;
+- keeps EPUB package identity stable for the same ordered author list and distinct when author order changes;
+- preserves existing single-author manuscripts without syntax changes;
+- adds parser, model, Typst, and EPUB regression coverage.
 
 ### Constraints
 
