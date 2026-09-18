@@ -118,26 +118,11 @@ Do not duplicate the basic fenced-code implementation.
 ## BL-013 — Migrate Deprecated PyMuPDF `fitz` API Usage
 
 **Priority:** P0  
-**Status:** Backlog — next change
+**Status:** Completed
 
-Remove remaining use of the deprecated `fitz` API in the digitization/PyMuPDF integration and migrate to the supported `pymupdf` import/API surface.
+The PyMuPDF integration has been migrated to the supported `pymupdf` API surface. No remaining `fitz` usage is expected in the digitization implementation.
 
-### Requirement
-
-The digitization command currently emits a deprecation warning indicating that the `fitz` API will be removed in a future release. The next engineering change touching the relevant PDF rendering code must address this rather than carrying the warning forward.
-
-### Scope
-
-- locate all `fitz` imports/usages in VTR Press;
-- replace them with the supported `pymupdf` API;
-- preserve existing PDF rendering behaviour;
-- update tests and documentation where imports/examples are affected;
-- verify the digitization CLI no longer emits the deprecation warning on supported environments;
-- keep compatibility with the current PyMuPDF versions supported by the project.
-
-### Constraint
-
-This is a maintenance/API migration only. Do not change PDF rendering semantics or use it as an opportunity for unrelated refactoring.
+---
 
 ---
 
@@ -241,7 +226,7 @@ This is a metadata capability, **not a new publishing architecture**. The soluti
 ## BL-012 — Document Digitization / OCR Pipeline
 
 **Priority:** P1  
-**Status:** In progress — candidate for v2.2
+**Status:** In progress — final scope for v2.2
 
 Add a reusable upstream digitization pipeline that converts scanned or image-based source material into a reviewable Markdown manuscript suitable for the existing VTR Press publishing pipeline.
 
@@ -249,53 +234,56 @@ Add a reusable upstream digitization pipeline that converts scanned or image-bas
 
 Support faithful digitization of historical technical reports, books, manuals and other scanned documents where the source is a physical document or scanned PDF rather than an existing Markdown manuscript.
 
-The pipeline should be reusable across projects. Project repositories should retain the original source scans and the generated/reviewed Markdown, while reusable OCR and digitization machinery belongs in VTR Press.
+The pipeline is intentionally a **text-first reconstruction aid**. Its purpose is to save manual character transcription while leaving document reconstruction and editorial judgement to the author.
 
 ### Implemented so far
 
-- PDF/page image extraction through a `pdftoppm` adapter;
-- Tesseract OCR adapter with named `prose`, `layout` and `code` profiles;
-- conservative Pillow preprocessing with unchanged passthrough and optional grayscale, autocontrast and thresholding;
-- deterministic page-level pipeline with source/page provenance;
-- reviewable Markdown assembly;
-- conservative page-level structure classification into `prose`, `code` and `layout` with bounded confidence and reasons;
-- code-safe handling with explicit verification treatment for OCR'd source listings;
-- source-image preservation and optional visual fallback for layout-sensitive pages;
-- conservative review markers for code, layout, low non-prose classification confidence and suspicious OCR glyphs;
-- real scanned college-report validation and controlled preprocessing comparison;
-- full 24-page real-document OCR validation for `College-project-01.pdf`;
-- full 24-page real source-code OCR validation for `Code-01.pdf`;
-- repeatable digitization CLI and end-to-end CLI tests;
-- unit/regression coverage for the digitization components added so far.
-
-### Remaining scope
-
-- representative regression fixtures using real scanned page images in a maintainable test strategy;
-- broader end-to-end validation against a second document such as the Accupressure case;
-- image/layout-aware extraction of tables and figures where faithful semantic representation can be demonstrated;
-- final production-readiness review, including runtime/dependency validation on supported environments.
-
-### Potential scope
-
 - PDF/page image extraction;
-- image preprocessing for OCR quality;
-- Tesseract or another pluggable OCR engine;
-- OCR-to-Markdown generation;
-- page and section boundary preservation;
-- detection/handling of figures and diagrams;
-- table extraction or structured table review support;
-- source-code-aware OCR handling for technical documents;
-- preservation of technical punctuation and symbols;
-- OCR confidence/review markers where practical;
+- pluggable OCR engines including Tesseract and macOS Vision;
+- conservative image preprocessing;
+- deterministic page-level processing with source/page provenance;
+- reviewable Markdown assembly;
+- page-level structure classification into prose, code and layout;
+- code-aware OCR handling with explicit verification treatment;
+- source-image preservation;
+- OCR review markers and run statistics;
+- persistent combined-source caching and sequential OCR processing;
+- stage-aware rendering/OCR progress reporting;
+- real scanned college-report validation;
+- unit/regression and end-to-end CLI coverage.
+
+### Final scope
+
+- **Characters/prose OCR:** primary supported outcome.
+- **Tables:** optional, only where reliable structured extraction can be demonstrated; otherwise preserve OCR text for manual reconstruction.
+- **Spellcheck:** high-confidence automatic correction of ordinary prose, with protected technical/code/name contexts and an audit trail of corrections.
+- **Images and diagrams:** out of scope for automatic reconstruction. Original scans remain authoritative and can be handled manually.
+- **Code:** out of scope for automatic reconstruction. Code source scans will be handled as a separate manual reconstruction workflow.
+- preserve source/page provenance;
 - deterministic, repeatable processing;
-- validation and regression tests using representative scanned documents.
+- final production-readiness review.
+
+### Spellcheck requirements
+
+Spellcheck is an automated cleanup aid with conservative safeguards.
+
+It should:
+
+- automatically correct only high-confidence spelling errors in ordinary prose;
+- preserve the corrected Markdown as the primary output;
+- maintain an audit trail of automatic corrections in run statistics or an equivalent reviewable report;
+- support a configurable custom/technical vocabulary;
+- protect code blocks, Markdown syntax, names, abbreviations, URLs, paths, equations and numeric content from ordinary spellchecking where practical;
+- leave uncertain words unchanged rather than making speculative corrections.
 
 ### Constraints
 
 This is an **upstream digitization capability**, not a replacement for the publishing pipeline. Digitization should produce a Markdown manuscript; the existing parser → Document Model → interpretation → renderer pipeline remains responsible for publishing.
 
-The system must distinguish ordinary prose from code, tables and other structures where OCR errors can materially change meaning. It must not silently modernize, correct or rewrite source content during faithful digitization.
+The system must not silently modernize, correct, rewrite or infer source content during faithful digitization. Automatic image/diagram reconstruction and automatic code reconstruction are deliberately excluded from this scope.
 
-The first implementation should be deliberately incremental and validated against real scanned documents before the CLI/API and broader feature set are finalized.
+The implementation should remain incremental, deterministic and validated against representative scanned documents.
+
+---
 
 ---
