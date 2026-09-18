@@ -50,6 +50,15 @@ class Metadata:
 
     language: str = ""
 
+    @property
+    def authors(self) -> tuple[str, ...]:
+        """Return authors as an ordered tuple for renderer consumption."""
+
+        if isinstance(self.author, str):
+            return (self.author,) if self.author.strip() else ()
+
+        return tuple(self.author)
+
 
 # ============================================================================
 # Inline Elements
