@@ -108,6 +108,17 @@ class TypstBookRenderer(TypstCommonMixin):
 
         return str(value)
 
+    def _typst_author_array(self, authors: tuple[str, ...]) -> str:
+        """Render ordered authors as a Typst array literal."""
+
+        if not authors:
+            return "()"
+
+        return "(" + ", ".join(
+            f'"{self._escape_string(author)}"'
+            for author in authors
+        ) + ")"
+
     def _running_title(self, title: str) -> str:
         """Return a title suitable for running heads."""
 
@@ -163,9 +174,12 @@ class TypstBookRenderer(TypstCommonMixin):
 
         self.lines.append(f'#import "{theme_import}": *')
         self.lines.append("")
+        authors = md.authors
+        author_text = ", ".join(authors)
+
         self.lines.append("#show: initialize-theme.with(")
         self.lines.append(f'  book-title: "{self._escape_string(md.title)}",')
-        self.lines.append(f'  book-author: "{self._escape_string(md.author)}",')
+        self.lines.append(f'  book-author: "{self._escape_string(author_text)}",')
         self.lines.append(")")
         self.lines.append("")
 
@@ -193,7 +207,10 @@ class TypstBookRenderer(TypstCommonMixin):
         self.lines.append("#render-title-page(")
         self.lines.append(f'  title: "{self._escape_string(md.title)}",')
         self.lines.append(f'  subtitle: "{self._escape_string(md.subtitle)}",')
-        self.lines.append(f'  author: "{self._escape_string(md.author)}",')
+        self.lines.append(
+            "  authors: "
+            f"{self._typst_author_array(md.authors)},"
+        )
         self.lines.append(
             f'  copyright-year: "{self._escape_string(md.copyright_year)}",'
         )
