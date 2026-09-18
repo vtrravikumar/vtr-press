@@ -38,3 +38,8 @@ books:
     bookpath: ../../Projects/vtrrk.in
     cover: ../../Projects/vtrrk.in/assets/book_cover.png
     output_name: Travelogue
+
+  college-project:
+    bookpath: ../../Projects/college-project
+    manuscript: manuscript_printready.md
+    output_name: College-Project
