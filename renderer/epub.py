@@ -170,8 +170,8 @@ class _Renderer(EpubCommonMixin):
         if md.subtitle:
             lines.append(f'<p class="subtitle">{_text(md.subtitle)}</p>')
 
-        if md.author:
-            lines.append(f'<p class="author">{_text(md.author)}</p>')
+        for author in md.authors:
+            lines.append(f'<p class="author">{_text(author)}</p>')
 
         if logo_name:
             lines.append(
@@ -659,9 +659,9 @@ class _Renderer(EpubCommonMixin):
             f'    <meta property="dcterms:modified">{modified}</meta>',
         ]
 
-        if book.metadata.author:
+        for author in book.metadata.authors:
             lines.append(
-                f"    <dc:creator>{_text(book.metadata.author)}</dc:creator>"
+                f"    <dc:creator>{_text(author)}</dc:creator>"
             )
 
         if book.metadata.subtitle:
@@ -789,7 +789,7 @@ def _book_uid(book: Book) -> str:
         [
             _plain(metadata.title),
             _plain(metadata.subtitle),
-            _plain(metadata.author),
+            *(_plain(author) for author in metadata.authors),
             _plain(metadata.version),
         ]
     )
