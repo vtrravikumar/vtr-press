@@ -30,6 +30,7 @@ class StructureClassifier(Protocol):
 
 
 ProgressCallback = Callable[[int, int, float], None]
+StageCallback = Callable[[str], None]
 
 
 @dataclass(frozen=True)
@@ -140,7 +141,14 @@ class DigitizationPipeline:
         self.visual_analyzer = visual_analyzer
         self.visual_extractor = visual_extractor
 
-    def run(self, pdf: str | Path, work_dir: str | Path, *, progress_callback: ProgressCallback | None = None) -> DigitizationResult:
+    def run(
+        self,
+        pdf: str | Path,
+        work_dir: str | Path,
+        *,
+        progress_callback: ProgressCallback | None = None,
+        stage_callback: StageCallback | None = None,
+    ) -> DigitizationResult:
         source_pdf = Path(pdf)
         if not source_pdf.is_file():
             raise FileNotFoundError(source_pdf)
@@ -149,7 +157,13 @@ class DigitizationPipeline:
         pages_dir = root / "pages"
         processed_dir = root / "processed"
         visuals_dir = root / "visuals" / source_pdf.stem
+
+        if stage_callback is not None:
+            stage_callback("rendering-start")
         images = self.renderer.render(source_pdf, pages_dir)
+        if stage_callback is not None:
+            stage_callback(f"rendering-complete:{len(images)}")
+            stage_callback("ocr-start")
 
         page_results: list[PageOCR] = []
         for page_number, image in enumerate(images, start=1):
@@ -190,7 +204,20 @@ class DigitizationPipeline:
 
         return DigitizationResult(source_pdf=source_pdf, pages=tuple(page_results))
 
-    def run_to_markdown(self, pdf: str | Path, work_dir: str | Path, *, include_source_images: bool = False, progress_callback: ProgressCallback | None = None) -> str:
+    def run_to_markdown(
+        self,
+        pdf: str | Path,
+        work_dir: str | Path,
+        *,
+        include_source_images: bool = False,
+        progress_callback: ProgressCallback | None = None,
+        stage_callback: StageCallback | None = None,
+    ) -> str:
         """Run digitization and return a page-traceable Markdown draft."""
-        result = self.run(pdf, work_dir, progress_callback=progress_callback)
+        result = self.run(
+            pdf,
+            work_dir,
+            progress_callback=progress_callback,
+            stage_callback=stage_callback,
+        )
         return MarkdownAssembler(include_source_images=include_source_images).assemble(result)
