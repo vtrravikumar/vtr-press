@@ -24,6 +24,7 @@
   title: "",
   subtitle: "",
   author: "",
+  authors: (),
   copyright-year: "",
   show-publisher-logo: true,
 ) = {
@@ -40,7 +41,14 @@
 
       #v(12%)
 
-      #text(size: 16pt)[#author]
+      #if authors.len() > 0 {
+        for author in authors {
+          text(size: 16pt)[#author]
+          linebreak()
+        }
+      } else {
+        text(size: 16pt)[#author]
+      }
 
       #v(20%)
 
