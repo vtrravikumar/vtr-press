@@ -217,6 +217,16 @@ def main(argv: list[str] | None = None) -> int:
         page_durations = []
         recent_durations: list[float] = []
 
+        def report_stage(stage: str) -> None:
+            if stage == "rendering-start":
+                print(f"[stage] Rendering source pages...")
+            elif stage.startswith("rendering-complete:"):
+                count = stage.split(":", 1)[1]
+                print(f"[stage] Rendering complete: {count} pages")
+            elif stage == "ocr-start":
+                print("[stage] Starting OCR...")
+                print()
+
         def report_progress(page_number: int, total_pages: int, _unused: float) -> None:
             nonlocal page_started
             now = time.monotonic()
@@ -231,7 +241,7 @@ def main(argv: list[str] | None = None) -> int:
             remaining = rate * (total_pages - page_number)
             print(f"[{page_number:>3}/{total_pages}] OCR complete ({duration:.1f}s/page; recent {rate:.1f}s/page) | elapsed {_format_duration(elapsed)} | ETA ~{_format_duration(remaining)}")
 
-        combined_result = pipeline.run(combined_pdf, combined_work, progress_callback=report_progress)
+        combined_result = pipeline.run(combined_pdf, combined_work, progress_callback=report_progress, stage_callback=report_stage)
         remapped_pages = remap_result_pages(combined_result, segments)
         timings_by_source = split_page_durations(page_durations, segments)
         elapsed_before = 0.0
@@ -265,6 +275,16 @@ def main(argv: list[str] | None = None) -> int:
             page_started = source_start
             page_durations = []
 
+            def report_stage(stage: str) -> None:
+                if stage == "rendering-start":
+                    print(f"[stage] Rendering {pdf.name}...")
+                elif stage.startswith("rendering-complete:"):
+                    count = stage.split(":", 1)[1]
+                    print(f"[stage] Rendering complete: {count} pages")
+                elif stage == "ocr-start":
+                    print("[stage] Starting OCR...")
+                    print()
+
             def report_progress(page_number: int, total_pages: int, _unused: float) -> None:
                 nonlocal page_started
                 now = time.monotonic()
@@ -275,7 +295,7 @@ def main(argv: list[str] | None = None) -> int:
                 remaining = recent * (total_pages - page_number)
                 print(f"[{page_number:>2}/{total_pages}] OCR complete ({page_durations[-1]:.1f}s/page; recent {recent:.1f}s/page) | elapsed {_format_duration(elapsed)} | ETA ~{_format_duration(remaining)}")
 
-            result = _copy_source_pages(pipeline.run(pdf, source_work, progress_callback=report_progress), output_pages, source_index, output_assets)
+            result = _copy_source_pages(pipeline.run(pdf, source_work, progress_callback=report_progress, stage_callback=report_stage), output_pages, source_index, output_assets)
             source_duration = time.monotonic() - source_start
             source_ended_at = utc_timestamp()
             if first_report_page_text is None and profile == "prose" and result.pages:

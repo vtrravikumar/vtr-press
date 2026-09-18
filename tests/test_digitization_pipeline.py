@@ -150,3 +150,18 @@ def test_markdown_assembler_does_not_modify_ocr_text():
 
     markdown = MarkdownAssembler().assemble(result)
     assert "Original punctuation: {} [] ; : #" in markdown
+
+
+def test_pipeline_reports_render_and_ocr_stages(tmp_path: Path):
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+    stages = []
+
+    result = DigitizationPipeline(FakeRenderer(), FakeOCR()).run(
+        pdf,
+        tmp_path / "work",
+        stage_callback=stages.append,
+    )
+
+    assert len(result.pages) == 2
+    assert stages == ["rendering-start", "rendering-complete:2", "ocr-start"]
