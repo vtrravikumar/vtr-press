@@ -256,7 +256,7 @@ The pipeline is intentionally a **text-first reconstruction aid**. Its purpose i
 
 - **Characters/prose OCR:** primary supported outcome.
 - **Tables:** optional, only where reliable structured extraction can be demonstrated; otherwise preserve OCR text for manual reconstruction.
-- **Spellcheck:** review-only assistance for OCR output. Spellcheck must never silently modify source text.
+- **Spellcheck:** high-confidence automatic correction of ordinary prose, with protected technical/code/name contexts and an audit trail of corrections.
 - **Images and diagrams:** out of scope for automatic reconstruction. Original scans remain authoritative and can be handled manually.
 - **Code:** out of scope for automatic reconstruction. Code source scans will be handled as a separate manual reconstruction workflow.
 - preserve source/page provenance;
@@ -265,16 +265,16 @@ The pipeline is intentionally a **text-first reconstruction aid**. Its purpose i
 
 ### Spellcheck requirements
 
-Spellcheck is a review aid, not an editorial correction engine.
+Spellcheck is an automated cleanup aid with conservative safeguards.
 
 It should:
 
-- identify possible misspellings without changing OCR text;
-- provide suggestions where available;
+- automatically correct only high-confidence spelling errors in ordinary prose;
+- preserve the corrected Markdown as the primary output;
+- maintain an audit trail of automatic corrections in run statistics or an equivalent reviewable report;
 - support a configurable custom/technical vocabulary;
-- avoid code blocks and Markdown syntax;
-- avoid treating names, abbreviations, URLs and paths as ordinary prose words where practical;
-- produce reviewable findings suitable for manual correction.
+- protect code blocks, Markdown syntax, names, abbreviations, URLs, paths, equations and numeric content from ordinary spellchecking where practical;
+- leave uncertain words unchanged rather than making speculative corrections.
 
 ### Constraints
 
