@@ -36,7 +36,10 @@ class Metadata:
 
     title: str = ""
     subtitle: str = ""
-    author: str = ""
+    # Backward compatible: a single author remains a string; multiple
+    # authors may be supplied as an ordered YAML list. Renderers use
+    # the `authors` property so the internal contract is always ordered.
+    author: str | list[str] = ""
 
     type: str = "book"
 
