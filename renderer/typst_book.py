@@ -86,15 +86,32 @@ class TypstBookRenderer(TypstCommonMixin):
     # ------------------------------------------------------------------
 
     def _escape_text(self, text: str) -> str:
-        """Escape plain text for Typst."""
+        """Escape literal text so it cannot be interpreted as Typst markup.
+
+        Markdown-derived text can contain characters such as [, ], *, _, and
+        $ that have syntactic meaning in Typst. Formatting nodes are rendered
+        separately, so escaping here is safe for plain Text content while
+        preventing OCR/source text from changing the Typst document structure.
+        """
 
         return (
             self._plain(text)
             .replace("\\", "\\\\")
+            .replace("*", "\\*")
+            .replace("_", "\\_")
+            .replace("$", "\\$")
             .replace("#", "\\#")
             .replace("@", "\\@")
+            .replace("<", "\\<")
+            .replace(">", "\\>")
+            .replace("~", "\\~")
+            .replace("=", "\\=")
+            .replace("-", "\\-")
+            .replace("+", "\\+")
+            .replace("/", "\\/")
+            .replace("[", "\\[")
+            .replace("]", "\\]")
         )
-
     def _escape_string(self, text: str) -> str:
         """Escape Typst string literals."""
 
