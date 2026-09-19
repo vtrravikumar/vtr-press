@@ -23,27 +23,36 @@
 ) = {
   plain-page[
     #align(center)[
-      #v(20%)
+      // Keep the title-page content as one fitting block. The previous
+      // fixed percentage spacings (20% + 12% + 20%) could consume more
+      // than half the page before the title, subtitle, authors, logo,
+      // and copyright were laid out. With multiple authors this could
+      // push the final author onto a new page. Fractional spacings
+      // balance only the remaining space and therefore adapt to the
+      // number of authors.
+      #v(1fr)
 
       #text(size: 24pt, weight: "bold")[#title]
 
       #if subtitle != "" {
-        v(0pt)
+        v(1.5em)
         text(size: 13pt)[#subtitle]
       }
 
-      #v(12%)
+      #v(3em)
 
       #if authors.len() > 0 {
-        for author in authors {
+        for (index, author) in authors.enumerate() {
           text(size: 13pt)[#author]
-          linebreak()
+          if index < authors.len() - 1 {
+            linebreak()
+          }
         }
       } else {
         text(size: 13pt)[#author]
       }
 
-      #v(20%)
+      #v(3em)
 
       #align(center)[
         #if show-publisher-logo {
@@ -62,6 +71,8 @@
         }
         #text(size: 10pt)[#copyright-year]
       ]
+
+      #v(1fr)
     ]
   ]
 }
