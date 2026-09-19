@@ -257,41 +257,25 @@ def interpret_technical_document(document: Document) -> InterpretedDocument:
             nodes.append(InterpretedNode(block=block))
             continue
 
-        key = block.title.strip().casefold()
-        kind = front_matter_map.get(key)
+        if block.level == 2:
+            key = block.title.strip().casefold()
+            kind = front_matter_map.get(key)
 
-        # Front matter is semantic, not a Markdown heading-level
-        # convention. Historical technical manuscripts commonly use
-        # level-1 headings for these pages, while newer manuscripts may
-        # use level 2. Recognize the declared front-matter title at
-        # either level.
-        if kind is not None:
+            if kind is not None:
+                nodes.append(InterpretedNode(
+                    block=block, kind=kind, outlined=False
+                ))
+                continue
+
             nodes.append(InterpretedNode(
-                block=block, kind=kind, outlined=False
+                block=block, kind=NodeKind.SECTION, outlined=True
             ))
             continue
 
-        # A level-1 heading matching the metadata title is the Markdown
-        # manuscript title. The title page is already generated from
-        # metadata, so do not duplicate it in the body.
-        if (
-            block.level == 1
-            and block.title.strip().casefold()
-            == document.metadata.title.strip().casefold()
-        ):
-            nodes.append(
-                InterpretedNode(
-                    block=block, kind=NodeKind.OTHER, outlined=False
-                )
-            )
-            continue
-
-        # Technical documents conventionally use level 1 for main
-        # sections/chapters and level 2+ for their subsections.
         if block.level == 1:
             nodes.append(
                 InterpretedNode(
-                    block=block, kind=NodeKind.SECTION, outlined=True
+                    block=block, kind=NodeKind.OTHER, outlined=False
                 )
             )
             continue
