@@ -130,12 +130,6 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             if self._current_front_matter_kind == NodeKind.ABSTRACT:
                 self.lines.append("#v(1em)")
                 self.lines.append("")
-            if self._current_front_matter_kind in {
-                NodeKind.CERTIFICATE,
-                NodeKind.VIVA_VOCE,
-            }:
-                self.lines.append("]")
-                self.lines.append("")
             self.lines.append("]")
             self.lines.append("")
             self._document_section_open = False
@@ -283,12 +277,6 @@ class TypstTechnicalRenderer(TypstBookRenderer):
 
         if kind in front_matter_kinds:
             if self._document_section_open:
-                if self._current_front_matter_kind in {
-                    NodeKind.CERTIFICATE,
-                    NodeKind.VIVA_VOCE,
-                }:
-                    self.lines.append("]")
-                    self.lines.append("")
                 self.lines.append("]")
                 self.lines.append("")
                 self.lines.append("#pagebreak()")
@@ -318,12 +306,6 @@ class TypstTechnicalRenderer(TypstBookRenderer):
 
         if kind == NodeKind.SECTION:
             if self._document_section_open:
-                if self._current_front_matter_kind in {
-                    NodeKind.CERTIFICATE,
-                    NodeKind.VIVA_VOCE,
-                }:
-                    self.lines.append("]")
-                    self.lines.append("")
                 self.lines.append("]")
                 self.lines.append("")
                 self.lines.append("#pagebreak()")
