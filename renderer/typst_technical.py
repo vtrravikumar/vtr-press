@@ -52,6 +52,7 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             document_assets=assets,
         )
         self._document_section_open = False
+        self._current_front_matter_kind = None
 
 
     def _render_block(self, block: Block) -> None:
@@ -116,6 +117,12 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             self._render_interpreted_node(node)
 
         if self._document_section_open:
+            if self._current_front_matter_kind in {
+                NodeKind.CERTIFICATE,
+                NodeKind.VIVA_VOCE,
+            }:
+                self.lines.append("]")
+                self.lines.append("")
             self.lines.append("]")
             self.lines.append("")
 
@@ -132,7 +139,8 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             f'  book-title: "{self._escape_string(metadata.title)}",'
         )
         self.lines.append(
-            f'  book-author: "{self._escape_string(metadata.author)}",'
+            "  book-author: "
+            f'"{self._escape_string(", ".join(metadata.authors))}",'
         )
         self.lines.append(")")
         self.lines.append("")
@@ -146,7 +154,8 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             f'  subtitle: "{self._escape_string(metadata.subtitle)}",'
         )
         self.lines.append(
-            f'  author: "{self._escape_string(metadata.author)}",'
+            "  authors: "
+            f"{self._typst_author_array(metadata.authors)}, "
         )
         self.lines.append(
             f'  copyright-year: '
@@ -188,6 +197,44 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             # generic model for structural fidelity but is not duplicated.
             return
 
+        front_matter_kinds = {
+            NodeKind.CERTIFICATE,
+            NodeKind.VIVA_VOCE,
+            NodeKind.DECLARATION,
+            NodeKind.ACKNOWLEDGEMENT,
+            NodeKind.ABSTRACT,
+            NodeKind.KEYWORDS,
+            NodeKind.LIST_OF_FIGURES,
+            NodeKind.LIST_OF_TABLES,
+            NodeKind.REFERENCES,
+        }
+
+        if kind in front_matter_kinds:
+            if self._document_section_open:
+                if self._current_front_matter_kind in {
+                    NodeKind.CERTIFICATE,
+                    NodeKind.VIVA_VOCE,
+                }:
+                    self.lines.append("]")
+                    self.lines.append("")
+                self.lines.append("]")
+                self.lines.append("")
+                self.lines.append("#pagebreak()")
+                self.lines.append("")
+
+            self.lines.append("#front-matter-page[")
+            self.lines.append("")
+            self._render_heading(heading.level, heading.title, outlined=False)
+            self.lines.append("")
+
+            if kind in {NodeKind.CERTIFICATE, NodeKind.VIVA_VOCE}:
+                self.lines.append("#centered-front-matter[")
+                self.lines.append("")
+
+            self._document_section_open = True
+            self._current_front_matter_kind = kind
+            return
+
         if kind == NodeKind.SECTION:
             if self._document_section_open:
                 self.lines.append("]")
@@ -206,6 +253,7 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             )
             self.lines.append("")
             self._document_section_open = True
+            self._current_front_matter_kind = None
             return
 
         self._render_heading(
