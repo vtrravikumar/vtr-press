@@ -205,6 +205,7 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             )
 
         if logo_path is not None:
+            self.lines.append("  show-publisher-logo: true,")
             self.lines.append(
                 f'  publisher-logo: "{self._escape_string(logo_path)}",'
             )
