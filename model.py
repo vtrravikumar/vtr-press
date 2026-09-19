@@ -52,7 +52,7 @@ class Metadata:
 
     # Publisher identity is document metadata. When omitted, renderers
     # retain their existing VTR Press defaults.
-    publisher_name: str | None = None
+    publisher_name: str | list[str] | None = None
     publisher_logo: str | None = None
 
     @property
