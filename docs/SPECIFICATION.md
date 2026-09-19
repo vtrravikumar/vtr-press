@@ -149,6 +149,22 @@ A typical technical document may contain:
 
 The technical-document type is intended for structured publications such as solution architecture documents, design specifications, technical guides, and similar material.
 
+## Publisher Branding
+
+Publisher identity is configurable per manuscript through optional YAML front matter:
+
+```yaml
+publisher:
+  name: "College Project"
+  logo: "assets/publisher-logo.png"
+```
+
+- `publisher.name` controls the publisher name shown on the title page and publisher imprint.
+- `publisher.logo` references a manuscript-relative asset that is staged during publication.
+- If `publisher` is omitted, existing VTR Press branding remains the default.
+- An empty `publisher.logo` disables the publisher logo while retaining the publisher name.
+
+
 ---
 
 # Assets
