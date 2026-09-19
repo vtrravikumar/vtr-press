@@ -146,13 +146,17 @@ p {
 }
 
 pre {
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
   overflow-x: auto;
+  margin: 1em 0;
+  page-break-inside: auto;
 }
 
 code {
   font-family: "Courier New", monospace;
-  font-size: 0.92em;
+  font-size: 0.82em;
 }
 
 a {
