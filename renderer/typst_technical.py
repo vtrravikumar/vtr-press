@@ -314,6 +314,10 @@ class TypstTechnicalRenderer(TypstBookRenderer):
 
         if kind == NodeKind.SECTION:
             if self._document_section_open:
+                if self._centered_front_matter_open:
+                    self.lines.append("]")
+                    self.lines.append("")
+                    self._centered_front_matter_open = False
                 self.lines.append("]")
                 self.lines.append("")
                 self.lines.append("#pagebreak()")
