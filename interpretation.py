@@ -63,6 +63,17 @@ class NodeKind(Enum):
     SUBSECTION = auto()
     APPENDIX = auto()
 
+    # Optional technical-document front matter
+    CERTIFICATE = auto()
+    VIVA_VOCE = auto()
+    DECLARATION = auto()
+    ACKNOWLEDGEMENT = auto()
+    ABSTRACT = auto()
+    KEYWORDS = auto()
+    LIST_OF_FIGURES = auto()
+    LIST_OF_TABLES = auto()
+    REFERENCES = auto()
+
     # Shared fallback for either type
     OTHER = auto()
 
@@ -226,6 +237,20 @@ def interpret_technical_document(document: Document) -> InterpretedDocument:
 
     nodes: list[InterpretedNode] = []
 
+    front_matter_map = {
+        "certificate": NodeKind.CERTIFICATE,
+        "viva voce examination": NodeKind.VIVA_VOCE,
+        "viva voce": NodeKind.VIVA_VOCE,
+        "declaration": NodeKind.DECLARATION,
+        "acknowledgement": NodeKind.ACKNOWLEDGEMENT,
+        "acknowledgements": NodeKind.ACKNOWLEDGEMENT,
+        "abstract": NodeKind.ABSTRACT,
+        "keywords": NodeKind.KEYWORDS,
+        "list of figures": NodeKind.LIST_OF_FIGURES,
+        "list of tables": NodeKind.LIST_OF_TABLES,
+        "references": NodeKind.REFERENCES,
+    }
+
     for block in document.blocks:
 
         if not isinstance(block, Heading):
@@ -233,11 +258,24 @@ def interpret_technical_document(document: Document) -> InterpretedDocument:
             continue
 
         if block.level == 2:
-            nodes.append(
-                InterpretedNode(
-                    block=block, kind=NodeKind.SECTION, outlined=True
-                )
-            )
+            key = block.title.strip().casefold()
+            kind = front_matter_map.get(key)
+
+            if kind is not None:
+                nodes.append(InterpretedNode(
+                    block=block, kind=kind, outlined=False
+                ))
+                continue
+
+            if key.startswith("appendix"):
+                nodes.append(InterpretedNode(
+                    block=block, kind=NodeKind.APPENDIX, outlined=True
+                ))
+                continue
+
+            nodes.append(InterpretedNode(
+                block=block, kind=NodeKind.SECTION, outlined=True
+            ))
             continue
 
         if block.level == 1:
