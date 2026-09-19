@@ -185,25 +185,21 @@ class TypstTechnicalRenderer(TypstBookRenderer):
 
         logo_path = None
         if metadata.publisher_logo:
-            if self.document_assets is None:
-                raise ValueError("Publisher logo requires document assets.")
-
-            asset = self.document_assets.resolve(metadata.publisher_logo)
-            if asset is None:
+            # Publisher identity assets are repository-level assets, not
+            # manuscript assets. The public convention is:
+            #
+            #   assets/publisher/<logo filename>
+            #
+            # The manuscript therefore supplies only the filename.
+            logo_name = Path(metadata.publisher_logo).name
+            if not logo_name or logo_name != metadata.publisher_logo:
                 raise ValueError(
-                    f"Publisher logo not found: {metadata.publisher_logo}"
+                    "Publisher logo must be a filename located under "
+                    "assets/publisher/: "
+                    f"{metadata.publisher_logo}"
                 )
 
-            staging_root = self.document_assets.staging_root
-            assets_index = staging_root.parts.index("assets")
-            logo_path = str(
-                Path(
-                    *staging_root.parts[assets_index:],
-                    "images",
-                    asset.staged_path.name,
-                )
-            )
-
+            logo_path = f"/assets/publisher/{logo_name}"
         if logo_path is not None:
             self.lines.append("  show-publisher-logo: true,")
             self.lines.append(
