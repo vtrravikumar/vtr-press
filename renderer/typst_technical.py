@@ -53,6 +53,7 @@ class TypstTechnicalRenderer(TypstBookRenderer):
         )
         self._document_section_open = False
         self._current_front_matter_kind = None
+        self._centered_front_matter_open = False
 
 
     def _render_block(self, block: Block) -> None:
@@ -130,6 +131,10 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             if self._current_front_matter_kind == NodeKind.ABSTRACT:
                 self.lines.append("#v(1em)")
                 self.lines.append("")
+            if self._centered_front_matter_open:
+                self.lines.append("]")
+                self.lines.append("")
+                self._centered_front_matter_open = False
             self.lines.append("]")
             self.lines.append("")
             self._document_section_open = False
@@ -144,6 +149,10 @@ class TypstTechnicalRenderer(TypstBookRenderer):
                 self._render_interpreted_node(node)
 
         if self._document_section_open:
+            if self._centered_front_matter_open:
+                self.lines.append("]")
+                self.lines.append("")
+                self._centered_front_matter_open = False
             self.lines.append("]")
             self.lines.append("")
 
@@ -278,19 +287,23 @@ class TypstTechnicalRenderer(TypstBookRenderer):
 
             centered = kind in {NodeKind.CERTIFICATE, NodeKind.VIVA_VOCE}
             if centered:
+                # Keep the entire certificate/viva page inside the
+                # vertical-balancing helper, not just the heading.
+                self.lines.append("#centered-front-matter[")
+                self.lines.append("")
                 self.lines.append("#align(center)[")
                 self.lines.append("")
                 self._render_heading(heading.level, heading.title, outlined=False)
                 self.lines.append("")
                 self.lines.append("]")
                 self.lines.append("")
-                # Keep the heading visually separated from the body.
                 self.lines.append("#v(2.5em)")
                 self.lines.append("")
+                self._centered_front_matter_open = True
             else:
                 self._render_heading(heading.level, heading.title, outlined=False)
                 self.lines.append("")
-
+                self._centered_front_matter_open = False
             self._document_section_open = True
             self._current_front_matter_kind = kind
             return
