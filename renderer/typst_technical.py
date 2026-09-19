@@ -105,14 +105,48 @@ class TypstTechnicalRenderer(TypstBookRenderer):
         self._render_document_preamble(document.metadata)
         self._render_title_page_from_metadata(document.metadata)
 
-        # Contents is deliberately emitted before main matter so the
-        # technical theme's outline can collect the sections that follow.
-        self._render_contents()
-        self.lines.append("#pagebreak()")
-        self.lines.append("")
+        # Render optional front matter before the Contents page.
+        # The first outlined heading marks the beginning of main matter.
+        first_outlined_index = next(
+            (
+                index
+                for index, node in enumerate(document.nodes)
+                if node.outlined
+            ),
+            None,
+        )
 
-        for node in document.nodes:
+        if first_outlined_index is None:
+            pre_main = document.nodes
+            main_matter = []
+        else:
+            pre_main = document.nodes[:first_outlined_index]
+            main_matter = document.nodes[first_outlined_index:]
+
+        for node in pre_main:
             self._render_interpreted_node(node)
+
+        if self._document_section_open:
+            if self._current_front_matter_kind in {
+                NodeKind.CERTIFICATE,
+                NodeKind.VIVA_VOCE,
+            }:
+                self.lines.append("]")
+                self.lines.append("")
+            self.lines.append("]")
+            self.lines.append("")
+            self._document_section_open = False
+            self._current_front_matter_kind = None
+
+        # Contents is emitted after optional front matter and before
+        # the first outlined main-matter section.
+        if main_matter:
+            self._render_contents()
+            self.lines.append("#pagebreak()")
+            self.lines.append("")
+
+            for node in main_matter:
+                self._render_interpreted_node(node)
 
         if self._document_section_open:
             if self._current_front_matter_kind in {
