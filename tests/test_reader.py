@@ -303,3 +303,28 @@ def test_no_front_matter_at_all_still_defaults_to_book(write_manuscript):
     metadata, _ = read(path)
 
     assert metadata.type == "book"
+
+
+def test_publisher_name_accepts_multiple_lines(write_manuscript):
+    path = write_manuscript(
+        "---\n"
+        "title: T\n"
+        "type: technical-document\n"
+        "publisher:\n"
+        "  name:\n"
+        "    - College of Engineering\n"
+        "    - Chennai, Tamil Nadu\n"
+        "    - India\n"
+        "  logo: assets/logo.png\n"
+        "---\n"
+        "Body\n"
+    )
+
+    metadata, _ = read(path)
+
+    assert metadata.publisher_name == [
+        "College of Engineering",
+        "Chennai, Tamil Nadu",
+        "India",
+    ]
+    assert metadata.publisher_logo == "assets/logo.png"
