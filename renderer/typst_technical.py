@@ -144,12 +144,6 @@ class TypstTechnicalRenderer(TypstBookRenderer):
                 self._render_interpreted_node(node)
 
         if self._document_section_open:
-            if self._current_front_matter_kind in {
-                NodeKind.CERTIFICATE,
-                NodeKind.VIVA_VOCE,
-            }:
-                self.lines.append("]")
-                self.lines.append("")
             self.lines.append("]")
             self.lines.append("")
 
