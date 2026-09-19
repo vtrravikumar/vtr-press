@@ -139,8 +139,8 @@ class _DocumentRenderer(EpubCommonMixin):
         if metadata.subtitle:
             lines.append(f'<p class="subtitle">{_text(metadata.subtitle)}</p>')
 
-        if metadata.author:
-            lines.append(f'<p class="author">{_text(metadata.author)}</p>')
+        for author in metadata.authors:
+            lines.append(f'<p class="author">{_text(author)}</p>')
 
         if self.logo_path.exists():
             lines.append(
@@ -436,8 +436,8 @@ class _DocumentRenderer(EpubCommonMixin):
             f'    <meta property="dcterms:modified">{modified}</meta>',
         ]
 
-        if metadata.author:
-            lines.append(f"    <dc:creator>{_text(metadata.author)}</dc:creator>")
+        for author in metadata.authors:
+            lines.append(f"    <dc:creator>{_text(author)}</dc:creator>")
 
         if metadata.subtitle:
             lines.extend(
