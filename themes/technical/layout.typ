@@ -44,7 +44,7 @@
       #if authors.len() > 0 {
         // Stack authors explicitly so their spacing stays compact and does
         // not inherit paragraph/line-break layout behavior.
-        #stack(
+        stack(
           dir: ttb,
           spacing: 0.8em,
           ..authors.map(author => text(size: 13pt)[#author]),
