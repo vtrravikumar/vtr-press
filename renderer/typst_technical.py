@@ -194,7 +194,40 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             f'  copyright-year: '
             f'"{self._escape_string(metadata.copyright_year)}",'
         )
-        self.lines.append("  show-publisher-logo: true,")
+
+        logo_path = None
+        if metadata.publisher_logo:
+            if self.document_assets is None:
+                raise ValueError("Publisher logo requires document assets.")
+
+            asset = self.document_assets.resolve(metadata.publisher_logo)
+            if asset is None:
+                raise ValueError(
+                    f"Publisher logo not found: {metadata.publisher_logo}"
+                )
+
+            staging_root = self.document_assets.staging_root
+            assets_index = staging_root.parts.index("assets")
+            logo_path = str(
+                Path(
+                    *staging_root.parts[assets_index:],
+                    "images",
+                    asset.staged_path.name,
+                )
+            )
+
+        if logo_path is not None:
+            self.lines.append(
+                f'  publisher-logo: "{self._escape_string(logo_path)}",'
+            )
+        elif metadata.publisher_logo == "":
+            self.lines.append("  show-publisher-logo: false,")
+        else:
+            self.lines.append("  show-publisher-logo: true,")
+
+        self.lines.append(
+            f'  publisher-name: "{self._escape_string(metadata.publisher_name)}",'
+        )
         self.lines.append(")")
         self.lines.append("")
         self.lines.append("#pagebreak()")
