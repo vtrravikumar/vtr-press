@@ -155,11 +155,14 @@ Publisher identity is configurable per manuscript through optional YAML front ma
 
 ```yaml
 publisher:
-  name: "College Project"
+  name:
+    - "College Project"
+    - "Chennai, Tamil Nadu"
+    - "India"
   logo: "assets/publisher-logo.png"
 ```
 
-- `publisher.name` controls the publisher name shown on the title page when supplied.
+- `publisher.name` controls the publisher text shown below the logo; it may be a string or an ordered list of lines.
 - `publisher.logo` references a manuscript-relative asset that is staged during publication.
 - If `publisher` is omitted, existing VTR Press branding remains the default.
 - An empty `publisher.logo` disables the publisher logo while retaining the publisher name.
