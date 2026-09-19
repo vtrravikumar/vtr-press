@@ -55,7 +55,7 @@
             text(size: 10pt)[#line]
             linebreak()
           }
-          #v(1mm)
+          v(1mm)
         } else if publisher-name != "" {
           text(size: 10pt)[#publisher-name]
           v(1mm)
