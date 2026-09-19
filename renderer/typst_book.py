@@ -106,6 +106,8 @@ class TypstBookRenderer(TypstCommonMixin):
             .replace("<", "\\<")
             .replace(">", "\\>")
             .replace("~", "\\~")
+            .replace("[", "\\[")
+            .replace("]", "\\]")
         )
     def _escape_string(self, text: str) -> str:
         """Escape Typst string literals."""
