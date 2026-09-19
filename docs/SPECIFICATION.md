@@ -159,7 +159,7 @@ publisher:
   logo: "assets/publisher-logo.png"
 ```
 
-- `publisher.name` controls the publisher name shown on the title page and publisher imprint.
+- `publisher.name` controls the publisher name shown on the title page when supplied.
 - `publisher.logo` references a manuscript-relative asset that is staged during publication.
 - If `publisher` is omitted, existing VTR Press branding remains the default.
 - An empty `publisher.logo` disables the publisher logo while retaining the publisher name.
