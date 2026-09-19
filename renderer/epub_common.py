@@ -82,7 +82,11 @@ body {
 
 .author {
   font-size: 1.15em;
-  margin: 0 0 6em;
+  margin: 0 0 0.8em;
+}
+
+.title-page .author:last-of-type {
+  margin-bottom: 0;
 }
 
 .copyright {
