@@ -107,7 +107,7 @@ def test_typst_single_author_still_uses_authors_array():
 
     output = render_typst(_book(metadata))
 
-    assert 'authors: ("Jane Doe"),' in output
+    assert 'authors: ("Jane Doe",),' in output
 
 
 def test_epub_title_page_renders_each_author_separately():
