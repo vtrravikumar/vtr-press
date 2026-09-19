@@ -40,6 +40,6 @@ books:
     output_name: Travelogue
 
   college-project:
-    bookpath: ../../Projects/college-project
+    bookpath: ../college-project
     manuscript: manuscript_printready.md
     output_name: College-Project
