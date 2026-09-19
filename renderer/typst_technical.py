@@ -111,8 +111,6 @@ class TypstTechnicalRenderer(TypstBookRenderer):
         self.lines.append("#pagebreak()")
         self.lines.append("")
 
-        self._start_main_matter()
-
         for node in document.nodes:
             self._render_interpreted_node(node)
 
@@ -224,12 +222,14 @@ class TypstTechnicalRenderer(TypstBookRenderer):
 
             self.lines.append("#front-matter-page[")
             self.lines.append("")
-            self._render_heading(heading.level, heading.title, outlined=False)
-            self.lines.append("")
 
-            if kind in {NodeKind.CERTIFICATE, NodeKind.VIVA_VOCE}:
+            centered = kind in {NodeKind.CERTIFICATE, NodeKind.VIVA_VOCE}
+            if centered:
                 self.lines.append("#centered-front-matter[")
                 self.lines.append("")
+
+            self._render_heading(heading.level, heading.title, outlined=False)
+            self.lines.append("")
 
             self._document_section_open = True
             self._current_front_matter_kind = kind
@@ -237,10 +237,19 @@ class TypstTechnicalRenderer(TypstBookRenderer):
 
         if kind == NodeKind.SECTION:
             if self._document_section_open:
+                if self._current_front_matter_kind in {
+                    NodeKind.CERTIFICATE,
+                    NodeKind.VIVA_VOCE,
+                }:
+                    self.lines.append("]")
+                    self.lines.append("")
                 self.lines.append("]")
                 self.lines.append("")
                 self.lines.append("#pagebreak()")
                 self.lines.append("")
+
+            if not self._main_matter_open:
+                self._start_main_matter()
 
             self.lines.append(
                 f'#running-section-page("{self._escape_string(heading.title)}")['
