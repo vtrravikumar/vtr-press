@@ -18,7 +18,7 @@
   copyright-year: "",
   show-publisher-logo: true,
   publisher-logo: "/assets/publisher/logo.png",
-  publisher-name: "VTR Press",
+  publisher-name: "",
 ) = {
   plain-page[
     #align(center)[
