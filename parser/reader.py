@@ -115,6 +115,22 @@ def read(path: str | Path) -> tuple[Metadata, str]:
             "author must be a string or a non-empty list of author names."
         )
 
+    publisher = data.get("publisher", {})
+    if publisher is None:
+        publisher = {}
+    if not isinstance(publisher, dict):
+        raise FrontMatterError(
+            "publisher must be a mapping with optional name and logo."
+        )
+
+    publisher_name = publisher.get("name", "VTR Press")
+    publisher_logo = publisher.get("logo")
+
+    if not isinstance(publisher_name, str):
+        raise FrontMatterError("publisher.name must be a string.")
+    if publisher_logo is not None and not isinstance(publisher_logo, str):
+        raise FrontMatterError("publisher.logo must be a string or null.")
+
     metadata = Metadata(
         title=data.get("title", ""),
         subtitle=data.get("subtitle", ""),
@@ -127,6 +143,9 @@ def read(path: str | Path) -> tuple[Metadata, str]:
         copyright_year=str(data.get("copyright_year", "")),
 
         language=data.get("language", ""),
+
+        publisher_name=publisher_name,
+        publisher_logo=publisher_logo,
     )
 
     return metadata, body.lstrip()
