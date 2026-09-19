@@ -50,6 +50,11 @@ class Metadata:
 
     language: str = ""
 
+    # Publisher identity is document metadata. When omitted, renderers
+    # retain their existing VTR Press defaults.
+    publisher_name: str = "VTR Press"
+    publisher_logo: str | None = None
+
     @property
     def authors(self) -> tuple[str, ...]:
         """Return authors as an ordered tuple for renderer consumption."""
