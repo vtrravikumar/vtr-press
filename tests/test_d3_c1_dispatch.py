@@ -154,3 +154,40 @@ Document body.
     assert 'publisher-name-lines: ("College Project", "Chennai, Tamil Nadu", "India")' in output
     assert 'publisher-logo: "/assets/publisher/college-logo.png"' in output
     assert 'show-publisher-logo: true' in output
+
+def test_certificate_and_viva_voce_use_vertical_centering(tmp_path):
+    path = tmp_path / "technical-front-matter.md"
+    path.write_text(
+        """---
+title: Test Technical Document
+author: VTR Ravi Kumar
+type: technical-document
+---
+
+# Test Technical Document
+
+## Certificate
+
+This certificate text is intentionally short.
+
+## Viva Voce
+
+This viva voce text is intentionally short.
+
+## Introduction
+
+Document body.
+""",
+        encoding="utf-8",
+    )
+
+    from publish import read_document
+    from renderer.document_assets import DocumentAssets
+    from renderer.typst_technical import render_document
+
+    document = read_document(path)
+    with DocumentAssets(path, assets_root=tmp_path) as document_assets:
+        output = render_document(document, assets=document_assets)
+
+    assert output.count("#centered-front-matter[") == 2
+    assert output.count("#front-matter-page[") == 2
