@@ -60,7 +60,7 @@
           text(size: 10pt)[#publisher-name]
           v(1mm)
         }
-        text(size: 10pt)[#copyright-year]
+        #text(size: 10pt)[#copyright-year]
       ]
     ]
   ]
