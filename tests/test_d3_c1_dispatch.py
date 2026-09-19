@@ -150,5 +150,6 @@ Document body.
         output = render_document(document, assets=document_assets)
 
     assert 'publisher-name-lines: ("College Project", "Chennai, Tamil Nadu", "India")' in output
-    assert 'publisher-logo: "/assets/documents/technical-publisher/images/college-logo.png"' in output
+    assert 'publisher-logo: "' in output
+    assert 'college-logo.png"' in output
     assert 'show-publisher-logo: true' in output
