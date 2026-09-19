@@ -42,12 +42,13 @@
       #v(3em)
 
       #if authors.len() > 0 {
-        for (index, author) in authors.enumerate() {
-          text(size: 13pt)[#author]
-          if index < authors.len() - 1 {
-            linebreak()
-          }
-        }
+        // Stack authors explicitly so their spacing stays compact and does
+        // not inherit paragraph/line-break layout behavior.
+        #stack(
+          dir: ttb,
+          spacing: 0.8em,
+          ..authors.map(author => text(size: 13pt)[#author]),
+        )
       } else {
         text(size: 13pt)[#author]
       }
