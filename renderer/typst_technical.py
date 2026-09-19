@@ -127,6 +127,9 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             self._render_interpreted_node(node)
 
         if self._document_section_open:
+            if self._current_front_matter_kind == NodeKind.ABSTRACT:
+                self.lines.append("#v(1em)")
+                self.lines.append("")
             if self._current_front_matter_kind in {
                 NodeKind.CERTIFICATE,
                 NodeKind.VIVA_VOCE,
@@ -142,8 +145,6 @@ class TypstTechnicalRenderer(TypstBookRenderer):
         # the first outlined main-matter section.
         if main_matter:
             self._render_contents()
-            self.lines.append("#pagebreak()")
-            self.lines.append("")
 
             for node in main_matter:
                 self._render_interpreted_node(node)
@@ -259,11 +260,18 @@ class TypstTechnicalRenderer(TypstBookRenderer):
 
             centered = kind in {NodeKind.CERTIFICATE, NodeKind.VIVA_VOCE}
             if centered:
-                self.lines.append("#centered-front-matter[")
+                self.lines.append("#align(center)[")
                 self.lines.append("")
-
-            self._render_heading(heading.level, heading.title, outlined=False)
-            self.lines.append("")
+                self._render_heading(heading.level, heading.title, outlined=False)
+                self.lines.append("")
+                self.lines.append("]")
+                self.lines.append("")
+                # Keep the heading visually separated from the body.
+                self.lines.append("#v(2.5em)")
+                self.lines.append("")
+            else:
+                self._render_heading(heading.level, heading.title, outlined=False)
+                self.lines.append("")
 
             self._document_section_open = True
             self._current_front_matter_kind = kind
