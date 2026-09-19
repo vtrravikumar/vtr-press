@@ -267,12 +267,6 @@ def interpret_technical_document(document: Document) -> InterpretedDocument:
                 ))
                 continue
 
-            if key.startswith("appendix"):
-                nodes.append(InterpretedNode(
-                    block=block, kind=NodeKind.APPENDIX, outlined=True
-                ))
-                continue
-
             nodes.append(InterpretedNode(
                 block=block, kind=NodeKind.SECTION, outlined=True
             ))
