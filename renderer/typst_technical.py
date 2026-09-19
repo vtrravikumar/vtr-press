@@ -226,7 +226,7 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             self.lines.append("  show-publisher-logo: true,")
 
         self.lines.append(
-            f'  publisher-name: "{self._escape_string(metadata.publisher_name)}",'
+            f'  publisher-name: "{self._escape_string(metadata.publisher_name or "")}",'
         )
         self.lines.append(")")
         self.lines.append("")
