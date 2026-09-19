@@ -52,15 +52,15 @@
         }
         #if publisher-name-lines.len() > 0 {
           for line in publisher-name-lines {
-            #text(size: 10pt)[#line]
+            text(size: 10pt)[#line]
             linebreak()
           }
           #v(1mm)
         } else if publisher-name != "" {
-          #text(size: 10pt)[#publisher-name]
-          #v(1mm)
+          text(size: 10pt)[#publisher-name]
+          v(1mm)
         }
-        #text(size: 10pt)[#copyright-year]
+        text(size: 10pt)[#copyright-year]
       ]
     ]
   ]
@@ -87,15 +87,15 @@
   if publisher-name != "" {
     v(1em)
     align(center)[
-      #text(size: 9pt)[Published by]
-      #linebreak()
+      text(size: 9pt)[Published by]
+      linebreak()
       #if publisher-name-lines.len() > 0 {
         for line in publisher-name-lines {
-          #text(size: 9pt, weight: "bold")[#line]
+          text(size: 9pt, weight: "bold")[#line]
           linebreak()
         }
       } else {
-        #text(size: 9pt, weight: "bold")[#publisher-name]
+        text(size: 9pt, weight: "bold")[#publisher-name]
       }
     ]
   }
