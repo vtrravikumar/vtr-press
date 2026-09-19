@@ -84,6 +84,7 @@ class _DocumentRenderer(EpubCommonMixin):
                 "render_document() currently supports only technical-document"
             )
 
+        self.logo_path = self._resolve_publisher_logo(document.metadata)
         self._render_title_page(document.metadata)
 
         first_outlined = document.first_outlined_node()
@@ -97,6 +98,35 @@ class _DocumentRenderer(EpubCommonMixin):
         self._insert_contents()
 
         return self._package(document.metadata)
+
+    # ------------------------------------------------------------------
+    # Publisher identity
+    # ------------------------------------------------------------------
+
+    def _resolve_publisher_logo(self, metadata: Metadata) -> Path | None:
+        """Resolve the repository-level publisher logo for EPUB output."""
+        if metadata.publisher_logo is None:
+            return DEFAULT_LOGO
+
+        if metadata.publisher_logo == "":
+            return None
+
+        logo_name = Path(metadata.publisher_logo).name
+        if not logo_name or logo_name != metadata.publisher_logo:
+            raise ValueError(
+                "Publisher logo must be a filename located under "
+                "assets/publisher/: "
+                f"{metadata.publisher_logo}"
+            )
+
+        logo_path = ROOT / "assets" / "publisher" / logo_name
+        if not logo_path.is_file():
+            raise FileNotFoundError(
+                "Publisher logo not found under assets/publisher/: "
+                f"{metadata.publisher_logo}"
+            )
+
+        return logo_path
 
     # ------------------------------------------------------------------
     # Title / sections
