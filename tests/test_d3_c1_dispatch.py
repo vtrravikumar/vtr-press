@@ -125,7 +125,7 @@ publisher:
     - College Project
     - Chennai, Tamil Nadu
     - India
-  logo: assets/college-logo.png
+  logo: college-logo.png
 ---
 
 # Test Technical Document
@@ -139,7 +139,9 @@ Document body.
 
     assets = tmp_path / "assets"
     assets.mkdir()
-    (assets / "college-logo.png").write_bytes(b"not-a-real-image")
+    publisher_assets = tmp_path / "publisher"
+    publisher_assets.mkdir()
+    (publisher_assets / "college-logo.png").write_bytes(b"not-a-real-image")
 
     from publish import read_document
     from renderer.document_assets import DocumentAssets
@@ -150,6 +152,5 @@ Document body.
         output = render_document(document, assets=document_assets)
 
     assert 'publisher-name-lines: ("College Project", "Chennai, Tamil Nadu", "India")' in output
-    assert 'publisher-logo: "' in output
-    assert 'college-logo.png"' in output
+    assert 'publisher-logo: "/assets/publisher/college-logo.png"' in output
     assert 'show-publisher-logo: true' in output
