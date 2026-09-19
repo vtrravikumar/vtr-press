@@ -121,7 +121,10 @@ title: Test Technical Document
 author: VTR Ravi Kumar
 type: technical-document
 publisher:
-  name: College Project
+  name:
+    - College Project
+    - Chennai, Tamil Nadu
+    - India
   logo: assets/college-logo.png
 ---
 
@@ -146,6 +149,6 @@ Document body.
     with DocumentAssets(path, assets_root=tmp_path) as document_assets:
         output = render_document(document, assets=document_assets)
 
-    assert 'publisher-name: "College Project"' in output
+    assert 'publisher-name-lines: ("College Project", "Chennai, Tamil Nadu", "India")' in output
     assert 'publisher-logo: "/assets/documents/technical-publisher/images/college-logo.png"' in output
     assert 'show-publisher-logo: true' in output
