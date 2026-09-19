@@ -17,6 +17,8 @@
   authors: (),
   copyright-year: "",
   show-publisher-logo: true,
+  publisher-logo: "/assets/publisher/logo.png",
+  publisher-name: "VTR Press",
 ) = {
   plain-page[
     #align(center)[
@@ -44,8 +46,12 @@
 
       #align(center)[
         #if show-publisher-logo {
-          image("/assets/publisher/logo.png", width: 20mm)
+          image(publisher-logo, width: 20mm)
           v(2mm)
+        }
+        #if publisher-name != "" {
+          #text(size: 10pt)[#publisher-name]
+          #v(1mm)
         }
         #text(size: 10pt)[#copyright-year]
       ]
@@ -70,13 +76,15 @@
 }
 
 
-#let render-publisher-imprint() = {
-  v(1em)
-  align(center)[
-    #text(size: 9pt)[Published by]
-    #linebreak()
-    #text(size: 9pt, weight: "bold")[VTR Press]
-  ]
+#let render-publisher-imprint(publisher-name: "VTR Press") = {
+  if publisher-name != "" {
+    v(1em)
+    align(center)[
+      #text(size: 9pt)[Published by]
+      #linebreak()
+      #text(size: 9pt, weight: "bold")[#publisher-name]
+    ]
+  }
 }
 
 
