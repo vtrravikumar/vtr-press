@@ -225,9 +225,15 @@ class TypstTechnicalRenderer(TypstBookRenderer):
         else:
             self.lines.append("  show-publisher-logo: true,")
 
-        self.lines.append(
-            f'  publisher-name: "{self._escape_string(metadata.publisher_name or "")}",'
-        )
+        if isinstance(metadata.publisher_name, list):
+            self.lines.append(
+                "  publisher-name-lines: "
+                f"{self._typst_author_array(tuple(metadata.publisher_name))}," 
+            )
+        else:
+            self.lines.append(
+                f'  publisher-name: "{self._escape_string(metadata.publisher_name or "")}",'
+            )
         self.lines.append(")")
         self.lines.append("")
         self.lines.append("#pagebreak()")
