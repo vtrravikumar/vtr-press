@@ -126,8 +126,16 @@ def read(path: str | Path) -> tuple[Metadata, str]:
     publisher_name = publisher.get("name")
     publisher_logo = publisher.get("logo")
 
-    if publisher_name is not None and not isinstance(publisher_name, str):
-        raise FrontMatterError("publisher.name must be a string or null.")
+    if publisher_name is not None and not (
+        isinstance(publisher_name, str)
+        or (
+            isinstance(publisher_name, list)
+            and all(isinstance(line, str) and line.strip() for line in publisher_name)
+        )
+    ):
+        raise FrontMatterError(
+            "publisher.name must be a string, a non-empty list of strings, or null."
+        )
     if publisher_logo is not None and not isinstance(publisher_logo, str):
         raise FrontMatterError("publisher.logo must be a string or null.")
 
