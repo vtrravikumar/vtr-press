@@ -111,3 +111,41 @@ A book document.
 
     assert '#import "../themes/classic/theme.typ": *' in output
     assert '#import "../themes/technical/theme.typ": *' not in output
+
+
+def test_technical_document_publisher_identity_is_configurable(tmp_path):
+    path = tmp_path / "technical-publisher.md"
+    path.write_text(
+        """---
+title: Test Technical Document
+author: VTR Ravi Kumar
+type: technical-document
+publisher:
+  name: College Project
+  logo: assets/college-logo.png
+---
+
+# Test Technical Document
+
+## Introduction
+
+Document body.
+""",
+        encoding="utf-8",
+    )
+
+    assets = tmp_path / "assets"
+    assets.mkdir()
+    (assets / "college-logo.png").write_bytes(b"not-a-real-image")
+
+    from publish import read_document
+    from renderer.document_assets import DocumentAssets
+    from renderer.typst_technical import render_document
+
+    document = read_document(path)
+    with DocumentAssets(path, assets_root=tmp_path) as document_assets:
+        output = render_document(document, assets=document_assets)
+
+    assert 'publisher-name: "College Project"' in output
+    assert 'publisher-logo: "/assets/documents/technical-publisher/images/college-logo.png"' in output
+    assert 'show-publisher-logo: true' in output
