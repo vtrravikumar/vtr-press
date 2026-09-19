@@ -106,6 +106,7 @@ class TypstBookRenderer(TypstCommonMixin):
             .replace("<", "\\<")
             .replace(">", "\\>")
             .replace("~", "\\~")
+            .replace("=", "\\=")
             .replace("[", "\\[")
             .replace("]", "\\]")
         )
