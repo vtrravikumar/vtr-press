@@ -123,11 +123,11 @@ def read(path: str | Path) -> tuple[Metadata, str]:
             "publisher must be a mapping with optional name and logo."
         )
 
-    publisher_name = publisher.get("name", "VTR Press")
+    publisher_name = publisher.get("name")
     publisher_logo = publisher.get("logo")
 
-    if not isinstance(publisher_name, str):
-        raise FrontMatterError("publisher.name must be a string.")
+    if publisher_name is not None and not isinstance(publisher_name, str):
+        raise FrontMatterError("publisher.name must be a string or null.")
     if publisher_logo is not None and not isinstance(publisher_logo, str):
         raise FrontMatterError("publisher.logo must be a string or null.")
 
