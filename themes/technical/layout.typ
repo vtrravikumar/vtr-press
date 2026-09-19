@@ -19,6 +19,7 @@
   show-publisher-logo: true,
   publisher-logo: "/assets/publisher/logo.png",
   publisher-name: "",
+  publisher-name-lines: (),
 ) = {
   plain-page[
     #align(center)[
@@ -49,7 +50,13 @@
           image(publisher-logo, width: 20mm)
           v(2mm)
         }
-        #if publisher-name != "" {
+        #if publisher-name-lines.len() > 0 {
+          for line in publisher-name-lines {
+            #text(size: 10pt)[#line]
+            linebreak()
+          }
+          #v(1mm)
+        } else if publisher-name != "" {
           #text(size: 10pt)[#publisher-name]
           #v(1mm)
         }
@@ -76,13 +83,20 @@
 }
 
 
-#let render-publisher-imprint(publisher-name: "VTR Press") = {
+#let render-publisher-imprint(publisher-name: "VTR Press", publisher-name-lines: ()) = {
   if publisher-name != "" {
     v(1em)
     align(center)[
       #text(size: 9pt)[Published by]
       #linebreak()
-      #text(size: 9pt, weight: "bold")[#publisher-name]
+      #if publisher-name-lines.len() > 0 {
+        for line in publisher-name-lines {
+          #text(size: 9pt, weight: "bold")[#line]
+          linebreak()
+        }
+      } else {
+        #text(size: 9pt, weight: "bold")[#publisher-name]
+      }
     ]
   }
 }
