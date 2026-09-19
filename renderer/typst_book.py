@@ -129,10 +129,18 @@ class TypstBookRenderer(TypstCommonMixin):
         if not authors:
             return "()"
 
-        return "(" + ", ".join(
+        rendered = ", ".join(
             f'"{self._escape_string(author)}"'
             for author in authors
-        ) + ")"
+        )
+
+        # Typst parses a parenthesized single value as an expression,
+        # not an array. A one-element array therefore requires a
+        # trailing comma: ("Author",).
+        if len(authors) == 1:
+            return f"({rendered},)"
+
+        return f"({rendered})"
 
     def _running_title(self, title: str) -> str:
         """Return a title suitable for running heads."""
