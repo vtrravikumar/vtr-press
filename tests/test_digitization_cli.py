@@ -107,7 +107,7 @@ def test_cli_allows_explicit_force_overwrite(tmp_path: Path, monkeypatch):
     output.write_text("existing manuscript", encoding="utf-8")
 
     assert cli.main([str(pdf), "--force-overwrite"]) == 0
-    assert output.read_text(encoding="utf-8").startswith("---\\n")
+    assert output.read_text(encoding="utf-8").startswith("---\n")
 
 
 def test_cli_default_work_dir_is_outside_repository(tmp_path: Path):
