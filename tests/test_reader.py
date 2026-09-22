@@ -159,7 +159,7 @@ def test_multiline_html_comments_in_body_are_not_rendered(write_manuscript):
 
     _, body = read(path)
 
-    assert body.strip() == "Before\\n\\nAfter"
+    assert body.strip() == "Before\n\nAfter"
     assert "source-image" not in body
 
 
