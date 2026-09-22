@@ -75,7 +75,10 @@
 
     #v(1em)
 
-    #outline(title: none)
+    #outline(
+      title: none,
+      depth: 2,
+    )
   ]
 }
 

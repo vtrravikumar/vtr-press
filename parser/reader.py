@@ -8,6 +8,7 @@ YAML front matter. It performs no structural parsing.
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 import yaml
 
@@ -80,6 +81,11 @@ def read(path: str | Path) -> tuple[Metadata, str]:
 
     yaml_text = text[4:end]
     body = text[end + 5:]
+
+    # HTML comments are manuscript metadata/provenance and must not
+    # become rendered document content. This also handles multi-line
+    # comments produced by digitization workflows.
+    body = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)
 
     try:
         data = yaml.safe_load(yaml_text) or {}
