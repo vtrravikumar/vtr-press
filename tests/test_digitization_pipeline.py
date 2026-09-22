@@ -4,6 +4,19 @@ from digitization.pipeline import DigitizationPipeline, MarkdownAssembler
 from digitization.structure import PageStructure
 
 
+class CountingRenderer:
+    def __init__(self):
+        self.calls = 0
+
+    def render(self, pdf: str | Path, output_dir: str | Path) -> list[Path]:
+        self.calls += 1
+        output = Path(output_dir)
+        output.mkdir(parents=True, exist_ok=True)
+        page = output / "page-1.png"
+        page.write_bytes(b"image")
+        return [page]
+
+
 class FakeRenderer:
     def render(self, pdf: str | Path, output_dir: str | Path) -> list[Path]:
         output = Path(output_dir)
@@ -165,3 +178,31 @@ def test_pipeline_reports_render_and_ocr_stages(tmp_path: Path):
 
     assert len(result.pages) == 2
     assert stages == ["rendering-start", "rendering-complete:2", "ocr-start"]
+
+
+def test_pipeline_reuses_valid_render_cache(tmp_path: Path):
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+    work = tmp_path / "work"
+    renderer = CountingRenderer()
+
+    first = DigitizationPipeline(renderer, FakeOCR()).run(pdf, work)
+    second = DigitizationPipeline(renderer, FakeOCR()).run(pdf, work)
+
+    assert renderer.calls == 1
+    assert first.pages[0].source_image == second.pages[0].source_image
+    assert (work / "pages" / "manifest.json").is_file()
+
+
+def test_pipeline_invalidates_render_cache_when_source_changes(tmp_path: Path):
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+    work = tmp_path / "work"
+    renderer = CountingRenderer()
+    pipeline = DigitizationPipeline(renderer, FakeOCR())
+
+    pipeline.run(pdf, work)
+    pdf.write_bytes(b"changed")
+    pipeline.run(pdf, work)
+
+    assert renderer.calls == 2
