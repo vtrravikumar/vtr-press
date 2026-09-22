@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import hashlib
+import json
 from typing import Callable, Protocol
 
 from .compatibility import normalize_ocr_headings
@@ -141,6 +143,45 @@ class DigitizationPipeline:
         self.visual_analyzer = visual_analyzer
         self.visual_extractor = visual_extractor
 
+
+    @staticmethod
+    def _source_fingerprint(pdf: Path) -> str:
+        digest = hashlib.sha256()
+        with pdf.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    def _renderer_cache_key(self) -> str:
+        return f"{type(self.renderer).__module__}.{type(self.renderer).__qualname__}:{self.renderer!r}"
+
+    def _load_render_cache(self, pages_dir: Path, pdf: Path) -> list[Path] | None:
+        manifest_path = pages_dir / "manifest.json"
+        if not manifest_path.is_file():
+            return None
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("source_sha256") != self._source_fingerprint(pdf):
+                return None
+            if manifest.get("renderer") != self._renderer_cache_key():
+                return None
+            pages = [pages_dir / name for name in manifest.get("pages", [])]
+            if not pages or not all(page.is_file() for page in pages):
+                return None
+            return pages
+        except (OSError, ValueError, TypeError):
+            return None
+
+    def _write_render_cache(self, pages_dir: Path, pdf: Path, images: list[Path]) -> None:
+        manifest = {
+            "source_sha256": self._source_fingerprint(pdf),
+            "renderer": self._renderer_cache_key(),
+            "pages": [image.name for image in images],
+        }
+        (pages_dir / "manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+
     def run(
         self,
         pdf: str | Path,
@@ -158,12 +199,19 @@ class DigitizationPipeline:
         processed_dir = root / "processed"
         visuals_dir = root / "visuals" / source_pdf.stem
 
-        if stage_callback is not None:
-            stage_callback("rendering-start")
-        images = self.renderer.render(source_pdf, pages_dir)
-        if stage_callback is not None:
-            stage_callback(f"rendering-complete:{len(images)}")
-            stage_callback("ocr-start")
+        images = self._load_render_cache(pages_dir, source_pdf)
+        if images is not None:
+            if stage_callback is not None:
+                stage_callback(f"rendering-cached:{len(images)}")
+                stage_callback("ocr-start")
+        else:
+            if stage_callback is not None:
+                stage_callback("rendering-start")
+            images = self.renderer.render(source_pdf, pages_dir)
+            self._write_render_cache(pages_dir, source_pdf, images)
+            if stage_callback is not None:
+                stage_callback(f"rendering-complete:{len(images)}")
+                stage_callback("ocr-start")
 
         page_results: list[PageOCR] = []
         for page_number, image in enumerate(images, start=1):
