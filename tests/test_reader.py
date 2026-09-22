@@ -128,6 +128,41 @@ def test_multiple_leading_html_comments_are_skipped(write_manuscript):
     assert metadata.title == "T"
 
 
+def test_html_comments_in_body_are_not_rendered(write_manuscript):
+    path = write_manuscript(
+        "---\\n"
+        "title: T\\n"
+        "---\\n"
+        "Before\\n"
+        "<!-- source: Health-01.pdf; page: 8 -->\\n"
+        "After\\n"
+    )
+
+    metadata, body = read(path)
+
+    assert metadata.title == "T"
+    assert body.strip() == "Before\\n\\nAfter"
+    assert "source: Health-01.pdf" not in body
+
+
+def test_multiline_html_comments_in_body_are_not_rendered(write_manuscript):
+    path = write_manuscript(
+        "---\\n"
+        "title: T\\n"
+        "---\\n"
+        "Before\\n"
+        "<!-- source: Health-01.pdf;\\n"
+        "page: 8; source-image: pages/01-page-8.png\\n"
+        "-->\\n"
+        "After\\n"
+    )
+
+    _, body = read(path)
+
+    assert body.strip() == "Before\\n\\nAfter"
+    assert "source-image" not in body
+
+
 def test_leading_whitespace_is_stripped(write_manuscript):
     path = write_manuscript("\n\n   ---\ntitle: T\n---\nBody\n")
 
