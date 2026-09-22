@@ -164,7 +164,7 @@ def test_cli_discovers_report_and_optional_code_into_one_root_manuscript(
         (code / name).write_bytes(b"pdf")
 
     assert cli.main([str(source)]) == 0
-    output = tmp_path / "manuscript.md"
+    output = tmp_path / "ocrmanuscript.md"
     text = output.read_text(encoding="utf-8")
     assert text.count("<!-- source-document:") == 6
     assert text.index("College-project-01.pdf") < text.index("College-project-02.pdf")
