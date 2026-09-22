@@ -29,7 +29,7 @@ def test_cli_writes_markdown_and_source_pages(tmp_path: Path, monkeypatch, capsy
     monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
     pdf = tmp_path / "source.pdf"
     pdf.write_bytes(b"pdf")
-    output = tmp_path / "manuscript.md"
+    output = tmp_path / "ocrmanuscript.md"
 
     assert cli.main([str(pdf), str(output), "--include-source-images"]) == 0
     text = output.read_text(encoding="utf-8")
@@ -204,7 +204,7 @@ def test_cli_combines_source_pdfs_into_one_session(tmp_path: Path, monkeypatch, 
 
     assert cli.main([str(source), "--combine-sources"]) == 0
     assert combined_pdf.is_file()
-    text = (tmp_path / "manuscript.md").read_text(encoding="utf-8")
+    text = (tmp_path / "ocrmanuscript.md").read_text(encoding="utf-8")
     assert "<!-- source-document: report-01.pdf; profile: prose -->" in text
     assert "<!-- source-document: Code-01.pdf; profile: code -->" in text
     stats = json.loads(next((tmp_path / "digitization" / "runs").glob("*.json")).read_text(encoding="utf-8"))
