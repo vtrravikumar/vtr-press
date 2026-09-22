@@ -30,7 +30,7 @@ Source PDF / scans
         +-- source-code handling
         |
         v
- VTR Press-compatible manuscript.md
+ VTR Press-compatible ocrmanuscript.md
         |
         v
 Existing VTR Press publishing pipeline
@@ -61,6 +61,18 @@ The current increment establishes the core, adapter-based pipeline:
 
 Structure classification is deliberately conservative. It is a page-level routing and review aid, not a claim that OCR text can reconstruct tables or diagrams. Tables now have a separate spatial-analysis path: detected grids can be decomposed into cell regions, and those regions can be OCR'd independently. This still requires review before semantic Markdown generation.
 
+
+## Safe output and working storage
+
+Digitization treats the OCR manuscript as a generated draft, not as the book's editorial `manuscript.md`.
+
+- The default Markdown output is `ocrmanuscript.md`.
+- An existing output file is never overwritten unless `--force-overwrite` is explicitly supplied.
+- The default digitization working directory is a local cache under `~/.vtr-press-work/<source-name>/`, outside the source repository. This keeps rendered pages and other disposable processing data out of repository storage by default.
+- `--work-dir` remains available when a caller needs a specific working location.
+
+This separation is especially important for repositories whose working path is a symlink into cloud-synchronised storage.
+
 ## Combining multi-part sources
 
 A source folder normally contains numbered report PDFs and optional numbered code PDFs. By default, each PDF is rendered separately. The optional `--combine-sources` mode creates one temporary PDF and processes all pages sequentially in one pipeline invocation.
@@ -72,7 +84,7 @@ For mixed report/code sources, page ranges are retained internally so the approp
 Example:
 
 ```bash
-python -m digitization ~/Projects/college-project/source \
+python -m digitization ~/Workspace/college-project/source \
   --pdf-renderer pymupdf \
   --ocr-engine macos-vision \
   --combine-sources

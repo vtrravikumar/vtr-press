@@ -29,7 +29,7 @@ def test_cli_writes_markdown_and_source_pages(tmp_path: Path, monkeypatch, capsy
     monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
     pdf = tmp_path / "source.pdf"
     pdf.write_bytes(b"pdf")
-    output = tmp_path / "manuscript.md"
+    output = tmp_path / "ocrmanuscript.md"
 
     assert cli.main([str(pdf), str(output), "--include-source-images"]) == 0
     text = output.read_text(encoding="utf-8")
@@ -67,17 +67,54 @@ def test_cli_writes_timestamped_run_statistics(tmp_path: Path, monkeypatch):
     assert stats["total_duration_seconds"] >= 0
 
 
-def test_cli_supports_default_manuscript_output_for_single_pdf(tmp_path: Path, monkeypatch):
+def test_cli_supports_default_ocrmanuscript_output_for_single_pdf(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(cli, "PdftoppmRenderer", FakeRenderer)
     monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
     pdf = tmp_path / "source.pdf"
     pdf.write_bytes(b"pdf")
 
     assert cli.main([str(pdf)]) == 0
-    output = tmp_path / "manuscript.md"
+    output = tmp_path / "ocrmanuscript.md"
     assert output.exists()
     assert "<!-- source: source.pdf; page: 1 -->" in output.read_text(encoding="utf-8")
     assert (tmp_path / "pages" / "01-source-page-1.png").is_file()
+
+
+def test_cli_refuses_to_overwrite_existing_output(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(cli, "PdftoppmRenderer", FakeRenderer)
+    monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+    output = tmp_path / "ocrmanuscript.md"
+    output.write_text("existing manuscript", encoding="utf-8")
+
+    try:
+        cli.main([str(pdf)])
+    except SystemExit as exc:
+        assert "Refusing to overwrite it" in str(exc)
+    else:
+        raise AssertionError("expected overwrite protection")
+
+    assert output.read_text(encoding="utf-8") == "existing manuscript"
+
+
+def test_cli_allows_explicit_force_overwrite(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(cli, "PdftoppmRenderer", FakeRenderer)
+    monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+    output = tmp_path / "ocrmanuscript.md"
+    output.write_text("existing manuscript", encoding="utf-8")
+
+    assert cli.main([str(pdf), "--force-overwrite"]) == 0
+    assert output.read_text(encoding="utf-8").startswith("---\n")
+
+
+def test_cli_default_work_dir_is_outside_repository(tmp_path: Path):
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
+    assert cli._default_work_dir(pdf) == Path.home() / ".vtr-press-work" / "source"
+    assert not cli._default_work_dir(pdf).is_relative_to(tmp_path)
 
 
 def test_cli_supports_passthrough_preprocessing(tmp_path: Path, monkeypatch):
@@ -85,7 +122,7 @@ def test_cli_supports_passthrough_preprocessing(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
     pdf = tmp_path / "source.pdf"
     pdf.write_bytes(b"pdf")
-    output = tmp_path / "manuscript.md"
+    output = tmp_path / "ocrmanuscript.md"
 
     assert cli.main([str(pdf), str(output), "--preprocess", "none"]) == 0
     assert output.exists()
@@ -127,7 +164,7 @@ def test_cli_discovers_report_and_optional_code_into_one_root_manuscript(
         (code / name).write_bytes(b"pdf")
 
     assert cli.main([str(source)]) == 0
-    output = tmp_path / "manuscript.md"
+    output = tmp_path / "ocrmanuscript.md"
     text = output.read_text(encoding="utf-8")
     assert text.count("<!-- source-document:") == 6
     assert text.index("College-project-01.pdf") < text.index("College-project-02.pdf")
@@ -168,7 +205,7 @@ def test_cli_combines_source_pdfs_into_one_session(tmp_path: Path, monkeypatch, 
 
     assert cli.main([str(source), "--combine-sources"]) == 0
     assert combined_pdf.is_file()
-    text = (tmp_path / "manuscript.md").read_text(encoding="utf-8")
+    text = (tmp_path / "ocrmanuscript.md").read_text(encoding="utf-8")
     assert "<!-- source-document: report-01.pdf; profile: prose -->" in text
     assert "<!-- source-document: Code-01.pdf; profile: code -->" in text
     stats = json.loads(next((tmp_path / "digitization" / "runs").glob("*.json")).read_text(encoding="utf-8"))
@@ -185,7 +222,7 @@ def test_cli_allows_report_without_code_folder(tmp_path: Path, monkeypatch):
     (source / "report" / "report.pdf").write_bytes(b"pdf")
 
     assert cli.main([str(source)]) == 0
-    text = (tmp_path / "manuscript.md").read_text(encoding="utf-8")
+    text = (tmp_path / "ocrmanuscript.md").read_text(encoding="utf-8")
     assert text.count("<!-- source-document:") == 1
     assert "profile: prose" in text
 
@@ -198,7 +235,7 @@ def test_cli_allows_single_report_pdf_with_any_filename(tmp_path: Path, monkeypa
     (source / "report" / "final-report.pdf").write_bytes(b"pdf")
 
     assert cli.main([str(source)]) == 0
-    assert "final-report.pdf" in (tmp_path / "manuscript.md").read_text(encoding="utf-8")
+    assert "final-report.pdf" in (tmp_path / "ocrmanuscript.md").read_text(encoding="utf-8")
 
 
 def test_cli_rejects_missing_report_sequence(tmp_path: Path):

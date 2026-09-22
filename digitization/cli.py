@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Convert scanned PDFs or source folders into VTR Press-compatible Markdown.")
     parser.add_argument("input", type=Path, help="input PDF or source folder containing report/ and optional code/ folders")
     parser.add_argument("output", type=Path, nargs="?", default=None, help="output Markdown file")
-    parser.add_argument("--work-dir", type=Path, help="working directory for rendered pages")
+    parser.add_argument("--work-dir", type=Path, help="working directory for rendered pages (default: local user cache outside the repository)")
     parser.add_argument("--profile", choices=("prose", "layout", "code"), default="prose", help="OCR profile for a single PDF input")
     parser.add_argument("--preprocess", choices=("none", "conservative"), default="conservative", help="image preprocessing mode")
     parser.add_argument("--pdf-renderer", choices=("pdftoppm", "pymupdf"), default="pdftoppm", help="PDF rendering backend")
@@ -38,6 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--include-source-images", action="store_true", help="embed source images for layout-classified pages")
     parser.add_argument("--combine-sources", action="store_true", help="combine all source PDFs into a persistent cached PDF and process them in one sequential session (requires pymupdf)")
     parser.add_argument("--rebuild-combined", action="store_true", help="force regeneration of the cached combined PDF")
+    parser.add_argument("--force-overwrite", action="store_true", help="allow overwriting an existing Markdown output file")
     return parser
 
 
@@ -77,6 +78,10 @@ def _discover_sources(source_dir: Path) -> list[tuple[Path, str]]:
 
 def _safe_stem(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-") or "source"
+
+def _default_work_dir(input_path: Path) -> Path:
+    """Return a local cache directory that is independent of the source repository."""
+    return Path.home() / ".vtr-press-work" / _safe_stem(input_path.stem if input_path.is_file() else input_path.name)
 
 
 def _copy_source_pages(
@@ -171,9 +176,14 @@ def main(argv: list[str] | None = None) -> int:
         sources = [(input_path, args.profile)]
         default_output_dir = input_path.parent
 
-    output = (args.output or default_output_dir / "manuscript.md").resolve()
+    output = (args.output or default_output_dir / "ocrmanuscript.md").resolve()
+    if output.exists() and not args.force_overwrite:
+        raise SystemExit(
+            f"Output already exists: {output}\n"
+            "Refusing to overwrite it. Use --force-overwrite only when replacement is intentional."
+        )
     output.parent.mkdir(parents=True, exist_ok=True)
-    work_root = (args.work_dir or output.parent / ".digitization-work").resolve()
+    work_root = (args.work_dir or _default_work_dir(input_path)).resolve()
     output_pages = output.parent / "pages"
     output_assets = output.parent / "assets"
     renderer = _build_renderer(args.pdf_renderer)
