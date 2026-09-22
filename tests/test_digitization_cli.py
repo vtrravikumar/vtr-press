@@ -122,7 +122,7 @@ def test_cli_supports_passthrough_preprocessing(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(cli, "TesseractOCR", FakeOCR)
     pdf = tmp_path / "source.pdf"
     pdf.write_bytes(b"pdf")
-    output = tmp_path / "manuscript.md"
+    output = tmp_path / "ocrmanuscript.md"
 
     assert cli.main([str(pdf), str(output), "--preprocess", "none"]) == 0
     assert output.exists()
@@ -235,7 +235,7 @@ def test_cli_allows_single_report_pdf_with_any_filename(tmp_path: Path, monkeypa
     (source / "report" / "final-report.pdf").write_bytes(b"pdf")
 
     assert cli.main([str(source)]) == 0
-    assert "final-report.pdf" in (tmp_path / "manuscript.md").read_text(encoding="utf-8")
+    assert "final-report.pdf" in (tmp_path / "ocrmanuscript.md").read_text(encoding="utf-8")
 
 
 def test_cli_rejects_missing_report_sequence(tmp_path: Path):
