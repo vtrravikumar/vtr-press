@@ -112,6 +112,7 @@ def test_cli_allows_explicit_force_overwrite(tmp_path: Path, monkeypatch):
 
 def test_cli_default_work_dir_is_outside_repository(tmp_path: Path):
     pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"pdf")
     assert cli._default_work_dir(pdf) == Path.home() / ".vtr-press-work" / "source"
     assert not cli._default_work_dir(pdf).is_relative_to(tmp_path)
 
@@ -221,7 +222,7 @@ def test_cli_allows_report_without_code_folder(tmp_path: Path, monkeypatch):
     (source / "report" / "report.pdf").write_bytes(b"pdf")
 
     assert cli.main([str(source)]) == 0
-    text = (tmp_path / "manuscript.md").read_text(encoding="utf-8")
+    text = (tmp_path / "ocrmanuscript.md").read_text(encoding="utf-8")
     assert text.count("<!-- source-document:") == 1
     assert "profile: prose" in text
 
