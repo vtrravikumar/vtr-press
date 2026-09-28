@@ -15,17 +15,17 @@ books:
     output_name: GenZ
 
   ride:
-    bookpath: ../../Projects/RideTogether
+    bookpath: ../RideTogether
     manuscript: docs/architecture/SolutionArchitecture.md
     output_name: RideTogetherSAD
 
   ridedesign:
-    bookpath: ../../Projects/RideTogether
+    bookpath: ../RideTogether
     manuscript: docs/engineering/EngineeringDesign.md
     output_name: RideTogetherEngineeringDesign
 
   rideapi:
-    bookpath: ../../Projects/RideTogether
+    bookpath: ../RideTogether
     manuscript: docs/engineering/APIEngineeringReference.md
     output_name: RideTogetherAPI
 
@@ -35,8 +35,8 @@ books:
     output_name: Health-In-Your-Hands
   
   travel:
-    bookpath: ../../Projects/vtrrk.in
-    cover: ../../Projects/vtrrk.in/assets/book_cover.png
+    bookpath: ../vtrrk.in
+    cover: ../vtrrk.in/assets/book_cover.png
     output_name: Travelogue
 
   college-project:
