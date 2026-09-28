@@ -30,8 +30,8 @@ books:
     output_name: RideTogetherAPI
 
   health:
-    bookpath: ../Health-in-your-hands
-    cover: ../Health-in-your-hands/assets/book_cover.png
+    bookpath: ../Accupressure
+    cover: ../Accupressure/assets/book_cover.png
     output_name: Health-In-Your-Hands
   
   travel:
