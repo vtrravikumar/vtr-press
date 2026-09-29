@@ -172,6 +172,10 @@ class TypstTechnicalRenderer(TypstBookRenderer):
             "  book-author: "
             f'"{self._escape_string(", ".join(metadata.authors))}",'
         )
+        if self.options.watermark_path:
+            self.lines.append(
+                f'  watermark-path: "{self._escape_string(self.options.watermark_path)}",'
+            )
         self.lines.append(")")
         self.lines.append("")
 
