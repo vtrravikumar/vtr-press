@@ -232,3 +232,20 @@ def test_apply_corrections_rejects_stale_or_overlapping_spans():
     ))
     with pytest.raises(ValueError, match="overlap"):
         apply_corrections("teh teh", overlapping)
+
+
+def test_no_spellcheck_markup_excludes_term_and_is_removed_from_temporary_text():
+    from digitization.spellcheck import strip_no_spellcheck_markup
+
+    source = "The herb is known as <no-spellcheck>baricum</no-spellcheck>."
+    result = check_markdown(
+        source,
+        engine=FakeEngine({"baricum": {"barium"}, "known": {"knows"}}),
+    )
+    assert [item.original for item in result.corrections] == ["known"]
+    corrected = apply_corrections(source, result.corrections)
+    temporary = strip_no_spellcheck_markup(corrected)
+    assert temporary == "The herb is knows as baricum."
+    assert "<no-spellcheck>" not in temporary
+    assert "</no-spellcheck>" not in temporary
+    assert source == "The herb is known as <no-spellcheck>baricum</no-spellcheck>."
