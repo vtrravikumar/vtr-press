@@ -23,8 +23,12 @@
   body,
   book-title: "",
   book-author: "",
+  watermark-path: none,
 ) = [
   #setup-page()
+  #set page(background: if watermark-path == none { [] } else {
+    place(center + horizon, image(watermark-path, width: 72%))
+  })
   #setup-typography()
   #setup-headings()
   #setup-metadata(
