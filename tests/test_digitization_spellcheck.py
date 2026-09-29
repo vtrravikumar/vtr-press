@@ -24,6 +24,17 @@ def test_corrects_only_unique_one_edit_prose_candidates():
     assert [item.original for item in result.corrections] == ["enginer", "manuscrpt"]
 
 
+def test_none_candidate_lookup_is_treated_as_no_suggestions():
+    class EmptyLookupEngine:
+        def candidates(self, word):
+            return None
+
+    source = "A manuscript sentence."
+    result = correct_prose(source, engine=EmptyLookupEngine())
+    assert result.text == source
+    assert result.corrections == ()
+
+
 def test_leaves_ambiguous_or_far_candidates_unchanged():
     source = "teh qzxpl"
     result = correct_prose(
