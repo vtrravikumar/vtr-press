@@ -320,3 +320,26 @@ def check_markdown(
         for item in checked.corrections
     )
     return SpellcheckResult(text, corrections)
+
+
+def apply_corrections(text: str, corrections: Iterable[Correction]) -> str:
+    """Apply recorded corrections to a separate copy of their source text.
+
+    Corrections are applied from right to left so original offsets remain
+    valid. Stale, mismatched, or overlapping spans are rejected.
+    """
+    ordered = sorted(corrections, key=lambda item: (item.start, item.end))
+    previous_end = 0
+    for item in ordered:
+        if item.start < 0 or item.end > len(text) or item.start >= item.end:
+            raise ValueError("Correction span is outside the source text")
+        if item.start < previous_end:
+            raise ValueError("Correction spans overlap")
+        if text[item.start:item.end] != item.original:
+            raise ValueError("Correction no longer matches source text")
+        previous_end = item.end
+
+    corrected = text
+    for item in reversed(ordered):
+        corrected = corrected[:item.start] + item.corrected + corrected[item.end:]
+    return corrected
