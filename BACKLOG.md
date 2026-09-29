@@ -301,3 +301,54 @@ The implementation should remain incremental, deterministic and validated agains
 ---
 
 ---
+
+---
+
+# P3 — Productization and Online Services
+
+## BL-014 — Online Manuscript-to-PDF Service
+
+**Priority:** P3  
+**Status:** In progress — Phase 1: online PDF rendering
+
+### Goal
+
+Extend VTR Press into an online service on vtrrk.in where a visitor can submit a manuscript and receive a rendered PDF.
+
+### Planned phases
+
+**Phase 1 — Rendering foundation (current work)**
+
+- Add an isolated `online` CLI mode that accepts a manuscript file path directly.
+- Use the manuscript's standard front matter as the source of metadata; do not require `books.yaml` or a separate online configuration file.
+- Render PDF only. EPUB, cover handling, ISBN output and publication manifests are excluded from this mode.
+- Derive the PDF output location from the manuscript's temporary workspace.
+- Apply a VTR Press watermark on every page for the free rendering tier.
+- Keep the existing local publishing and `print` workflows unchanged.
+- Preserve temporary inputs and outputs during local CLI testing; the eventual web-service request handler owns per-request temporary-directory cleanup.
+
+**Phase 2 — Web upload and response**
+
+- Provide a web interface on vtrrk.in to upload a valid VTR Press Markdown manuscript.
+- Create an isolated temporary workspace for each request and pass the manuscript path to the renderer.
+- Return the generated PDF to the visitor and remove the request workspace after the response is complete.
+- Validate uploads and handle rendering errors without exposing server paths or internal details.
+
+**Phase 3 — Paid, watermark-free rendering**
+
+- Offer a nominally priced option to generate a PDF without the watermark.
+- Integrate payment and ensure watermark removal is tied to confirmed payment.
+
+**Future extensions (not in Phase 1)**
+
+- Accept Word (`.docx`) input and convert it into the standard manuscript format.
+- Collect book metadata through a web form and generate the required manuscript metadata/YAML.
+- Consider EPUB support separately after the PDF service is established.
+
+### Constraints
+
+- Online rendering must remain isolated from the existing named-book publishing workflow.
+- The manuscript remains the content and metadata source of truth for Phase 1.
+- Do not introduce `books.yaml`, cover selection, a separate online YAML fixture, or EPUB generation into the Phase 1 path.
+- Keep the rendering engine reusable by both the CLI and future web-service layer.
+
