@@ -180,9 +180,12 @@ def correct_prose(
             normalized = word.casefold()
             if normalized in custom:
                 continue
+            # Some dictionary lookups return None when no suggestions exist.
+            # Treat that as an empty candidate set rather than aborting publishing.
+            suggestions = engine.candidates(normalized) or ()
             candidates = {
                 candidate.casefold()
-                for candidate in engine.candidates(normalized)
+                for candidate in suggestions
                 if candidate.isalpha() and candidate.islower()
                 and _edit_distance_one(normalized, candidate.casefold())
             }
