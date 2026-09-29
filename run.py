@@ -14,13 +14,16 @@ from __future__ import annotations
 from contextlib import nullcontext
 from datetime import datetime, timezone
 import hashlib
+import json
 import shutil
+import tempfile
 import subprocess
 import sys
 from pathlib import Path
 
 import yaml
 
+from digitization.spellcheck import apply_corrections, check_markdown
 from exceptions import FrontMatterError
 from parser.reader import read
 from publish import publish_all
@@ -184,14 +187,42 @@ def main() -> None:
         # Generate publication formats
         #
 
-        typst_source, epub_source = publish_all(
-            manuscript,
-            cover,
-            typst_cover_path,
-            render_options=render_options,
-            assets_root=assets_root,
-            assets=assets,
+        # Spellcheck a temporary sibling copy so relative manuscript paths
+        # remain rooted beside the original, while the source stays untouched.
+        source_text = manuscript.read_text(encoding="utf-8")
+        spellcheck = check_markdown(source_text)
+        corrected_text = apply_corrections(source_text, spellcheck.corrections)
+
+        report_file = GENERATED_DIR / f"{output_name}-spellcheck-report.json"
+        report_file.write_text(
+            json.dumps(spellcheck.to_report(), ensure_ascii=False, indent=2) + "\\n",
+            encoding="utf-8",
         )
+
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                suffix=manuscript.suffix,
+                prefix=f".{manuscript.stem}-spellcheck-",
+                dir=manuscript.parent,
+                delete=False,
+            ) as temp_manuscript:
+                temp_manuscript.write(corrected_text)
+                temp_path = Path(temp_manuscript.name)
+
+            typst_source, epub_source = publish_all(
+                temp_path,
+                cover,
+                typst_cover_path,
+                render_options=render_options,
+                assets_root=assets_root,
+                assets=assets,
+            )
+        finally:
+            if temp_path is not None:
+                temp_path.unlink(missing_ok=True)
 
         typ_file = GENERATED_DIR / f"{output_name}.typ"
 
