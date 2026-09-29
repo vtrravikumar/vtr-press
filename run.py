@@ -23,7 +23,11 @@ from pathlib import Path
 
 import yaml
 
-from digitization.spellcheck import apply_corrections, check_markdown
+from digitization.spellcheck import (
+    apply_corrections,
+    check_markdown,
+    strip_no_spellcheck_markup,
+)
 from exceptions import FrontMatterError
 from parser.reader import read
 from publish import publish_all
@@ -193,6 +197,7 @@ def main() -> None:
         source_text = manuscript.read_text(encoding="utf-8")
         spellcheck = check_markdown(source_text)
         corrected_text = apply_corrections(source_text, spellcheck.corrections)
+        corrected_text = strip_no_spellcheck_markup(corrected_text)
 
         report_file = GENERATED_DIR / f"{output_name}-spellcheck-report.json"
         print("Writing spellcheck report...", flush=True)
