@@ -21,6 +21,7 @@
   body,
   book-title: "",
   book-author: "",
+  watermark-path: none,
 ) = {
   // NOTE: this theme's initialize-theme differs internally from
   // themes/classic's (which calls each setup-* function with no
@@ -41,6 +42,11 @@
   // The public signature of initialize-theme itself (body, book-title,
   // book-author) is unchanged and matches themes/classic exactly.
   setup-page()
+  if watermark-path != none {
+    set page(background: place(center, opacity(8%)[
+      image(watermark-path, width: 72%)
+    ]))
+  }
   setup-typography()
   setup-metadata(
     book-title: book-title,
