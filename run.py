@@ -195,7 +195,7 @@ def main() -> None:
 
         report_file = GENERATED_DIR / f"{output_name}-spellcheck-report.json"
         report_file.write_text(
-            json.dumps(spellcheck.to_report(), ensure_ascii=False, indent=2) + "\\n",
+            json.dumps(spellcheck.to_report(), ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
 
