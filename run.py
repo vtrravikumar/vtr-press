@@ -201,34 +201,41 @@ def main() -> None:
         # Generate publication formats
         #
 
-        # Spellcheck a temporary sibling copy so relative manuscript paths
-        # remain rooted beside the original, while the source stays untouched.
-        print("Spellchecking manuscript...", flush=True)
         source_text = manuscript.read_text(encoding="utf-8")
-        spellcheck = check_markdown(source_text)
-        corrected_text = apply_corrections(source_text, spellcheck.corrections)
-        corrected_text = strip_no_spellcheck_markup(corrected_text)
-
-        report_file = GENERATED_DIR / f"{output_name}-spellcheck-report.json"
-        print("Writing spellcheck report...", flush=True)
-        report_file.write_text(
-            json.dumps(spellcheck.to_report(), ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
-
-        print(f"Spellcheck report: {report_file.relative_to(ROOT)}", flush=True)
-        print("Preparing corrected temporary manuscript...", flush=True)
         temp_path = None
         try:
+            if metadata.spellcheck:
+                print("Spellchecking manuscript...", flush=True)
+                spellcheck = check_markdown(source_text)
+                corrected_text = apply_corrections(source_text, spellcheck.corrections)
+                corrected_text = strip_no_spellcheck_markup(corrected_text)
+
+                report_file = GENERATED_DIR / f"{output_name}-spellcheck-report.json"
+                print("Writing spellcheck report...", flush=True)
+                report_file.write_text(
+                    json.dumps(spellcheck.to_report(), ensure_ascii=False, indent=2) + "\\n",
+                    encoding="utf-8",
+                )
+                print(f"Spellcheck report: {report_file.relative_to(ROOT)}", flush=True)
+                manuscript_for_render = corrected_text
+                temp_prefix = f".{manuscript.stem}-spellcheck-"
+            else:
+                print("Spellcheck disabled by manuscript metadata.", flush=True)
+                manuscript_for_render = source_text
+                temp_prefix = f".{manuscript.stem}-render-"
+
+            # Use a temporary sibling so relative manuscript paths stay rooted
+            # beside the original, and the source manuscript remains untouched.
+            print("Preparing temporary manuscript...", flush=True)
             with tempfile.NamedTemporaryFile(
                 mode="w",
                 encoding="utf-8",
                 suffix=manuscript.suffix,
-                prefix=f".{manuscript.stem}-spellcheck-",
+                prefix=temp_prefix,
                 dir=manuscript.parent,
                 delete=False,
             ) as temp_manuscript:
-                temp_manuscript.write(corrected_text)
+                temp_manuscript.write(manuscript_for_render)
                 temp_path = Path(temp_manuscript.name)
 
             print("Generating PDF and EPUB sources...", flush=True)
@@ -345,7 +352,7 @@ def main() -> None:
         print(f"✓ EPUB   output/{epub_file.name}")
         print(f"✓ ISBN   isbn/{output_name}/")
         print(f"✓ Manifest isbn/{output_name}/{manifest_file.name}")
-    print(f"✓ Spellcheck generated/{report_file.name}")
+    if metadata.spellcheck:\n        print(f"✓ Spellcheck generated/{report_file.name}")
     print()
     print("Done.")
 
