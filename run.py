@@ -7,6 +7,7 @@ Usage
 python run.py engineering
 python run.py memoir
 python run.py memoir print
+python run.py engineering online
 """
 
 from __future__ import annotations
@@ -63,6 +64,7 @@ def main() -> None:
         print("Usage:")
         print("    python run.py <book>")
         print("    python run.py <book> print")
+        print("    python run.py <book> online")
         print()
         print("Example:")
         print("    python run.py engineering")
@@ -70,16 +72,24 @@ def main() -> None:
         sys.exit(1)
 
     book_name = sys.argv[1]
-    print_mode = len(sys.argv) == 3
+    mode = sys.argv[2] if len(sys.argv) == 3 else None
+    print_mode = mode == "print"
+    online_mode = mode == "online"
 
-    if print_mode and sys.argv[2] != "print":
+    if mode is not None and mode not in {"print", "online"}:
         print(f'Unknown publishing mode "{sys.argv[2]}"')
         print()
         print("Available optional modes:")
         print("  - print")
+        print("  - online")
         sys.exit(1)
 
-    render_options = RenderOptions(print_mode=print_mode)
+    render_options = RenderOptions(
+        print_mode=print_mode,
+        watermark_path=(
+            "/assets/publisher/logo-watermark.png" if online_mode else None
+        ),
+    )
 
     books = load_books()
 
@@ -239,6 +249,8 @@ def main() -> None:
         pdf_filename = (
             f"{output_name}-interior.pdf"
             if print_mode
+            else f"{output_name}-online.pdf"
+            if online_mode
             else f"{output_name}.pdf"
         )
 
@@ -250,7 +262,8 @@ def main() -> None:
             encoding="utf-8",
         )
 
-        epub_file.write_bytes(epub_source)
+        if not online_mode:
+            epub_file.write_bytes(epub_source)
 
         #
         # Compile PDF
@@ -298,38 +311,40 @@ def main() -> None:
                 print(result.stderr)
             sys.exit(result.returncode)
 
-    #
-    # Publish artifacts to ISBN workspace
-    #
-
-    isbn_dir = ROOT / "isbn" / output_name
-    isbn_dir.mkdir(parents=True, exist_ok=True)
-
-    for artifact in (pdf_file, epub_file):
-        shutil.copy2(
-            artifact,
-            isbn_dir / artifact.name,
+    if not online_mode:
+        #
+        # Publish artifacts to ISBN workspace
+        #
+    
+        isbn_dir = ROOT / "isbn" / output_name
+        isbn_dir.mkdir(parents=True, exist_ok=True)
+    
+        for artifact in (pdf_file, epub_file):
+            shutil.copy2(
+                artifact,
+                isbn_dir / artifact.name,
+            )
+    
+        manifest_file = isbn_dir / "publication-manifest.md"
+    
+        manifest_file.write_text(
+            publication_manifest(
+                output_name,
+                (pdf_file, epub_file),
+            ),
+            encoding="utf-8",
         )
-
-    manifest_file = isbn_dir / "publication-manifest.md"
-
-    manifest_file.write_text(
-        publication_manifest(
-            output_name,
-            (pdf_file, epub_file),
-        ),
-        encoding="utf-8",
-    )
-
-    #
+    
+        #
     # Success
     #
 
     print()
     print(f"✓ PDF    output/{pdf_file.name}")
-    print(f"✓ EPUB   output/{epub_file.name}")
-    print(f"✓ ISBN   isbn/{output_name}/")
-    print(f"✓ Manifest isbn/{output_name}/{manifest_file.name}")
+    if not online_mode:
+        print(f"✓ EPUB   output/{epub_file.name}")
+        print(f"✓ ISBN   isbn/{output_name}/")
+        print(f"✓ Manifest isbn/{output_name}/{manifest_file.name}")
     print(f"✓ Spellcheck generated/{report_file.name}")
     print()
     print("Done.")
