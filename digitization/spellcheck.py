@@ -234,6 +234,7 @@ MARKDOWN_LINK_DEST_RE = re.compile(r"(?<=\])\([^)]*\)")
 MARKDOWN_AUTOLINK_RE = re.compile(r"<https?://[^>]+>", re.IGNORECASE)
 MARKDOWN_REFERENCE_SUFFIX_RE = re.compile(r"(?<=\])\[[^]]*\]")
 MARKDOWN_REFERENCE_DEFINITION_RE = re.compile(r"(?m)^[ \t]{0,3}\[[^]]+\]:[^\r\n]*")
+HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 
 
 def _blank_span(chars: list[str], start: int, end: int) -> None:
@@ -268,6 +269,10 @@ def _markdown_prose_view(text: str) -> str:
         offset += len(line)
 
     view = "".join(chars)
+
+    # Mask HTML comments such as OCR source metadata without changing offsets.
+    for match in HTML_COMMENT_RE.finditer("".join(chars)):
+        _blank_span(chars, match.start(), match.end())
 
     # Mask inline code and link destinations while preserving link labels.
     for pattern in (INLINE_CODE_RE, MARKDOWN_LINK_DEST_RE, MARKDOWN_REFERENCE_SUFFIX_RE, MARKDOWN_REFERENCE_DEFINITION_RE, MARKDOWN_AUTOLINK_RE):
