@@ -45,6 +45,7 @@ class RenderOptions:
     """Options that customize Typst rendering for publication variants."""
 
     print_mode: bool = False
+    watermark_path: str | None = None
 
 def render(
     book: Book,
@@ -203,6 +204,10 @@ class TypstBookRenderer(TypstCommonMixin):
         self.lines.append("#show: initialize-theme.with(")
         self.lines.append(f'  book-title: "{self._escape_string(md.title)}",')
         self.lines.append(f'  book-author: "{self._escape_string(author_text)}",')
+        if self.options.watermark_path:
+            self.lines.append(
+                f'  watermark-path: "{self._escape_string(self.options.watermark_path)}",'
+            )
         self.lines.append(")")
         self.lines.append("")
 
