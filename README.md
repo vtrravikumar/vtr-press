@@ -24,6 +24,7 @@ It separates content from presentation through a shared document model, allowing
 - Verse blocks
 - Inline formatting (bold, italic, code, links)
 - Format-independent architecture
+- Conservative manuscript spellchecking with a reviewable JSON correction report
 
 ## Project Status
 
@@ -192,6 +193,18 @@ Book/Technical Book/Technical
  ↓             ↓
 PDF           EPUB
 ```
+
+## Spellcheck in the Publishing Workflow
+
+The publishing runner applies conservative spellchecking to a temporary manuscript copy before generating PDF and EPUB output. The original manuscript remains unchanged, and each run starts from that original source.
+
+A JSON report records the automatic corrections at:
+
+```text
+generated/<publication-name>-spellcheck-report.json
+```
+
+The runner prints the report path and progress through the spellcheck and publication stages. Review the report after publication to inspect the changes. HTML comments are excluded from spellchecking so source metadata is not treated as prose.
 
 ## Publication Workflows
 
