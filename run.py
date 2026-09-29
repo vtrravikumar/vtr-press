@@ -189,16 +189,20 @@ def main() -> None:
 
         # Spellcheck a temporary sibling copy so relative manuscript paths
         # remain rooted beside the original, while the source stays untouched.
+        print("Spellchecking manuscript...", flush=True)
         source_text = manuscript.read_text(encoding="utf-8")
         spellcheck = check_markdown(source_text)
         corrected_text = apply_corrections(source_text, spellcheck.corrections)
 
         report_file = GENERATED_DIR / f"{output_name}-spellcheck-report.json"
+        print("Writing spellcheck report...", flush=True)
         report_file.write_text(
             json.dumps(spellcheck.to_report(), ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
 
+        print(f"Spellcheck report: {report_file.relative_to(ROOT)}", flush=True)
+        print("Preparing corrected temporary manuscript...", flush=True)
         temp_path = None
         try:
             with tempfile.NamedTemporaryFile(
@@ -212,6 +216,7 @@ def main() -> None:
                 temp_manuscript.write(corrected_text)
                 temp_path = Path(temp_manuscript.name)
 
+            print("Generating PDF and EPUB sources...", flush=True)
             typst_source, epub_source = publish_all(
                 temp_path,
                 cover,
@@ -247,7 +252,7 @@ def main() -> None:
         #
 
         print()
-        print("Compiling Typst...")
+        print("Compiling PDF with Typst...", flush=True)
         print()
 
         compile_command = [
@@ -320,6 +325,7 @@ def main() -> None:
     print(f"✓ EPUB   output/{epub_file.name}")
     print(f"✓ ISBN   isbn/{output_name}/")
     print(f"✓ Manifest isbn/{output_name}/{manifest_file.name}")
+    print(f"✓ Spellcheck generated/{report_file.name}")
     print()
     print("Done.")
 
