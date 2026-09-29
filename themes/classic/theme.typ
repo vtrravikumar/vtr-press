@@ -26,11 +26,9 @@
   watermark-path: none,
 ) = [
   #setup-page()
-  #if watermark-path != none {
-    set page(background: place(center, [
-      image(watermark-path, width: 72%)
-    ]))
-  }
+  #set page(background: if watermark-path == none { [] } else {
+    place(center, image(watermark-path, width: 72%))
+  })
   #setup-typography()
   #setup-headings()
   #setup-metadata(
