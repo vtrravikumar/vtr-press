@@ -43,7 +43,7 @@
   // book-author) is unchanged and matches themes/classic exactly.
   setup-page()
   if watermark-path != none {
-    set page(background: place(center, opacity(8%)[
+    set page(background: place(center, [
       image(watermark-path, width: 72%)
     ]))
   }
