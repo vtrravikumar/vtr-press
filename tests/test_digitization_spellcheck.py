@@ -1,4 +1,9 @@
-from digitization.spellcheck import check_markdown, correct_prose, load_vocabulary
+from digitization.spellcheck import (
+    apply_corrections,
+    check_markdown,
+    correct_prose,
+    load_vocabulary,
+)
 
 
 class FakeEngine:
@@ -191,3 +196,28 @@ def test_check_markdown_fence_closer_must_match_opening_length():
     assert [item.original for item in result.corrections] == ["teh"]
     item = result.corrections[0]
     assert source[item.start:item.end] == item.original
+
+
+def test_apply_corrections_uses_original_offsets_right_to_left():
+    source = "teh and manuscrpt"
+    result = check_markdown(
+        source,
+        engine=FakeEngine({"teh": {"the"}, "manuscrpt": {"manuscript"}}),
+    )
+    assert apply_corrections(source, result.corrections) == "the and manuscript"
+    assert source == "teh and manuscrpt"
+
+
+def test_apply_corrections_rejects_stale_or_overlapping_spans():
+    result = correct_prose("teh teh", engine=FakeEngine({"teh": {"the"}}))
+    first, second = result.corrections
+    import pytest
+    with pytest.raises(ValueError, match="no longer matches"):
+        apply_corrections("xxx teh", (first,))
+    overlapping = (first, first.__class__(
+        original="h", corrected="e", start=1, end=2,
+        corrected_start=1, corrected_end=2, context="", reason="test",
+        engine="test", engine_version="test",
+    ))
+    with pytest.raises(ValueError, match="overlap"):
+        apply_corrections("teh teh", overlapping)
