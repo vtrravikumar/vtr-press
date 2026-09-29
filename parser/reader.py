@@ -107,6 +107,10 @@ def read(path: str | Path) -> tuple[Metadata, str]:
             f"Supported types are: {supported}."
         )
 
+    spellcheck = data.get("spellcheck", False)
+    if not isinstance(spellcheck, bool):
+        raise FrontMatterError("spellcheck must be true or false.")
+
     raw_author = data.get("author", "")
 
     if isinstance(raw_author, str):
@@ -157,6 +161,7 @@ def read(path: str | Path) -> tuple[Metadata, str]:
         copyright_year=str(data.get("copyright_year", "")),
 
         language=data.get("language", ""),
+        spellcheck=spellcheck,
 
         publisher_name=publisher_name,
         publisher_logo=publisher_logo,

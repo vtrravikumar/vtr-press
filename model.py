@@ -50,6 +50,9 @@ class Metadata:
 
     language: str = ""
 
+    # Spellchecking is opt-in per manuscript; rendering preserves source by default.
+    spellcheck: bool = False
+
     # Publisher identity is document metadata. When omitted, renderers
     # retain their existing VTR Press defaults.
     publisher_name: str | list[str] | None = None
