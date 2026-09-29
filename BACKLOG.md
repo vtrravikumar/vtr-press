@@ -267,6 +267,8 @@ The pipeline is intentionally a **text-first reconstruction aid**. Its purpose i
 
 ### Spellcheck requirements
 
+**Status: Implemented in the publishing workflow; validated in the Health in Your Hands publication run.**
+
 Spellcheck is an automated cleanup aid with conservative safeguards.
 
 It should:
@@ -277,6 +279,16 @@ It should:
 - support a configurable custom/technical vocabulary;
 - protect code blocks, Markdown syntax, names, abbreviations, URLs, paths, equations and numeric content from ordinary spellchecking where practical;
 - leave uncertain words unchanged rather than making speculative corrections.
+
+
+### Spellcheck implementation and validation
+
+- Integrated conservative spellchecking into `run.py`; each run starts from the original manuscript and prepares a temporary corrected copy for PDF/EPUB generation. The source manuscript is not modified.
+- Writes a JSON correction report under `generated/<publication-name>-spellcheck-report.json` and prints its path during the run and in the completion summary.
+- Excludes HTML comments from spellchecking, preventing source metadata comments (including filenames such as `.pdf`) from being treated as prose.
+- Emits stage-level progress messages for spellchecking, report generation, temporary manuscript preparation, source generation and PDF compilation.
+- Validated after integration: full test suite passed (345 tests); `python run.py health` generated the PDF, EPUB, ISBN output, publication manifest and spellcheck report successfully.
+- One existing Pillow deprecation warning remains in a digitization preprocessing test; it does not block the workflow.
 
 ### Constraints
 
