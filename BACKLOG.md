@@ -321,7 +321,8 @@ Extend VTR Press into an online service on vtrrk.in where a visitor can submit a
 
 - Add an isolated `online` CLI mode that accepts a manuscript file path directly.
 - Use the manuscript's standard front matter as the source of metadata; do not require `books.yaml` or a separate online configuration file.
-- Render PDF only. EPUB, cover handling, ISBN output and publication manifests are excluded from this mode.
+- Render PDF only. Use a repository-provided default `cover.png` when no requester cover is supplied. EPUB, ISBN output and publication manifests are excluded from this mode.
+- In the future web interface, allow the requester to upload a cover that replaces the default `cover.png` for that request.
 - Derive the PDF output location from the manuscript's temporary workspace.
 - Apply a VTR Press watermark on every page for the free rendering tier.
 - Keep the existing local publishing and `print` workflows unchanged.
@@ -349,6 +350,6 @@ Extend VTR Press into an online service on vtrrk.in where a visitor can submit a
 
 - Online rendering must remain isolated from the existing named-book publishing workflow.
 - The manuscript remains the content and metadata source of truth for Phase 1.
-- Do not introduce `books.yaml`, cover selection, a separate online YAML fixture, or EPUB generation into the Phase 1 path.
+- Do not introduce `books.yaml`, a separate online YAML fixture, or EPUB generation into the Phase 1 path. The default cover is a fixed service asset; requester-supplied cover replacement belongs to the web-upload phase.
 - Keep the rendering engine reusable by both the CLI and future web-service layer.
 
