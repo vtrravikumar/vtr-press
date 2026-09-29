@@ -235,6 +235,8 @@ MARKDOWN_AUTOLINK_RE = re.compile(r"<https?://[^>]+>", re.IGNORECASE)
 MARKDOWN_REFERENCE_SUFFIX_RE = re.compile(r"(?<=\])\[[^]]*\]")
 MARKDOWN_REFERENCE_DEFINITION_RE = re.compile(r"(?m)^[ \t]{0,3}\[[^]]+\]:[^\r\n]*")
 HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+NO_SPELLCHECK_RE = re.compile(r"<no-spellcheck>.*?</no-spellcheck>", re.DOTALL)
+NO_SPELLCHECK_TAG_RE = re.compile(r"</?no-spellcheck>")
 
 
 def _blank_span(chars: list[str], start: int, end: int) -> None:
@@ -269,6 +271,10 @@ def _markdown_prose_view(text: str) -> str:
         offset += len(line)
 
     view = "".join(chars)
+
+    # Mask explicit spellcheck exclusions, including the enclosed text.
+    for match in NO_SPELLCHECK_RE.finditer("".join(chars)):
+        _blank_span(chars, match.start(), match.end())
 
     # Mask HTML comments such as OCR source metadata without changing offsets.
     for match in HTML_COMMENT_RE.finditer("".join(chars)):
@@ -351,3 +357,8 @@ def apply_corrections(text: str, corrections: Iterable[Correction]) -> str:
     for item in reversed(ordered):
         corrected = corrected[:item.start] + item.corrected + corrected[item.end:]
     return corrected
+
+
+def strip_no_spellcheck_markup(text: str) -> str:
+    """Remove paired no-spellcheck markers while preserving their enclosed text."""
+    return NO_SPELLCHECK_TAG_RE.sub("", text)
