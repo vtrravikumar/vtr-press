@@ -43,7 +43,7 @@
   // book-author) is unchanged and matches themes/classic exactly.
   setup-page()
   set page(background: if watermark-path == none { [] } else {
-    place(center, image(watermark-path, width: 72%))
+    place(center + horizon, image(watermark-path, width: 72%))
   })
   setup-typography()
   setup-metadata(
