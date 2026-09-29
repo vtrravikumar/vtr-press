@@ -352,7 +352,8 @@ def main() -> None:
         print(f"✓ EPUB   output/{epub_file.name}")
         print(f"✓ ISBN   isbn/{output_name}/")
         print(f"✓ Manifest isbn/{output_name}/{manifest_file.name}")
-    if metadata.spellcheck:\n        print(f"✓ Spellcheck generated/{report_file.name}")
+    if metadata.spellcheck:
+        print(f"✓ Spellcheck generated/{report_file.name}")
     print()
     print("Done.")
 
