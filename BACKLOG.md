@@ -124,8 +124,6 @@ The PyMuPDF integration has been migrated to the supported `pymupdf` API surface
 
 ---
 
----
-
 # P1 — Document and Publishing Capabilities
 
 ## BL-006 — Footnotes
@@ -280,7 +278,6 @@ It should:
 - protect code blocks, Markdown syntax, names, abbreviations, URLs, paths, equations and numeric content from ordinary spellchecking where practical;
 - leave uncertain words unchanged rather than making speculative corrections.
 
-
 ### Spellcheck implementation and validation
 
 - Integrated conservative spellchecking into `run.py`; each run starts from the original manuscript and prepares a temporary corrected copy for PDF/EPUB generation. The source manuscript is not modified.
@@ -300,7 +297,45 @@ The implementation should remain incremental, deterministic and validated agains
 
 ---
 
----
+# P2 — Additional Publishing Formats
+
+## BL-015 — Audiobook Generation
+
+**Priority:** P2  
+**Status:** Backlog — discovery and prototype required
+
+### Goal
+
+Extend VTR Press to support producing audiobook editions from the same source manuscript used for PDF and EPUB, initially targeting a practical, reviewable AI-narrated workflow.
+
+### Use case
+
+Allow VTR Press publications, including non-fiction and technical books, to be converted into chapter-based audiobooks without manually re-authoring the content. The first validation use case is an audiobook prototype from a chapter of *Engineering Home*.
+
+### Desired capabilities
+
+- derive narration-ready text and chapter/section boundaries from the canonical document model;
+- preserve reading order while excluding non-narrative publishing elements where appropriate (for example, page numbers, running headers and image alt text unless explicitly configured);
+- support configurable narration provider/engine and voice, without coupling the publishing model to one vendor;
+- allow pronunciation overrides for author names, technical terms, abbreviations and other difficult words;
+- support per-chapter generation, retry and regeneration without reprocessing the entire book;
+- generate consistently named chapter audio files and required opening/closing credits;
+- provide configurable audio format and quality settings, with validation and a reviewable production report;
+- support listening-based editorial review before a final audiobook package is considered complete;
+- retain source-to-audio chapter traceability and report generation errors;
+- keep audiobook creation separate from distribution, retailer submission and rights/platform compliance workflows.
+
+### Initial prototype
+
+- Select one chapter from *Engineering Home*.
+- Compare a small set of suitable narrator voices for pronunciation, pacing and naturalness.
+- Measure generation time, output quality and actual cost.
+- Review technical vocabulary, headings, quotations, numbers and paragraph transitions.
+- Document the chosen input format, voice configuration and repeatable generation steps before designing the production integration.
+
+### Constraints
+
+This is an additional output capability, not a replacement for PDF/EPUB and not a requirement to adopt a particular AI narration vendor. The original manuscript must remain unchanged. Generated audio must be reviewable, and distribution/platform eligibility must be assessed separately because retailer rules and acceptance of synthetic narration may differ.
 
 ---
 
@@ -352,4 +387,3 @@ Extend VTR Press into an online service on vtrrk.in where a visitor can submit a
 - The manuscript remains the content and metadata source of truth for Phase 1.
 - Do not introduce `books.yaml`, a separate online YAML fixture, or EPUB generation into the Phase 1 path. The default cover is a fixed service asset; requester-supplied cover replacement belongs to the web-upload phase.
 - Keep the rendering engine reusable by both the CLI and future web-service layer.
-
